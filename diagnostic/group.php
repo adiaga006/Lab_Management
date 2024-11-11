@@ -104,6 +104,10 @@ $groupResult = $connect->query($groupSql);
                         <input type="number" name="survival_sample" class="form-control" required>
                     </div>
                     <div class="form-group">
+                        <label>Feeding Weight</label>
+                        <input type="number" step="0.01" name="feeding_weight" class="form-control" required>
+                    </div>
+                    <div class="form-group">
                         <label>Day (DD/MM/YYYY)</label>
                         <input type="text" name="lab_day" class="form-control datepicker" required>
                     </div>
