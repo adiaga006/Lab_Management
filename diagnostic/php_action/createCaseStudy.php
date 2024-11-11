@@ -1,45 +1,54 @@
-<?php
-
+<?php 
 require_once 'core.php';
 
-$valid['success'] = array('success' => false, 'messages' => array());
+$valid = array('success' => false, 'messages' => '');
 
-if ($_POST) {	
+try {
+    if ($_POST) {	
+        $caseStudyId = $_POST['case_study_id'];
+        $caseName = $_POST['case_name'];
+        $location = $_POST['location'];
+        $categoryId = $_POST['categories_id'];
+        $startDate = $_POST['start_date'];
+        $endDate = $_POST['end_date'];
+        $pondId = isset($_POST['pond_id']) ? $_POST['pond_id'] : NULL; // Xử lý nếu pond_id không có giá trị
+        $status = $_POST['status'];
+        $repNumber = $_POST['rep_number'];
 
-    $caseStudyId   = $_POST['case_study_id'];
-    $caseName      = $_POST['case_name'];
-    $location      = $_POST['location'];
-    $categoryId    = $_POST['categories_id'];
-    $startDate     = $_POST['start_date'];
-    $endDate       = $_POST['end_date'];
-    $userId        = $_POST['user_id'];
-    $pondId        = $_POST['pond_id'];
-    $status        = $_POST['status'];
-    $repNumber     = $_POST['rep_number'];
-    
-    // Kiểm tra xem case_study_id đã tồn tại chưa
-    $checkSql = "SELECT * FROM case_study WHERE case_study_id = '$caseStudyId'";
-    $checkResult = $connect->query($checkSql);
+        // Kiểm tra xem case_study_id đã tồn tại chưa
+        $checkSql = "SELECT * FROM case_study WHERE case_study_id = ?";
+        $stmt = $connect->prepare($checkSql);
+        if (!$stmt) throw new Exception("Prepare failed: " . $connect->error);
 
-    if ($checkResult->num_rows > 0) {
-        // Nếu case_study_id đã tồn tại
-        $valid['success'] = false;
-        $valid['messages'] = "ID này đã tồn tại. Vui lòng chọn ID khác.";
-    } else {
-        // Nếu không trùng, thực hiện chèn dữ liệu
-        $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, end_date, user_id, pond_id, status, rep_number) 
-                VALUES ('$caseStudyId', '$caseName', '$location', '$categoryId', '$startDate', '$endDate', '$userId', '$pondId', '$status', '$repNumber')";
+        $stmt->bind_param("s", $caseStudyId);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-        if ($connect->query($sql) === TRUE) {
-            $valid['success'] = true;
-            $valid['messages'] = "Thêm thành công";
-        } else {
+        if ($result->num_rows > 0) {
             $valid['success'] = false;
-            $valid['messages'] = "Lỗi khi thêm thí nghiệm";
+            $valid['messages'] = "Case Study ID is available. Please choose another ID .";
+        } else {
+            // Chèn case study mới
+            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, end_date, pond_id, status, rep_number) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $connect->prepare($sql);
+            if (!$stmt) throw new Exception("Prepare failed: " . $connect->error);
+
+            $stmt->bind_param("sssissssi", $caseStudyId, $caseName, $location, $categoryId, $startDate, $endDate, $pondId, $status, $repNumber);
+
+            if ($stmt->execute()) {
+                $valid['success'] = true;
+                $valid['messages'] = "Successfully Added";
+            } else {
+                throw new Exception("Execute failed: " . $stmt->error);
+            }
         }
     }
-
-    $connect->close();
-    echo json_encode($valid);
+} catch (Exception $e) {
+    $valid['success'] = false;
+    $valid['messages'] = $e->getMessage();
 }
+
+echo json_encode($valid);
+exit;
 ?>

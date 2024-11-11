@@ -164,7 +164,7 @@ forEach(addButtonTrigger);
     <script src="js/lib/jquery/jquery.min.js"></script>
     
     <script src="js/lib/bootstrap/js/popper.min.js"></script>
-    <script src="js/lib/bootstrap/js/bootstrap.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     
     <script src="js/jquery.slimscroll.js"></script>
     

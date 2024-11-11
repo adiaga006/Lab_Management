@@ -1,28 +1,24 @@
 <?php 	
-
 require_once 'core.php';
 
-//$valid['success'] = array('success' => false, 'messages' => array());
 $categoriesId = $_GET['id'];
 if($_POST) {	
+    $categoriesName = $_POST['categoriesName'];
+    $categoriesStatus = $_POST['categoriesStatus'];
+    $groupIds = explode(',', $_POST['groupIds']);
 
-	$brandName = $_POST['categoriesName'];
-  $brandStatus = $_POST['categoriesStatus']; 
-  //$categoriesId = $_POST['editCategoriesId'];
+    // Cập nhật bảng categories
+    $sql = "UPDATE categories SET categories_name = '$categoriesName', categories_active = '$categoriesStatus' WHERE categories_id = '$categoriesId'";
+    $connect->query($sql);
 
-	$sql = "UPDATE categories SET categories_name = '$brandName', categories_active = '$brandStatus' WHERE categories_id = '$categoriesId'";
+    // Xóa liên kết cũ trong category_groups
+    $connect->query("DELETE FROM category_groups WHERE category_id = '$categoriesId'");
 
-	if($connect->query($sql) === TRUE) {
-	 	$valid['success'] = true;
-		$valid['messages'] = "Successfully Updated";
-		header('location:../categories.php');	
-	} else {
-	 	$valid['success'] = false;
-	 	$valid['messages'] = "Error while updating the categories";
-	}
-	 
-	$connect->close();
+    // Thêm các liên kết mới
+    foreach ($groupIds as $groupId) {
+        $connect->query("INSERT INTO category_groups (category_id, group_id) VALUES ('$categoriesId', '$groupId')");
+    }
 
-	echo json_encode($valid);
- 
-} // /if $_POST
+    header('location:../categories.php');
+    $connect->close();
+}

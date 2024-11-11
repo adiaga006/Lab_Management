@@ -20,12 +20,12 @@
             <div class="col-lg-8" style="margin-left: 10%;">
                 <div class="card">
                     <div class="card-body">
-                        <!-- Thêm phần này để hiển thị thông báo -->
                         <div id="message" style="display: none;" class="alert"></div>
 
                         <div class="input-states">
                             <form class="form-horizontal" method="POST" id="submitCaseStudyForm" action="php_action/createCaseStudy.php" enctype="multipart/form-data">
-
+                                
+                                <!-- Case Study ID -->
                                 <div class="form-group">
                                     <div class="row">
                                         <label class="col-sm-3 control-label">Case Study ID</label>
@@ -34,9 +34,8 @@
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Các phần khác của form (Case Name, Location, Category, v.v.) -->
-                                                       
+
+                                <!-- Case Name -->
                                 <div class="form-group">
                                     <div class="row">
                                         <label class="col-sm-3 control-label">Case Name</label>
@@ -45,7 +44,8 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
+                                <!-- Location -->
                                 <div class="form-group">
                                     <div class="row">
                                         <label class="col-sm-3 control-label">Location</label>
@@ -55,6 +55,7 @@
                                     </div>
                                 </div>
 
+                                <!-- Category -->
                                 <div class="form-group">
                                     <div class="row">
                                         <label class="col-sm-3 control-label">Category</label>
@@ -74,33 +75,27 @@
                                     </div>
                                 </div>
 
+                                <!-- Start Date -->
                                 <div class="form-group">
                                     <div class="row">
                                         <label class="col-sm-3 control-label">Start Date</label>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="startDate" name="start_date" placeholder="YYYY-MM-DD" required="" />
+                                            <input type="text" class="form-control" id="startDate" name="start_date" placeholder="DD-MM-YYYY" />
                                         </div>
                                     </div>
                                 </div>
 
+                                <!-- End Date -->
                                 <div class="form-group">
                                     <div class="row">
                                         <label class="col-sm-3 control-label">End Date</label>
                                         <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="endDate" name="end_date" placeholder="YYYY-MM-DD" required="" />
+                                            <input type="text" class="form-control" id="endDate" name="end_date" placeholder="DD-MM-YYYY" />
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="form-group">
-                                    <div class="row">
-                                        <label class="col-sm-3 control-label">Pond ID</label>
-                                        <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="pondId" name="pond_id" placeholder="Enter Pond ID" required="" />
-                                        </div>
-                                    </div>
-                                </div>
-
+                                <!-- Status -->
                                 <div class="form-group">
                                     <div class="row">
                                         <label class="col-sm-3 control-label">Status</label>
@@ -114,6 +109,8 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Repetition Number -->
                                 <div class="form-group">
                                     <div class="row">
                                         <label class="col-sm-3 control-label">Repetition Number</label>
@@ -123,6 +120,7 @@
                                     </div>
                                 </div>
 
+                                <!-- Submit Button -->
                                 <button type="button" id="createCaseStudyBtn" class="btn btn-primary btn-flat m-b-30 m-t-30">Submit</button>
                             </form>
                         </div>
@@ -134,32 +132,73 @@
 
 <?php include('./constant/layout/footer.php'); ?>
 
-<!-- JavaScript xử lý thông báo -->
+<!-- Thêm Flatpickr CSS và JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 <script>
-document.getElementById('createCaseStudyBtn').addEventListener('click', function() {
-    const form = document.getElementById('submitCaseStudyForm');
-    const formData = new FormData(form);
+    // Cấu hình Flatpickr để hiển thị theo định dạng DD-MM-YYYY
+    flatpickr("#startDate", {
+        dateFormat: "d-m-Y",  // Định dạng hiển thị DD-MM-YYYY
+        altInput: true,
+        altFormat: "d-m-Y"
+    });
+
+    flatpickr("#endDate", {
+        dateFormat: "d-m-Y",  // Định dạng hiển thị DD-MM-YYYY
+        altInput: true,
+        altFormat: "d-m-Y"
+    });
+
+    // Hàm chuyển đổi từ DD-MM-YYYY sang YYYY-MM-DD
+    function formatDateToYYYYMMDD(date) {
+        const [day, month, year] = date.split("-");
+        return `${year}-${month}-${day}`;
+    }
+
+    document.getElementById('createCaseStudyBtn').addEventListener('click', function() {
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        
+        // Chuyển đổi ngày về định dạng YYYY-MM-DD
+        if (startDateInput.value) {
+            startDateInput.value = formatDateToYYYYMMDD(startDateInput.value);
+        }
+        if (endDateInput.value) {
+            endDateInput.value = formatDateToYYYYMMDD(endDateInput.value);
+        }
+
+        // Gửi form
+        const form = document.getElementById('submitCaseStudyForm');
+        const formData = new FormData(form);
 
     fetch('php_action/createCaseStudy.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        const messageDiv = document.getElementById('message');
-        messageDiv.style.display = 'block';
-        
-        if (data.success) {
-            messageDiv.className = 'alert alert-success';
-            messageDiv.innerText = data.messages;
-            form.reset(); // Xóa dữ liệu form sau khi thêm thành công
-        } else {
-            messageDiv.className = 'alert alert-danger';
-            messageDiv.innerText = data.messages;
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
+    method: 'POST',
+    body: formData
+})
+.then(response => {
+    console.log(response); // Kiểm tra phản hồi từ server
+    return response.json();
+})
+.then(data => {
+    const messageDiv = document.getElementById('message');
+    messageDiv.style.display = 'block';
+    
+    if (data.success) {
+        messageDiv.className = 'alert alert-success';
+        messageDiv.innerText = data.messages;
+        form.reset(); // Xóa dữ liệu form sau khi thêm thành công
+    } else {
+        messageDiv.className = 'alert alert-danger';
+        messageDiv.innerText = data.messages;
+    }
+})
+.catch(error => {
+    console.error('Error:', error);
+    const messageDiv = document.getElementById('message');
+    messageDiv.style.display = 'block';
+    messageDiv.className = 'alert alert-danger';
+    messageDiv.innerText = 'An error occurred while processing your request.';
 });
+    });
 </script>

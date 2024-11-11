@@ -6,7 +6,12 @@
 include('./constant/check.php');
  include('./constant/connect.php');
 ?>
-    
+<!-- jQuery and Bootstrap JS -->
+<!-- <script src="assets/js/lib/jquery/jquery.min.js"></script> -->
+<!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script> -->
+    <!-- Bootstrap CSS-->
+<!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"> -->
+
     <div id="main-wrapper">
         
         <div class="header">
@@ -24,7 +29,7 @@ include('./constant/check.php');
                     <a class="navbar-brand" href="index.php">
                         
                          
-                        <b><img src="./assets/uploadImage/Logo/logo.jpg" style="width: 100%;" alt="homepage" class="dark-logo" style="width:100%;height:auto;"/></b>
+                        <b><img src="./assets/uploadImage/Logo/shrimvet_logo.png" style="width: 100%;" alt="homepage" class="dark-logo" style="width:100%;height:auto;"/></b>
                        
                     </a>
                 </div>
@@ -40,7 +45,7 @@ include('./constant/check.php');
                         
                     </ul>
                 <marquee behavior="scroll" direction="left" scrollamount="1"><p style="color: red;">
-                This Project is developed for Academic study purpose only. | Never Sell or Distribute with your Name OR Branding</p>
+                Welcome back, this is a test version, not fully functional, we are still perfecting it.</p>
             </marquee>
                     <ul class="navbar-nav my-lg-0 ml-auto">
 

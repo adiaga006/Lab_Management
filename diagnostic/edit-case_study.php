@@ -50,20 +50,22 @@ $result = $connect->query($sql)->fetch_assoc();
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
+                                     <!-- Start Date -->
+                                     <div class="form-group">
                                         <div class="row">
                                             <label class="col-sm-3 control-label">Start Date</label>
                                             <div class="col-sm-9">
-                                                <input type="text" class="form-control" id="editStartDate" value="<?php echo $result['start_date']; ?>" name="editStartDate" autocomplete="off">
+                                                <input type="text" class="form-control" id="editStartDate" value="<?php echo date('d-m-Y', strtotime($result['start_date'])); ?>" name="editStartDate" autocomplete="off">
                                             </div>
                                         </div>
                                     </div>
 
+                                    <!-- End Date -->
                                     <div class="form-group">
                                         <div class="row">
                                             <label class="col-sm-3 control-label">End Date</label>
                                             <div class="col-sm-9">
-                                                <input type="text" class="form-control" id="editEndDate" value="<?php echo $result['end_date']; ?>" name="editEndDate" autocomplete="off">
+                                                <input type="text" class="form-control" id="editEndDate" value="<?php echo date('d-m-Y', strtotime($result['end_date'])); ?>" name="editEndDate" autocomplete="off">
                                             </div>
                                         </div>
                                     </div>
@@ -109,5 +111,22 @@ $result = $connect->query($sql)->fetch_assoc();
             </div>
         </div>
     </div>
+<!-- Thêm Flatpickr CSS và JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
+<script>
+    // Cấu hình Flatpickr để hiển thị theo định dạng DD-MM-YYYY cho các trường ngày
+    flatpickr("#editStartDate", {
+        dateFormat: "d-m-Y",  // Định dạng hiển thị DD-MM-YYYY
+        altInput: true,
+        altFormat: "d-m-Y"
+    });
+
+    flatpickr("#editEndDate", {
+        dateFormat: "d-m-Y",  // Định dạng hiển thị DD-MM-YYYY
+        altInput: true,
+        altFormat: "d-m-Y"
+    });
+</script>
 <?php include('./constant/layout/footer.php'); ?>

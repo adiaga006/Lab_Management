@@ -55,7 +55,7 @@ if ($result->num_rows > 0) {
         );
     }
 }
-header('location:../test.php');
+header('location:../case_study.php');
 $connect->close();
 
 echo json_encode($output);

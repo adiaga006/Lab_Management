@@ -28,7 +28,7 @@ if (move_uploaded_file($_FILES['productImage']['tmp_name'], $target)) {
 				if($connect->query($sql) === TRUE) {									
 					$valid['success'] = true;
 					$valid['messages'] = "Successfully Updated";
-					header('location:../test.php');
+					header('location:../case_study.php');
 				} 
 				else {
 					$valid['success'] = false;

@@ -1,120 +1,89 @@
 
              <?php
              include('./constant/connect.php');
-             include './social_link.php'; 
              ?>
              
-           <footer class="footer">
-               <p> Footer</p>
-                <div class="ml-lg-5 pl-lg-5  position-relative">
-                     <b id="time" class="ml-lg-5 pl-lg-5"></b>
-                    </div>
-           </footer>
-        </div>
-          
-    </div>
-     <script language="javascript">
-var today = new Date();
-document.getElementById('ti').innerHTML=today;
+<!-- jQuery - Tải trước các thư viện khác -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-var today = new Date();
-document.getElementById('time').innerHTML=today;
- </script>
-    
-    <script src="assets/js/lib/jquery/jquery.min.js"></script>
-    
-    <script src="assets/js/lib/bootstrap/js/popper.min.js"></script>
-    <script src="assets/js/lib/bootstrap/js/bootstrap.min.js"></script>
-    
-    <script src="assets/js/jquery.slimscroll.js"></script>
-    
-    <script src="assets/js/sidebarmenu.js"></script>
-    
-    <script src="assets/js/lib/sticky-kit-master/dist/sticky-kit.min.js"></script>
+<!-- Bootstrap - Bao gồm Popper.js và Bootstrap -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
+<!-- Datepicker CSS và JS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
 
- <script src="assets/js/lib/sweetalert/sweetalert.min.js"></script>
-    
-    <script src="assets/js/lib/sweetalert/sweetalert.init.js"></script>
-   
+<!-- Các thư viện JavaScript khác -->
+<script src="assets/js/jquery.slimscroll.js"></script>
+<script src="assets/js/sidebarmenu.js"></script>
+<script src="assets/js/lib/sticky-kit-master/dist/sticky-kit.min.js"></script>
+<script src="assets/js/lib/sweetalert/sweetalert.min.js"></script>
+<script src="assets/js/custom.min.js"></script>
 
-    <script src="assets/js/lib/weather/jquery.simpleWeather.min.js"></script>
-    <script src="assets/js/lib/weather/weather-init.js"></script>
-    <script src="assets/js/lib/owl-carousel/owl.carousel.min.js"></script>
-    <script src="assets/js/lib/owl-carousel/owl.carousel-init.js"></script>
+<!-- Các thư viện DataTables -->
+<script src="assets/js/lib/datatables/datatables.min.js"></script>
+<script src="assets/js/lib/datatables/dataTables.buttons.min.js"></script>
+<script src="assets/js/lib/datatables/jszip.min.js"></script>
+<script src="assets/js/lib/datatables/pdfmake.min.js"></script>
+<script src="assets/js/lib/datatables/vfs_fonts.js"></script>
+<script src="assets/js/lib/datatables/buttons.html5.min.js"></script>
+<script src="assets/js/lib/datatables/buttons.print.min.js"></script>
+<script src="assets/js/lib/datatables/datatables-init.js"></script>
 
+<!-- Calendar và Editor -->
+<script src="assets/js/lib/calendar-2/moment.latest.min.js"></script>
+<script src="assets/js/lib/calendar-2/semantic.ui.min.js"></script>
+<script src="assets/js/lib/calendar-2/prism.min.js"></script>
+<script src="assets/js/lib/calendar-2/pignose.calendar.min.js"></script>
+<script src="assets/js/lib/calendar-2/pignose.init.js"></script>
+<script src="assets/js/lib/html5-editor/wysihtml5-0.3.0.js"></script>
+<script src="assets/js/lib/html5-editor/bootstrap-wysihtml5.js"></script>
+<script src="assets/js/lib/html5-editor/wysihtml5-init.js"></script>
 
-   
-    
-    <script src="assets/js/custom.min.js"></script>
-
-   
-     <script src="assets/js/lib/datatables/datatables.min.js"></script>
-    <script src="assets/js/lib/datatables/cdn.datatables.net/buttons/1.2.2/js/dataTables.buttons.min.js"></script>
-    <script src="assets/js/lib/datatables/cdn.datatables.net/buttons/1.2.2/js/buttons.flash.min.js"></script>
-    <script src="assets/js/lib/datatables/cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
-    <script src="assets/js/lib/datatables/cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/pdfmake.min.js"></script>
-    <script src="assets/js/lib/datatables/cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js"></script>
-    <script src="assets/js/lib/datatables/cdn.datatables.net/buttons/1.2.2/js/buttons.html5.min.js"></script>
-    <script src="assets/js/lib/datatables/cdn.datatables.net/buttons/1.2.2/js/buttons.print.min.js"></script>
-    <script src="assets/js/lib/datatables/datatables-init.js"></script>
-
-     <script src="assets/js/lib/calendar-2/moment.latest.min.js"></script>
-    
-    <script src="assets/js/lib/calendar-2/semantic.ui.min.js"></script>
-    
-    <script src="assets/js/lib/calendar-2/prism.min.js"></script>
-    
-    <script src="assets/js/lib/calendar-2/pignose.calendar.min.js"></script>
-    
-    <script src="assets/js/lib/calendar-2/pignose.init.js"></script>
-
- <script src="assets/js/lib/sticky-kit-master/dist/sticky-kit.min.js"></script>
-    <script src="assets/js/lib/html5-editor/wysihtml5-0.3.0.js"></script>
-    <script src="assets/js/lib/html../assets/5-editor/bootstrap-wysihtml5.js"></script>
-    <script src="assets/js/lib/html5-editor/wysihtml5-init.js"></script>
-</body>
-
-</html>
+<!-- Script bổ sung để xóa phần credit (nếu cần) -->
 <script>
-function alphaOnly(event) {
-  var key = event.keyCode;
-  return ((key >= 65 && key <= 90) || key == 8);
-};
-                                        </script>
-                                        <script>
-    // WRITE THE VALIDATION SCRIPT.
-    function isNumber(evt) {
-        var iKeyCode = (evt.which) ? evt.which : evt.keyCode
-        if (iKeyCode != 46 && iKeyCode > 31 && (iKeyCode < 48 || iKeyCode > 57))
-            return false;
-
-        return true;
-    }    
+    document.addEventListener("DOMContentLoaded", function() {
+        const mayuriFooter = document.querySelector("div[style*='Mayuri K']");
+        if (mayuriFooter) {
+            mayuriFooter.remove();
+        }
+    });
 </script>
-<script type="text/javascript">
+
+<script>
+// Các hàm JavaScript khác nếu có
+function alphaOnly(event) {
+    var key = event.keyCode;
+    return ((key >= 65 && key <= 90) || key == 8);
+};
+
+function isNumber(evt) {
+    var iKeyCode = (evt.which) ? evt.which : evt.keyCode;
+    if (iKeyCode != 46 && iKeyCode > 31 && (iKeyCode < 48 || iKeyCode > 57))
+        return false;
+    return true;
+}
+
 function googleTranslateElementInit() {
-  new google.translate.TranslateElement({pageLanguage: 'en'}, 'google_translate_element');
+    new google.translate.TranslateElement({pageLanguage: 'en'}, 'google_translate_element');
 }
 </script>
 
+<!-- Google Translate -->
 <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 <style>
-       .goog-logo-link {
-    display:none !important;
-} 
-    
-.goog-te-gadget{
-    color: transparent;
-}
-.goog-te-gadget .goog-te-combo {
-    margin: 0px 0;
-        padding: 8px;
-}
-#google_translate_element{
-        padding-top: 14px;
-}
+    .goog-logo-link { display: none !important; }
+    .goog-te-gadget { color: transparent; }
+    .goog-te-gadget .goog-te-combo { padding: 8px; }
+    #google_translate_element { padding-top: 14px; }
 </style>
+
+<!-- Footer -->
+<footer class="footer" style="text-align: center; padding: 10px; background-color: #e0e0e0;">
+    <p>Copyright © 2024 Project Developed by AI Team</p>
+</footer>
+
 
 <script>
     
@@ -133,9 +102,11 @@ function show(id, value) {
 }
 
 onReady(function () {
+    document.querySelector('.footer').style.display = 'block';
     show('page', true);
     show('loading', false);
 });
+
 
 </script>
 
