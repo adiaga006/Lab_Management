@@ -3,7 +3,7 @@
 require_once 'core.php';
 
 $sql = "SELECT case_study.case_study_id, case_study.case_name, case_study.location, case_study.start_date, 
-        case_study.end_date, case_study.status, case_study.rep_number, categories.categories_name 
+        case_study.end_date, case_study.status, categories.categories_name 
         FROM case_study 
         INNER JOIN categories ON case_study.categories_id = categories.categories_id";
 

@@ -109,17 +109,6 @@
                                         </div>
                                     </div>
                                 </div>
-
-                                <!-- Repetition Number -->
-                                <div class="form-group">
-                                    <div class="row">
-                                        <label class="col-sm-3 control-label">Repetition Number</label>
-                                        <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="repNumber" name="rep_number" placeholder="Enter Repetition Number" required="" pattern="^[0-9]+$" />
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <!-- Submit Button -->
                                 <button type="button" id="createCaseStudyBtn" class="btn btn-primary btn-flat m-b-30 m-t-30">Submit</button>
                             </form>

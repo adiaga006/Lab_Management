@@ -3,7 +3,7 @@
 <?php include('./constant/layout/sidebar.php'); ?>   
 <?php include('./constant/connect.php'); 
 
-$sql = "SELECT case_study_id, case_name, location, start_date, end_date, categories_id, status, rep_number FROM case_study";
+$sql = "SELECT case_study_id, case_name, location, start_date, end_date, categories_id, status FROM case_study";
 $result = $connect->query($sql);
 ?>
 <div class="page-wrapper">

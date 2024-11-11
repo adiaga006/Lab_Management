@@ -13,8 +13,6 @@ try {
         $endDate = $_POST['end_date'];
         $pondId = isset($_POST['pond_id']) ? $_POST['pond_id'] : NULL; // Xử lý nếu pond_id không có giá trị
         $status = $_POST['status'];
-        $repNumber = $_POST['rep_number'];
-
         // Kiểm tra xem case_study_id đã tồn tại chưa
         $checkSql = "SELECT * FROM case_study WHERE case_study_id = ?";
         $stmt = $connect->prepare($checkSql);
@@ -29,12 +27,12 @@ try {
             $valid['messages'] = "Case Study ID is available. Please choose another ID .";
         } else {
             // Chèn case study mới
-            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, end_date, pond_id, status, rep_number) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, end_date, pond_id, status) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $connect->prepare($sql);
             if (!$stmt) throw new Exception("Prepare failed: " . $connect->error);
 
-            $stmt->bind_param("sssissssi", $caseStudyId, $caseName, $location, $categoryId, $startDate, $endDate, $pondId, $status, $repNumber);
+            $stmt->bind_param("sssisssi", $caseStudyId, $caseName, $location, $categoryId, $startDate, $endDate, $pondId, $status);
 
             if ($stmt->execute()) {
                 $valid['success'] = true;
