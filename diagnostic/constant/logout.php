@@ -1,12 +1,15 @@
 <?php  
-session_start(); //to ensure you are using same session
-session_destroy(); //destroy the session
- 
+session_start(); // Bắt đầu session
+
+// Xóa session PHP
+session_destroy(); // Hủy session hoàn toàn
+
 ?>
 <script>
-window.location="../login.php";
+// Xóa tất cả dữ liệu trong sessionStorage khi đăng xuất
+sessionStorage.clear();
+window.location = "../login.php"; // Điều hướng về trang login
 </script>
 <?php
-//to redirect back to "index.php" after logging out
-  exit;
+exit;
 ?>

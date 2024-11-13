@@ -59,17 +59,6 @@ $result = $connect->query($sql)->fetch_assoc();
                                             </div>
                                         </div>
                                     </div>
-
-                                    <!-- End Date -->
-                                    <div class="form-group">
-                                        <div class="row">
-                                            <label class="col-sm-3 control-label">End Date</label>
-                                            <div class="col-sm-9">
-                                                <input type="text" class="form-control" id="editEndDate" value="<?php echo date('d-m-Y', strtotime($result['end_date'])); ?>" name="editEndDate" autocomplete="off">
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     <div class="form-group">
                                         <div class="row">
                                             <label class="col-sm-3 control-label">Category</label>
@@ -118,12 +107,6 @@ $result = $connect->query($sql)->fetch_assoc();
 <script>
     // Cấu hình Flatpickr để hiển thị theo định dạng DD-MM-YYYY cho các trường ngày
     flatpickr("#editStartDate", {
-        dateFormat: "d-m-Y",  // Định dạng hiển thị DD-MM-YYYY
-        altInput: true,
-        altFormat: "d-m-Y"
-    });
-
-    flatpickr("#editEndDate", {
         dateFormat: "d-m-Y",  // Định dạng hiển thị DD-MM-YYYY
         altInput: true,
         altFormat: "d-m-Y"

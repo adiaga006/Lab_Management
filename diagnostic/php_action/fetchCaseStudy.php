@@ -2,8 +2,7 @@
 
 require_once 'core.php';
 
-$sql = "SELECT case_study.case_study_id, case_study.case_name, case_study.location, case_study.start_date, 
-        case_study.end_date, case_study.status, categories.categories_name 
+$sql = "SELECT case_study.case_study_id, case_study.case_name, case_study.location, case_study.start_date, case_study.status, categories.categories_name 
         FROM case_study 
         INNER JOIN categories ON case_study.categories_id = categories.categories_id";
 
@@ -18,9 +17,9 @@ if ($result->num_rows > 0) {
         $status = "";
 
         // Status label
-        if ($row[5] == "In-process") {
+        if ($row[4] == "In-process") {
             $status = "<label class='label label-warning'>In-process</label>";
-        } else if ($row[5] == "Prepare") {
+        } else if ($row[4] == "Prepare") {
             $status = "<label class='label label-info'>Prepare</label>";
         } else {
             $status = "<label class='label label-success'>Complete</label>";
@@ -48,7 +47,6 @@ if ($result->num_rows > 0) {
             $row[1],    // Case Study Name
             $row[2],    // Location
             $row[3],    // Start Date
-            $row[4],    // End Date
             $category,  // Category
             $status,    // Status
             $button     // Action buttons

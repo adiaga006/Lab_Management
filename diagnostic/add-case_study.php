@@ -85,16 +85,6 @@
                                     </div>
                                 </div>
 
-                                <!-- End Date -->
-                                <div class="form-group">
-                                    <div class="row">
-                                        <label class="col-sm-3 control-label">End Date</label>
-                                        <div class="col-sm-9">
-                                            <input type="text" class="form-control" id="endDate" name="end_date" placeholder="DD-MM-YYYY" />
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <!-- Status -->
                                 <div class="form-group">
                                     <div class="row">
@@ -132,13 +122,6 @@
         altInput: true,
         altFormat: "d-m-Y"
     });
-
-    flatpickr("#endDate", {
-        dateFormat: "d-m-Y",  // Định dạng hiển thị DD-MM-YYYY
-        altInput: true,
-        altFormat: "d-m-Y"
-    });
-
     // Hàm chuyển đổi từ DD-MM-YYYY sang YYYY-MM-DD
     function formatDateToYYYYMMDD(date) {
         const [day, month, year] = date.split("-");
@@ -146,17 +129,11 @@
     }
 
     document.getElementById('createCaseStudyBtn').addEventListener('click', function() {
-        const startDateInput = document.getElementById('startDate');
-        const endDateInput = document.getElementById('endDate');
-        
+        const startDateInput = document.getElementById('startDate');        
         // Chuyển đổi ngày về định dạng YYYY-MM-DD
         if (startDateInput.value) {
             startDateInput.value = formatDateToYYYYMMDD(startDateInput.value);
         }
-        if (endDateInput.value) {
-            endDateInput.value = formatDateToYYYYMMDD(endDateInput.value);
-        }
-
         // Gửi form
         const form = document.getElementById('submitCaseStudyForm');
         const formData = new FormData(form);

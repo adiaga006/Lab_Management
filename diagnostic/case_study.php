@@ -3,7 +3,7 @@
 <?php include('./constant/layout/sidebar.php'); ?>   
 <?php include('./constant/connect.php'); 
 
-$sql = "SELECT case_study_id, case_name, location, start_date, end_date, categories_id, status FROM case_study";
+$sql = "SELECT case_study_id, case_name, location, start_date, categories_id, status FROM case_study";
 $result = $connect->query($sql);
 ?>
 <div class="page-wrapper">
@@ -33,7 +33,6 @@ $result = $connect->query($sql);
                                 <th>Case Study Name</th>
                                 <th>Location</th>
                                 <th>Start Date</th>
-                                <th>End Date</th>
                                 <th>Category</th>
                                 <th>Status</th>
                                 <th>Action</th>
@@ -73,7 +72,6 @@ $result = $connect->query($sql);
                                 <td><?php echo $row['case_name']; ?></td>
                                 <td><?php echo $row['location']; ?></td>
                                 <td><?php echo date('d-m-Y', strtotime($row['start_date'])); ?></td>
-                                <td><?php echo date('d-m-Y', strtotime($row['end_date'])); ?></td>
                                 <td><?php echo $row2['categories_name']; ?></td>
                                 <td><?php echo $statusLabel; ?></td>
                                 <td>

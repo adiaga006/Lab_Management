@@ -5,7 +5,6 @@ $response = ['success' => false, 'messages' => ''];
 
 if ($_POST) {
     $caseStudyId = $_POST['case_study_id'];
-    $groupId = $_POST['group_id'];
     $treatmentName = $_POST['treatment_name'];
     $productApplication = $_POST['product_application'];
     $survivalSample = $_POST['survival_sample'];
@@ -15,9 +14,9 @@ if ($_POST) {
     // Convert date format from dd/mm/yyyy to yyyy-mm-dd
     $labDayFormatted = date('Y-m-d', strtotime(str_replace('/', '-', $labDay)));
 
-    // Prepare SQL statement to insert data including feeding_weight
-    $stmt = $connect->prepare("INSERT INTO entry_data (case_study_id, group_id, treatment_name, product_application, survival_sample, lab_day, feeding_weight) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sissisd", $caseStudyId, $groupId, $treatmentName, $productApplication, $survivalSample, $labDayFormatted, $feedingWeight);
+    // Prepare SQL statement to insert data without group_id
+    $stmt = $connect->prepare("INSERT INTO entry_data (case_study_id, treatment_name, product_application, survival_sample, lab_day, feeding_weight) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssisd", $caseStudyId, $treatmentName, $productApplication, $survivalSample, $labDayFormatted, $feedingWeight);
 
     if ($stmt->execute()) {
         $response['success'] = true;

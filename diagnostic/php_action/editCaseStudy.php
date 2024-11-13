@@ -11,14 +11,12 @@ if ($_POST) {
     $location = $_POST['editLocation'];
     $categoryId = $_POST['editCategoryName'];
     $startDate = date('Y-m-d', strtotime($_POST['editStartDate'])); // Chuyển đổi sang YYYY-MM-DD
-    $endDate = date('Y-m-d', strtotime($_POST['editEndDate']));     // Chuyển đổi sang YYYY-MM-DD
     $status = $_POST['editCaseStudyStatus'];
 
 	$sql = "UPDATE case_study SET 
                 case_name = '$caseName', 
                 location = '$location', 
                 start_date = '$startDate', 
-                end_date = '$endDate', 
                 categories_id = '$categoryId', 
                 status = '$status' 
             WHERE case_study_id = '$caseStudyId'";
