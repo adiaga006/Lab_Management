@@ -5,7 +5,21 @@ include('./constant/layout/sidebar.php');
 include('./constant/layout/footer.php');
 include('./constant/connect.php');
 $caseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : 0;
+// Lấy `start_date` từ bảng `case_study` dựa trên `case_study_id`
+$sql = "SELECT start_date FROM case_study WHERE case_study_id = ?";
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("i", $caseStudyId);
+$stmt->execute();
+$stmt->bind_result($startDate);
+$stmt->fetch();
+$stmt->close();
 
+if (!$startDate) {
+    die("Error: start_date not found for the given case_study_id");
+}
+
+// Encode start_date thành định dạng JSON để sử dụng trong JavaScript
+$startDateJs = json_encode($startDate);
 if (!$caseStudyId) {
     die("Error: Missing case_study_id in URL");
 }
@@ -49,14 +63,15 @@ $groupResult = $connect->query($groupSql);
                                     <tr>
                                         <td>
                                             <?php
-                                            // Determine URL based on group_id
+                                            // Determine URL based on group_id and include group_id in the URL
                                             if ($group['group_id'] == 1) {
-                                                $url = "entry_data.php?case_study_id=" . htmlspecialchars($caseStudyId);
+                                                $url = "entry_data.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
                                             } elseif ($group['group_id'] == 3) {
-                                                $url = "water_quality.php?case_study_id=" . htmlspecialchars($caseStudyId);
+                                                $url = "water_quality.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
                                             } else {
                                                 $url = "#";
                                             }
+
                                             ?>
                                             <a href="<?php echo $url; ?>">
                                                 <?php echo htmlspecialchars($group['group_name']); ?>
@@ -65,7 +80,8 @@ $groupResult = $connect->query($groupSql);
                                         <td>
                                             <!-- Add Data button triggers modal for each group -->
                                             <?php if ($group['group_id'] == 1): ?>
-                                                <button class="btn btn-primary" data-toggle="modal"
+                                                <button class="btn btn-primary" 
+                                                    data-toggle="modal"
                                                     data-target="#addDataModalGroup1"
                                                     onclick="openAddDataModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
                                                     Add Data
@@ -227,13 +243,37 @@ $groupResult = $connect->query($groupSql);
 </div>
 
 <script>
+    // Chuyển đổi start_date từ PHP sang biến JavaScript
+    const startDate = new Date(<?php echo $startDateJs; ?>);
+    const twentyThirdDayAfterStart = new Date(startDate);
+    twentyThirdDayAfterStart.setDate(twentyThirdDayAfterStart.getDate() + 22);
+
     // Khởi tạo Datepicker cho trường ngày
     $('.datepicker').datepicker({
         format: 'dd/mm/yyyy',
         autoclose: true,
         todayHighlight: true
+    }).on('changeDate', function (e) {
+        checkAndSetSystemType(e.date);
     });
 
+    // Kiểm tra ngày đã chọn và đặt giá trị cho system_type
+    function checkAndSetSystemType(selectedDate) {
+        const systemTypeSelect = $('select[name="system_type"]');
+
+        if (selectedDate >= startDate && selectedDate <= twentyThirdDayAfterStart) {
+            // Ngày trong khoảng 23 ngày sau startDate
+            systemTypeSelect.html('<option value="RAS System (NC, PC & Treatments)">RAS System (NC, PC & Treatments)</option>');
+            systemTypeSelect.val("RAS System (NC, PC & Treatments)").prop('disabled', true); // Làm readonly
+        } else {
+            // Ngày sau 23 ngày, cho phép người dùng chọn từ 2 lựa chọn và mở khóa readonly
+            systemTypeSelect.html(`
+                <option value="Static System (Negative Control)">Static System (Negative Control)</option>
+                <option value="RAS System (Positive Control, T1, T2, T3 & T4)">RAS System (Positive Control, T1, T2, T3 & T4)</option>
+            `);
+            systemTypeSelect.prop('disabled', false).val(""); // Mở khóa và đặt giá trị trống để người dùng chọn
+        }
+    }
     // Mở form thêm Entry Data và điền case_study_id vào form
     function openAddDataModal(caseStudyId, groupName) {
         $('#modalCaseStudyId').val(caseStudyId);

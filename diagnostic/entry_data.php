@@ -216,11 +216,6 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
         </div>
     </div>
 </div>
-
-
-
-
-
 <!-- Edit Data Modal -->
 <div id="editDataModal" class="modal fade" role="dialog" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
