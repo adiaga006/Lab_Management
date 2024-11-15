@@ -3,11 +3,26 @@ include('./constant/layout/head.php');
 include('./constant/layout/header.php');
 include('./constant/layout/sidebar.php');
 include('./constant/connect.php');
-
+// Lấy `case_study_id` từ URL và `start_date` từ bảng `case_study`
 $caseStudyId = $_GET['case_study_id'];
+$caseStudySql = "SELECT start_date FROM case_study WHERE case_study_id = ?";
+$stmt = $connect->prepare($caseStudySql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$stmt->bind_result($startDate);
+$stmt->fetch();
+$stmt->close();
+
+if (!$startDate) {
+    die("Error: Start date not found for the given case_study_id.");
+}
 $groupId = $_GET['group_id'];
 
-// Lấy dữ liệu water_quality theo case_study_id và group_id
+// Calculate phases based on `start_date`
+$startDateObj = new DateTime($startDate);
+$preChallengeEnd = clone $startDateObj;
+$preChallengeEnd->modify('+22 days'); // Phase 1: Pre-challenge period (23 days)
+// Lấy dữ liệu `water_quality` theo `case_study_id` và sắp xếp theo ngày
 $waterQualitySql = "SELECT * FROM water_quality WHERE case_study_id = ? ORDER BY day ASC";
 $stmt = $connect->prepare($waterQualitySql);
 $stmt->bind_param("s", $caseStudyId);
@@ -19,236 +34,343 @@ while ($row = $waterQualityResult->fetch_assoc()) {
 }
 $stmt->close();
 
-function calculateMean($data)
-{
-    return array_sum($data) / count($data);
+// Hàm tính trung bình
+// Function to calculate mean
+function calculateMean($data) {
+    return count($data) > 0 ? array_sum($data) / count($data) : 0;
 }
 
-function calculateSD($data)
-{
+// Function to calculate standard deviation
+function calculateSD($data) {
     $mean = calculateMean($data);
     $sumOfSquares = array_reduce($data, function ($carry, $item) use ($mean) {
         $carry += pow($item - $mean, 2);
         return $carry;
     }, 0);
-    return sqrt($sumOfSquares / count($data));
+    return count($data) > 1 ? sqrt($sumOfSquares / count($data)) : 0;
 }
 
-if (count($waterQualityData) > 0) {
-    // Lấy các giá trị cho các cột để tính toán Mean và SD
-    $salinityValues = array_column($waterQualityData, 'salinity');
-    $tempValues = array_column($waterQualityData, 'temperature');
-    $doValues = array_column($waterQualityData, 'dissolved_oxygen');
-    $phValues = array_column($waterQualityData, 'pH');
-    $alkalinityValues = array_column($waterQualityData, 'alkalinity');
-    $tanValues = array_column($waterQualityData, 'tan');
-    $nitriteValues = array_column($waterQualityData, 'nitrite');
+// Separate data by system type and phase
+$phase1Data = array_filter($waterQualityData, function($data) use ($preChallengeEnd) {
+    $dataDate = new DateTime($data['day']);
+    return $dataDate <= $preChallengeEnd && $data['system_type'] == 'RAS System (NC, PC & Treatments)';
+});
 
-    // Tính Mean và SD cho từng cột
-    $meanSalinity = calculateMean($salinityValues);
-    $sdSalinity = calculateSD($salinityValues);
+$phase2DataRAS = array_filter($waterQualityData, function($data) use ($preChallengeEnd) {
+    $dataDate = new DateTime($data['day']);
+    return $dataDate > $preChallengeEnd && $data['system_type'] == 'RAS System (Positive Control, T1, T2, T3 & T4)';
+});
 
-    $meanTemp = calculateMean($tempValues);
-    $sdTemp = calculateSD($tempValues);
+$phase2DataStatic = array_filter($waterQualityData, function($data) use ($preChallengeEnd) {
+    $dataDate = new DateTime($data['day']);
+    return $dataDate > $preChallengeEnd && $data['system_type'] == 'Static System (Negative Control)';
+});
 
-    $meanDO = calculateMean($doValues);
-    $sdDO = calculateSD($doValues);
+// Calculate stats for each system type
+function calculateStats($data) {
+    $salinityValues = array_column($data, 'salinity');
+    $tempValues = array_column($data, 'temperature');
+    $doValues = array_column($data, 'dissolved_oxygen');
+    $phValues = array_column($data, 'pH');
+    $alkalinityValues = array_column($data, 'alkalinity');
+    $tanValues = array_column($data, 'tan');
+    $nitriteValues = array_column($data, 'nitrite');
 
-    $meanPH = calculateMean($phValues);
-    $sdPH = calculateSD($phValues);
-
-    $meanAlkalinity = calculateMean($alkalinityValues);
-    $sdAlkalinity = calculateSD($alkalinityValues);
-
-    $meanTAN = calculateMean($tanValues);
-    $sdTAN = calculateSD($tanValues);
-
-    $meanNitrite = calculateMean($nitriteValues);
-    $sdNitrite = calculateSD($nitriteValues);
-} else {
-    echo "<p>No data available for this case study.</p>";
+    return [
+        'meanSalinity' => calculateMean($salinityValues),
+        'sdSalinity' => calculateSD($salinityValues),
+        'meanTemp' => calculateMean($tempValues),
+        'sdTemp' => calculateSD($tempValues),
+        'meanDO' => calculateMean($doValues),
+        'sdDO' => calculateSD($doValues),
+        'meanPH' => calculateMean($phValues),
+        'sdPH' => calculateSD($phValues),
+        'meanAlkalinity' => calculateMean($alkalinityValues),
+        'sdAlkalinity' => calculateSD($alkalinityValues),
+        'meanTAN' => calculateMean($tanValues),
+        'sdTAN' => calculateSD($tanValues),
+        'meanNitrite' => calculateMean($nitriteValues),
+        'sdNitrite' => calculateSD($nitriteValues),
+    ];
 }
+
+// Get statistics for each phase and system type
+$phase1Stats = calculateStats($phase1Data);
+$phase2RASStats = calculateStats($phase2DataRAS);
+$phase2StaticStats = calculateStats($phase2DataStatic);
 ?>
 
+<!-- HTML to display data by phase and system type -->
 <div class="page-wrapper">
-    <div class="row page-titles">
-        <div class="col-md-10 align-self-center">
-            <h3 class="text-primary">Water Quality Data for Case Study ID: <?php echo htmlspecialchars($caseStudyId); ?>
-            </h3>
-        </div>
-    </div>
-
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">
-                <?php if (count($waterQualityData) > 0): ?>
-                    <div class="table-responsive m-t-20">
-                        <table class="table table-bordered table-striped">
-                            <thead>
+                <!-- Phase 1: Pre-challenge period -->
+                <h3 class="text-primary">Water Quality during Pre-challenge Period</h3>
+                <h4 class="text-secondary">RAS System (NC, PC & Treatments)</h4>
+
+                <div class="table-responsive m-t-20">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Date</th>
+                                <th>Salinity (ppt)</th>
+                                <th>Temp (°C)</th>
+                                <th>DO (ppm)</th>
+                                <th>pH</th>
+                                <th>Alkalinity (ppm)</th>
+                                <th>TAN (ppm)</th>
+                                <th>Nitrite (ppm)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php
+                            $dayCounter = 1; // Reset day counter for Phase 1
+                            foreach ($phase1Data as $data): ?>
                                 <tr>
-                                    <th>Day</th>
-                                    <th>Date</th>
-                                    <th>Salinity (ppt)</th>
-                                    <th>Temp (°C)</th>
-                                    <th>DO (ppm)</th>
-                                    <th>pH</th>
-                                    <th>Alkalinity (ppm)</th>
-                                    <th>TAN (ppm)</th>
-                                    <th>Nitrite (ppm)</th>
-                                    <th>Actions</th> <!-- Thêm cột hành động -->
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($waterQualityData as $index => $data): ?>
-                                    <tr>
-                                        <td><?php echo $index + 1; ?></td>
-                                        <td><?php echo date('d-M', strtotime($data['day'])); ?></td>
-                                        <td><?php echo $data['salinity']; ?></td>
-                                        <td><?php echo $data['temperature']; ?></td>
-                                        <td><?php echo $data['dissolved_oxygen']; ?></td>
-                                        <td><?php echo $data['pH']; ?></td>
-                                        <td><?php echo $data['alkalinity']; ?></td>
-                                        <td><?php echo $data['tan']; ?></td>
-                                        <td><?php echo $data['nitrite']; ?></td>
-                                        <td>
-                                            <!-- Nút chỉnh sửa -->
-                                            <button class="btn btn-warning btn-sm"
-                                                data-toggle="modal"
-                                                data-target="#editWaterQualityModal"
-                                                onclick="editWaterQualityData(<?php echo $data['id']; ?>)">
-                                                <i class="fa fa-pencil"></i>
-                                            </button>
-                                            <!-- Nút xóa -->
-                                            <button class="btn btn-danger btn-sm"
-                                                onclick="deleteWaterQualityData(<?php echo $data['id']; ?>)">
-                                                <i class="fa fa-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                <tr>
-                                    <td colspan="2"><strong>Mean</strong></td>
-                                    <td><?php echo number_format($meanSalinity, 2); ?></td>
-                                    <td><?php echo number_format($meanTemp, 2); ?></td>
-                                    <td><?php echo number_format($meanDO, 2); ?></td>
-                                    <td><?php echo number_format($meanPH, 2); ?></td>
-                                    <td><?php echo number_format($meanAlkalinity, 2); ?></td>
-                                    <td><?php echo number_format($meanTAN, 2); ?></td>
-                                    <td><?php echo number_format($meanNitrite, 2); ?></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="2"><strong>SD</strong></td>
-                                    <td><?php echo number_format($sdSalinity, 2); ?></td>
-                                    <td><?php echo number_format($sdTemp, 2); ?></td>
-                                    <td><?php echo number_format($sdDO, 2); ?></td>
-                                    <td><?php echo number_format($sdPH, 2); ?></td>
-                                    <td><?php echo number_format($sdAlkalinity, 2); ?></td>
-                                    <td><?php echo number_format($sdTAN, 2); ?></td>
-                                    <td><?php echo number_format($sdNitrite, 2); ?></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="2"><strong>Mean ± SD</strong></td>
-                                    <td><?php echo number_format($meanSalinity, 2) . " ± " . number_format($sdSalinity, 2); ?>
-                                    </td>
-                                    <td><?php echo number_format($meanTemp, 2) . " ± " . number_format($sdTemp, 2); ?></td>
-                                    <td><?php echo number_format($meanDO, 2) . " ± " . number_format($sdDO, 2); ?></td>
-                                    <td><?php echo number_format($meanPH, 2) . " ± " . number_format($sdPH, 2); ?></td>
-                                    <td><?php echo number_format($meanAlkalinity, 2) . " ± " . number_format($sdAlkalinity, 2); ?>
-                                    </td>
-                                    <td><?php echo number_format($meanTAN, 2) . " ± " . number_format($sdTAN, 2); ?></td>
-                                    <td><?php echo number_format($meanNitrite, 2) . " ± " . number_format($sdNitrite, 2); ?>
+                                    <td><?=  $dayCounter ++; ?></td>
+                                    <td><?= date('d-M', strtotime($data['day'])); ?></td>
+                                    <td><?= $data['salinity']; ?></td>
+                                    <td><?= $data['temperature']; ?></td>
+                                    <td><?= $data['dissolved_oxygen']; ?></td>
+                                    <td><?= $data['pH']; ?></td>
+                                    <td><?= $data['alkalinity']; ?></td>
+                                    <td><?= $data['tan']; ?></td>
+                                    <td><?= $data['nitrite']; ?></td>
+                                    <td>
+                                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editWaterQualityModal" onclick="editWaterQualityData(<?= $data['id']; ?>)">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteWaterQualityData(<?= $data['id']; ?>)">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
                                     </td>
                                 </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php else: ?>
-                    <p>No data available for this case study.</p>
-                <?php endif; ?>
+                            <?php endforeach; ?>
+                            <tr>
+                                <td colspan="2"><strong>Mean ± SD</strong></td>
+                                <td><?= number_format($phase1Stats['meanSalinity'], 2) . " ± " . number_format($phase1Stats['sdSalinity'], 2); ?></td>
+                                <td><?= number_format($phase1Stats['meanTemp'], 2) . " ± " . number_format($phase1Stats['sdTemp'], 2); ?></td>
+                                <td><?= number_format($phase1Stats['meanDO'], 2) . " ± " . number_format($phase1Stats['sdDO'], 2); ?></td>
+                                <td><?= number_format($phase1Stats['meanPH'], 2) . " ± " . number_format($phase1Stats['sdPH'], 2); ?></td>
+                                <td><?= number_format($phase1Stats['meanAlkalinity'], 2) . " ± " . number_format($phase1Stats['sdAlkalinity'], 2); ?></td>
+                                <td><?= number_format($phase1Stats['meanTAN'], 2) . " ± " . number_format($phase1Stats['sdTAN'], 2); ?></td>
+                                <td><?= number_format($phase1Stats['meanNitrite'], 2) . " ± " . number_format($phase1Stats['sdNitrite'], 2); ?></td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Phase 2: Challenge & Post-challenge period -->
+                <h3 class="text-primary">Water Quality during Challenge & Post-challenge Period</h3>
+
+                <!-- RAS System Section -->
+                <h4 class="text-secondary">RAS System (Positive Control, T1, T2, T3 & T4)</h4>
+                <div class="table-responsive m-t-20">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Date</th>
+                                <th>Salinity (ppt)</th>
+                                <th>Temp (°C)</th>
+                                <th>DO (ppm)</th>
+                                <th>pH</th>
+                                <th>Alkalinity (ppm)</th>
+                                <th>TAN (ppm)</th>
+                                <th>Nitrite (ppm)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php
+                            $dayCounter = 1; // Reset day counter for Phase 2, RAS System
+                            foreach ($phase2DataRAS as $data): ?>
+                                <tr>
+                                    <td><?=  $dayCounter ++; ?></td>
+                                    <td><?= date('d-M', strtotime($data['day'])); ?></td>
+                                    <td><?= $data['salinity']; ?></td>
+                                    <td><?= $data['temperature']; ?></td>
+                                    <td><?= $data['dissolved_oxygen']; ?></td>
+                                    <td><?= $data['pH']; ?></td>
+                                    <td><?= $data['alkalinity']; ?></td>
+                                    <td><?= $data['tan']; ?></td>
+                                    <td><?= $data['nitrite']; ?></td>
+                                    <td>
+                                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editWaterQualityModal" onclick="editWaterQualityData(<?= $data['id']; ?>)">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteWaterQualityData(<?= $data['id']; ?>)">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            <tr>
+                                <td colspan="2"><strong>Mean ± SD</strong></td>
+                                <td><?= number_format($phase2RASStats['meanSalinity'], 2) . " ± " . number_format($phase2RASStats['sdSalinity'], 2); ?></td>
+                                <td><?= number_format($phase2RASStats['meanTemp'], 2) . " ± " . number_format($phase2RASStats['sdTemp'], 2); ?></td>
+                                <td><?= number_format($phase2RASStats['meanDO'], 2) . " ± " . number_format($phase2RASStats['sdDO'], 2); ?></td>
+                                <td><?= number_format($phase2RASStats['meanPH'], 2) . " ± " . number_format($phase2RASStats['sdPH'], 2); ?></td>
+                                <td><?= number_format($phase2RASStats['meanAlkalinity'], 2) . " ± " . number_format($phase2RASStats['sdAlkalinity'], 2); ?></td>
+                                <td><?= number_format($phase2RASStats['meanTAN'], 2) . " ± " . number_format($phase2RASStats['sdTAN'], 2); ?></td>
+                                <td><?= number_format($phase2RASStats['meanNitrite'], 2) . " ± " . number_format($phase2RASStats['sdNitrite'], 2); ?></td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Static System Section -->
+                <h4 class="text-secondary">Static System (Negative Control)</h4>
+                <div class="table-responsive m-t-20">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Date</th>
+                                <th>Salinity (ppt)</th>
+                                <th>Temp (°C)</th>
+                                <th>DO (ppm)</th>
+                                <th>pH</th>
+                                <th>Alkalinity (ppm)</th>
+                                <th>TAN (ppm)</th>
+                                <th>Nitrite (ppm)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php
+                            $dayCounter = 1; // Reset day counter for Phase 2, Static System
+                            foreach ($phase2DataStatic as $data): ?>
+                                <tr>
+                                    <td><?= $dayCounter ++; ?></td>
+                                    <td><?= date('d-M', strtotime($data['day'])); ?></td>
+                                    <td><?= $data['salinity']; ?></td>
+                                    <td><?= $data['temperature']; ?></td>
+                                    <td><?= $data['dissolved_oxygen']; ?></td>
+                                    <td><?= $data['pH']; ?></td>
+                                    <td><?= $data['alkalinity']; ?></td>
+                                    <td><?= $data['tan']; ?></td>
+                                    <td><?= $data['nitrite']; ?></td>
+                                    <td>
+                                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editWaterQualityModal" onclick="editWaterQualityData(<?= $data['id']; ?>)">
+                                            <i class="fa fa-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteWaterQualityData(<?= $data['id']; ?>)">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            <tr>
+                                <td colspan="2"><strong>Mean ± SD</strong></td>
+                                <td><?= number_format($phase2StaticStats['meanSalinity'], 2) . " ± " . number_format($phase2StaticStats['sdSalinity'], 2); ?></td>
+                                <td><?= number_format($phase2StaticStats['meanTemp'], 2) . " ± " . number_format($phase2StaticStats['sdTemp'], 2); ?></td>
+                                <td><?= number_format($phase2StaticStats['meanDO'], 2) . " ± " . number_format($phase2StaticStats['sdDO'], 2); ?></td>
+                                <td><?= number_format($phase2StaticStats['meanPH'], 2) . " ± " . number_format($phase2StaticStats['sdPH'], 2); ?></td>
+                                <td><?= number_format($phase2StaticStats['meanAlkalinity'], 2) . " ± " . number_format($phase2StaticStats['sdAlkalinity'], 2); ?></td>
+                                <td><?= number_format($phase2StaticStats['meanTAN'], 2) . " ± " . number_format($phase2StaticStats['sdTAN'], 2); ?></td>
+                                <td><?= number_format($phase2StaticStats['meanNitrite'], 2) . " ± " . number_format($phase2StaticStats['sdNitrite'], 2); ?></td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
-<!-- Edit Water Quality Modal -->
+
+
+<!-- Modal chỉnh sửa -->
 <div id="editWaterQualityModal" class="modal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <form id="editWaterQualityForm">
             <div class="modal-content">
                 <div class="modal-header">
                     <h4 class="modal-title">Edit Water Quality Data</h4>
-                    </button>
                 </div>
                 <div class="modal-body">
-                    <!-- Hidden field for Water Quality ID -->
+                    <!-- Các trường dữ liệu cần chỉnh sửa -->
                     <input type="hidden" name="id" id="editWaterQualityId">
-
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label>Day</label>
-                                <input type="date" name="day" class="form-control" id="editDay" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label>Salinity (ppt)</label>
-                                <input type="number" name="salinity" class="form-control" id="editSalinity" step="0.1"
-                                    required>
-                            </div>
-                            <div class="form-group">
-                                <label>Temperature (°C)</label>
-                                <input type="number" name="temperature" class="form-control" id="editTemperature"
-                                    step="0.1" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Dissolved Oxygen (ppm)</label>
-                                <input type="number" name="dissolved_oxygen" class="form-control"
-                                    id="editDissolvedOxygen" step="0.01" required>
-                            </div>
+                            <label>Day</label>
+                            <input type="date" name="day" class="form-control" id="editDay" readonly>
+                            <label>Salinity (ppt)</label>
+                            <input type="number" name="salinity" class="form-control" id="editSalinity" step="0.1" required>
+                            <label>Temperature (°C)</label>
+                            <input type="number" name="temperature" class="form-control" id="editTemperature" step="0.1" required>
+                            <label>Dissolved Oxygen (ppm)</label>
+                            <input type="number" name="dissolved_oxygen" class="form-control" id="editDissolvedOxygen" step="0.01" required>
                         </div>
-
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label>pH</label>
-                                <input type="number" name="pH" class="form-control" id="editPH" step="0.1" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Alkalinity (ppm)</label>
-                                <input type="number" name="alkalinity" class="form-control" id="editAlkalinity"
-                                    step="0.1" required>
-                            </div>
-                            <div class="form-group">
-                                <label>TAN (ppm)</label>
-                                <input type="number" name="tan" class="form-control" id="editTAN" step="0.1" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Nitrite (ppm)</label>
-                                <input type="number" name="nitrite" class="form-control" id="editNitrite" step="0.1"
-                                    required>
-                            </div>
-                            <div class="form-group">
-                                <label>System Type</label>
-                                <select name="system_type" class="form-control" id="editSystemType" required>
-                                    <option value="RAS System (NC, PC & Treatments)">RAS System (NC, PC & Treatments)
-                                    </option>
-                                    <option value="Static System (Negative Control)">Static System (Negative Control)
-                                    </option>
-                                    <option value="RAS System (Positive Control, T1, T2, T3 & T4)">RAS System (Positive
-                                        Control, T1, T2, T3 & T4)</option>
-                                </select>
-                            </div>
+                            <label>pH</label>
+                            <input type="number" name="pH" class="form-control" id="editPH" step="0.1" required>
+                            <label>Alkalinity (ppm)</label>
+                            <input type="number" name="alkalinity" class="form-control" id="editAlkalinity" step="0.1" required>
+                            <label>TAN (ppm)</label>
+                            <input type="number" name="tan" class="form-control" id="editTAN" step="0.1" required>
+                            <label>Nitrite (ppm)</label>
+                            <input type="number" name="nitrite" class="form-control" id="editNitrite" step="0.1" required>
+                            <label>System Type</label>
+                            <input name="system_type" class="form-control" id="editSystemType" readonly>
+                            </input>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" onclick="updateWaterQualityData()">Save
-                        Changes</button>
-                        <button type="button" class="btn btn-default btn-close-modal" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" onclick="updateWaterQualityData()">Save Changes</button>
+                    <button type="button" class="btn btn-default btn-close-modal" data-dismiss="modal">Close</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
-
+<!-- Thông báo Toast -->
+<div class="custom-toast-container">
+    <div id="toastMessage" class="custom-toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="custom-toast-header">
+            <strong id="toastTitle">Notification</strong>
+            <button type="button" class="custom-toast-close" onclick="closeToast()" aria-label="Close">&times;</button>
+        </div>
+        <div class="custom-toast-body" id="toastBody">
+            This is a message.
+        </div>
+    </div>
+</div>
 <script>
+    function showToast(message, title = 'Notification', isSuccess = true) {
+    const toastTitle = document.getElementById('toastTitle');
+    const toastBody = document.getElementById('toastBody');
+    const toastElement = document.getElementById('toastMessage');
+
+    // Đặt tiêu đề và nội dung thông báo
+    toastTitle.textContent = title;
+    toastBody.textContent = message;
+
+    // Thêm lớp cho kiểu thông báo
+    toastElement.classList.remove('bg-success', 'bg-danger');
+    toastElement.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
+
+    // Hiển thị toast
+    toastElement.classList.add('show');
+
+    // Tự động ẩn toast sau 3 giây
+    setTimeout(() => {
+        toastElement.classList.remove('show');
+    }, 3000);
+}
+
+// Hàm đóng toast thủ công
+function closeToast() {
+    document.getElementById('toastMessage').classList.remove('show');
+}
+    // Hàm mở modal chỉnh sửa và lấy dữ liệu của entry cần chỉnh sửa
     function editWaterQualityData(id) {
         $.ajax({
             url: 'php_action/get_water_quality_data.php',
@@ -268,7 +390,7 @@ if (count($waterQualityData) > 0) {
                     $('#editNitrite').val(response.data.nitrite);
                     $('#editSystemType').val(response.data.system_type);
                 } else {
-                    alert('Error fetching water quality data.');
+                    showToast(response.messages, 'Error', false);
                 }
             },
             error: function (xhr, status, error) {
@@ -277,6 +399,7 @@ if (count($waterQualityData) > 0) {
         });
     }
 
+    // Hàm cập nhật dữ liệu sau khi chỉnh sửa
     function updateWaterQualityData() {
         const formData = $('#editWaterQualityForm').serialize();
         $.ajax({
@@ -286,11 +409,12 @@ if (count($waterQualityData) > 0) {
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    alert('Water quality data updated successfully!');
+                    showToast('Water quality data updated successfully!', 'Success', true);
+
                     $('.btn-close-modal').click();
                     location.reload();
                 } else {
-                    alert('Failed to update water quality data.');
+                    showToast(response.messages, 'Error', false);
                 }
             },
             error: function (xhr, status, error) {
@@ -299,7 +423,7 @@ if (count($waterQualityData) > 0) {
         });
     }
 
-
+    // Hàm xóa dữ liệu
     function deleteWaterQualityData(id) {
         if (confirm('Are you sure you want to delete this entry?')) {
             $.ajax({
@@ -309,10 +433,10 @@ if (count($waterQualityData) > 0) {
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        alert('Water quality data deleted successfully!');
+                        showToast('Water quality data deleted successfully!', 'Success', true);
                         location.reload();
                     } else {
-                        alert('Failed to delete water quality data.');
+                        showToast(response.messages, 'Error', false);
                     }
                 },
                 error: function (xhr, status, error) {
@@ -321,7 +445,66 @@ if (count($waterQualityData) > 0) {
             });
         }
     }
-
 </script>
 
-<?php include('./constant/layout/footer.php');
+<?php include('./constant/layout/footer.php'); ?>
+<style>
+/* Container cho toast */
+.custom-toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1100;
+}
+/* Toast container */
+.custom-toast {
+    display: none; /* Ẩn mặc định */
+    padding: 16px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    min-width: 250px;
+    max-width: 300px;
+    animation: fadeInOut 5s forwards;
+    color: #fff;
+}
+
+.custom-toast.show {
+    display: block;
+}
+
+/* Header của toast */
+.custom-toast-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+/* Nút đóng toast */
+.custom-toast-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* Nội dung của toast */
+.custom-toast-body {
+    margin-top: 5px;
+}
+
+/* Hiệu ứng fadeIn và fadeOut */
+@keyframes fadeInOut {
+    0%, 90% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Màu sắc cho các loại thông báo */
+.custom-toast.bg-success {
+    background-color: #28a745;
+}
+.custom-toast.bg-danger {
+    background-color: #dc3545;
+}
+</style>

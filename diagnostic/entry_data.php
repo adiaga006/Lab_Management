@@ -140,10 +140,10 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                             <table class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
-                                        <th>Treatment Name</th>
+                                        <th style="width: 140px;">Treatment Name</th>
                                         <th style="width: 200px;">Product Application</th>
                                         <th>Day</th>
-                                        <th>Reps</th>
+                                        <th style="width: 50px;">Reps</th>
                                         <th>Survival Sample</th>
                                         <th>Feeding Weight</th>
                                         <th>Action</th>
@@ -259,7 +259,18 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
         </form>
     </div>
 </div>
-
+<!-- Thông báo Toast -->
+<div class="custom-toast-container">
+    <div id="toastMessage" class="custom-toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="custom-toast-header">
+            <strong id="toastTitle">Notification</strong>
+            <button type="button" class="custom-toast-close" onclick="closeToast()" aria-label="Close">&times;</button>
+        </div>
+        <div class="custom-toast-body" id="toastBody">
+            This is a message.
+        </div>
+    </div>
+</div>
 
 <?php include('./constant/layout/footer.php'); ?>
 
@@ -268,6 +279,32 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
 <script>
+      function showToast(message, title = 'Notification', isSuccess = true) {
+    const toastTitle = document.getElementById('toastTitle');
+    const toastBody = document.getElementById('toastBody');
+    const toastElement = document.getElementById('toastMessage');
+
+    // Đặt tiêu đề và nội dung thông báo
+    toastTitle.textContent = title;
+    toastBody.textContent = message;
+
+    // Thêm lớp cho kiểu thông báo
+    toastElement.classList.remove('bg-success', 'bg-danger');
+    toastElement.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
+
+    // Hiển thị toast
+    toastElement.classList.add('show');
+
+    // Tự động ẩn toast sau 3 giây
+    setTimeout(() => {
+        toastElement.classList.remove('show');
+    }, 3000);
+}
+
+// Hàm đóng toast thủ công
+function closeToast() {
+    document.getElementById('toastMessage').classList.remove('show');
+}
     // Open the Edit Modal and populate data
     function editEntryData(entryId) {
         $.ajax({
@@ -284,7 +321,7 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                     $('#editFeedingWeight').val(response.data.feeding_weight);
                     $('#editDataModal').modal('show');
                 } else {
-                    alert('Error fetching entry data.');
+                    showToast(response.messages, 'Error', false);
                 }
             },
             error: function (xhr, status, error) {
@@ -305,11 +342,11 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    alert('Entry updated successfully!');
+                    showToast('Entry updated successfully!', 'Success', true);
                     $('#editDataModal').modal('hide');
                     location.reload();
                 } else {
-                    alert('Failed to update entry.');
+                    showToast(response.messages, 'Error', false);
                 }
             },
             error: function (xhr, status, error) {
@@ -328,10 +365,10 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        alert('Entry deleted successfully!');
+                        showToast('Entry deleted successfully!', 'Success', true);
                         location.reload();
                     } else {
-                        alert('Failed to delete entry.');
+                        showToast(response.messages, 'Error', false);
                     }
                 },
                 error: function (xhr, status, error) {
@@ -341,3 +378,63 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
         }
     }
 </script>
+<style>
+/* Container cho toast */
+.custom-toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1100;
+}
+/* Toast container */
+.custom-toast {
+    display: none; /* Ẩn mặc định */
+    padding: 16px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    min-width: 250px;
+    max-width: 300px;
+    animation: fadeInOut 5s forwards;
+    color: #fff;
+}
+
+.custom-toast.show {
+    display: block;
+}
+
+/* Header của toast */
+.custom-toast-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+/* Nút đóng toast */
+.custom-toast-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* Nội dung của toast */
+.custom-toast-body {
+    margin-top: 5px;
+}
+
+/* Hiệu ứng fadeIn và fadeOut */
+@keyframes fadeInOut {
+    0%, 90% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Màu sắc cho các loại thông báo */
+.custom-toast.bg-success {
+    background-color: #28a745;
+}
+.custom-toast.bg-danger {
+    background-color: #dc3545;
+}
+</style>

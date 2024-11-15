@@ -34,7 +34,8 @@ $categoryId = $caseStudy['categories_id'];
 $groupSql = "SELECT g.group_id, g.group_name 
              FROM category_groups cg
              JOIN groups g ON cg.group_id = g.group_id
-             WHERE cg.category_id = '$categoryId'";
+             WHERE cg.category_id = '$categoryId'
+             ORDER BY g.group_id ASC"; // Added ORDER BY clause
 $groupResult = $connect->query($groupSql);
 ?>
 <div class="page-wrapper">
@@ -80,8 +81,7 @@ $groupResult = $connect->query($groupSql);
                                         <td>
                                             <!-- Add Data button triggers modal for each group -->
                                             <?php if ($group['group_id'] == 1): ?>
-                                                <button class="btn btn-primary" 
-                                                    data-toggle="modal"
+                                                <button class="btn btn-primary" data-toggle="modal"
                                                     data-target="#addDataModalGroup1"
                                                     onclick="openAddDataModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
                                                     Add Data
@@ -241,8 +241,47 @@ $groupResult = $connect->query($groupSql);
         </form>
     </div>
 </div>
-
+<!-- Thông báo Toast -->
+<div class="custom-toast-container">
+    <div id="toastMessage" class="custom-toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="custom-toast-header">
+            <strong id="toastTitle">Notification</strong>
+            <button type="button" class="custom-toast-close" onclick="closeToast()" aria-label="Close">&times;</button>
+        </div>
+        <div class="custom-toast-body" id="toastBody">
+            This is a message.
+        </div>
+    </div>
+</div>
 <script>
+   function showToast(message, title = 'Notification', isSuccess = true) {
+    const toastTitle = document.getElementById('toastTitle');
+    const toastBody = document.getElementById('toastBody');
+    const toastElement = document.getElementById('toastMessage');
+
+    // Đặt tiêu đề và nội dung thông báo
+    toastTitle.textContent = title;
+    toastBody.textContent = message;
+
+    // Thêm lớp cho kiểu thông báo
+    toastElement.classList.remove('bg-success', 'bg-danger');
+    toastElement.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
+
+    // Hiển thị toast
+    toastElement.classList.add('show');
+
+    // Tự động ẩn toast sau 3 giây
+    setTimeout(() => {
+        toastElement.classList.remove('show');
+    }, 3000);
+}
+
+// Hàm đóng toast thủ công
+function closeToast() {
+    document.getElementById('toastMessage').classList.remove('show');
+}
+
+
     // Chuyển đổi start_date từ PHP sang biến JavaScript
     const startDate = new Date(<?php echo $startDateJs; ?>);
     const twentyThirdDayAfterStart = new Date(startDate);
@@ -264,7 +303,7 @@ $groupResult = $connect->query($groupSql);
         if (selectedDate >= startDate && selectedDate <= twentyThirdDayAfterStart) {
             // Ngày trong khoảng 23 ngày sau startDate
             systemTypeSelect.html('<option value="RAS System (NC, PC & Treatments)">RAS System (NC, PC & Treatments)</option>');
-            systemTypeSelect.val("RAS System (NC, PC & Treatments)").prop('disabled', true); // Làm readonly
+            systemTypeSelect.val("RAS System (NC, PC & Treatments)").prop('readonly', true); // Làm readonly
         } else {
             // Ngày sau 23 ngày, cho phép người dùng chọn từ 2 lựa chọn và mở khóa readonly
             systemTypeSelect.html(`
@@ -324,13 +363,13 @@ $groupResult = $connect->query($groupSql);
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    alert('Entry data added successfully!');
+                    showToast('Entry data added successfully!', 'Success', true);
 
                     // Reset chỉ `Survival Sample` và `Feeding Weight`
                     $('input[name="survival_sample"]').val('');
                     $('input[name="feeding_weight"]').val('');
                 } else {
-                    alert(response.messages);
+                    showToast(response.messages, 'Error', false);
                 }
             },
             error: function (xhr, status, error) {
@@ -352,11 +391,11 @@ $groupResult = $connect->query($groupSql);
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    alert('Water quality data added successfully!');
+                    showToast('Entry data added successfully!', 'Success', true);
                     $('#addWaterQualityForm')[0].reset();
                     $('.btn-close-modal').click();
                 } else {
-                    alert(response.messages);
+                    showToast(response.messages, 'Error', false);
                 }
             },
             error: function (xhr, status, error) {
@@ -408,3 +447,63 @@ $groupResult = $connect->query($groupSql);
         sessionStorage.removeItem('lab_day');
     }, 10800000);
 </script>
+<style>
+/* Container cho toast */
+.custom-toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1100;
+}
+/* Toast container */
+.custom-toast {
+    display: none; /* Ẩn mặc định */
+    padding: 16px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    min-width: 250px;
+    max-width: 300px;
+    animation: fadeInOut 5s forwards;
+    color: #fff;
+}
+
+.custom-toast.show {
+    display: block;
+}
+
+/* Header của toast */
+.custom-toast-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+/* Nút đóng toast */
+.custom-toast-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* Nội dung của toast */
+.custom-toast-body {
+    margin-top: 5px;
+}
+
+/* Hiệu ứng fadeIn và fadeOut */
+@keyframes fadeInOut {
+    0%, 90% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Màu sắc cho các loại thông báo */
+.custom-toast.bg-success {
+    background-color: #28a745;
+}
+.custom-toast.bg-danger {
+    background-color: #dc3545;
+}
+</style>
