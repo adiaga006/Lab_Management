@@ -23,6 +23,18 @@ $startDateJs = json_encode($startDate);
 if (!$caseStudyId) {
     die("Error: Missing case_study_id in URL");
 }
+$recentEntriesSql = "
+    SELECT treatment_name, lab_day, survival_sample, feeding_weight, entry_data_id 
+    FROM entry_data 
+    WHERE case_study_id = ? 
+    ORDER BY created_at DESC 
+    LIMIT 5";
+$stmt = $connect->prepare($recentEntriesSql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$recentEntriesResult = $stmt->get_result();
+$recentEntries = $recentEntriesResult->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
 
 // Lấy thông tin case study và category ID
 $sql = "SELECT case_name, categories_id FROM case_study WHERE case_study_id = '$caseStudyId'";
@@ -40,10 +52,17 @@ $groupResult = $connect->query($groupSql);
 ?>
 <div class="page-wrapper">
     <div class="row page-titles">
-        <div class="col-md-5 align-self-center">
-            <h3 class="text-primary">Manage Groups for Case Study: <?php echo htmlspecialchars($caseStudyId); ?></h3>
+        <div class="col-md-8 align-self-center">
+            <h3 class="text-primary">Case Study: <?php echo htmlspecialchars($caseStudyId); ?></h3>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="results.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
+                class="btn btn-success btn-lg">
+                <i class="fa fa-bar-chart"></i> Show Results
+            </a>
         </div>
     </div>
+
 
     <div class="container-fluid">
         <div class="card">
@@ -55,7 +74,7 @@ $groupResult = $connect->query($groupSql);
                         <table class="table table-bordered table-striped">
                             <thead>
                                 <tr>
-                                    <th>Group Name</th>
+                                    <th>Raw Data</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -114,15 +133,14 @@ $groupResult = $connect->query($groupSql);
 
 <!-- Add Data Modal for Group 1 -->
 <div id="addDataModalGroup1" class="modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <form id="addDataForm">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title">Add Entry Data for Group: <span id="modalGroupName"></span></h4>
+                    <h4 style="color: black" class="modal-title">Add Data</h4>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="case_study_id" id="modalCaseStudyId">
-
                     <div class="form-group">
                         <label>Treatment Name</label>
                         <select name="treatment_name" class="form-control" required
@@ -154,6 +172,25 @@ $groupResult = $connect->query($groupSql);
                         <input type="number" step="0.01" name="feeding_weight" class="form-control" required>
                     </div>
                 </div>
+
+                <div class="recent-entries">
+                    <h5 style="color: black">Recently Added Data</h5>
+                    <div id="recentEntriesContainer" style="font-size: 12px; line-height: 1.6;">
+                        <?php if (!empty($recentEntries)): ?>
+                            <?php foreach ($recentEntries as $entry): ?>
+                                <div>
+                                    <span><strong><?php echo htmlspecialchars($entry['treatment_name']); ?></strong></span> -
+                                    <span><?php echo date('d-m-Y', strtotime($entry['lab_day'])); ?></span> -
+                                    <span>Survival Sample: <?php echo htmlspecialchars($entry['survival_sample']); ?></span> -
+                                    <span>Feeding Weight: <?php echo htmlspecialchars($entry['feeding_weight']); ?>g</span>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <p>No recent entries found.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-success" onclick="submitEntryData()">Add</button>
                     <button type="button" class="btn btn-default btn-close-modal" data-dismiss="modal">Close</button>
@@ -165,11 +202,11 @@ $groupResult = $connect->query($groupSql);
 
 <!-- Add Data Modal for Group 3 (Water Quality) -->
 <div id="addDataModalGroup3" class="modal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-dialog-centered">
         <form id="addWaterQualityForm">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title">Add Water Quality Data for Group: <span id="modalGroupName3"></span></h4>
+                    <h4 style="color: black" class="modal-title">Add Water Quality Data</h4>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="case_study_id" id="modalCaseStudyId3">
@@ -254,32 +291,37 @@ $groupResult = $connect->query($groupSql);
     </div>
 </div>
 <script>
-   function showToast(message, title = 'Notification', isSuccess = true) {
-    const toastTitle = document.getElementById('toastTitle');
-    const toastBody = document.getElementById('toastBody');
-    const toastElement = document.getElementById('toastMessage');
+    document.addEventListener('wheel', function (event) {
+        if (document.activeElement.type === 'number') {
+            event.preventDefault();
+        }
+    }, { passive: false });
+    function showToast(message, title = 'Notification', isSuccess = true) {
+        const toastTitle = document.getElementById('toastTitle');
+        const toastBody = document.getElementById('toastBody');
+        const toastElement = document.getElementById('toastMessage');
 
-    // Đặt tiêu đề và nội dung thông báo
-    toastTitle.textContent = title;
-    toastBody.textContent = message;
+        // Đặt tiêu đề và nội dung thông báo
+        toastTitle.textContent = title;
+        toastBody.textContent = message;
 
-    // Thêm lớp cho kiểu thông báo
-    toastElement.classList.remove('bg-success', 'bg-danger');
-    toastElement.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
+        // Thêm lớp cho kiểu thông báo
+        toastElement.classList.remove('bg-success', 'bg-danger');
+        toastElement.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
 
-    // Hiển thị toast
-    toastElement.classList.add('show');
+        // Hiển thị toast
+        toastElement.classList.add('show');
 
-    // Tự động ẩn toast sau 3 giây
-    setTimeout(() => {
-        toastElement.classList.remove('show');
-    }, 3000);
-}
+        // Tự động ẩn toast sau 3 giây
+        setTimeout(() => {
+            toastElement.classList.remove('show');
+        }, 3000);
+    }
 
-// Hàm đóng toast thủ công
-function closeToast() {
-    document.getElementById('toastMessage').classList.remove('show');
-}
+    // Hàm đóng toast thủ công
+    function closeToast() {
+        document.getElementById('toastMessage').classList.remove('show');
+    }
 
 
     // Chuyển đổi start_date từ PHP sang biến JavaScript
@@ -335,9 +377,7 @@ function closeToast() {
     }
     // Mở form thêm Water Quality và điền case_study_id vào form
     function openWaterQualityModal(caseStudyId, groupName) {
-        $('#modalCaseStudyId3').val(caseStudyId);
-        $('#modalGroupName3').text(groupName);
-        // Đăng ký sự kiện "keydown" khi form đang hiển thị
+        $('#modalCaseStudyId3').val(caseStudyId);        // Đăng ký sự kiện "keydown" khi form đang hiển thị
         $('#addWaterQualityForm').on('keydown', function (event) {
             if (event.key === 'Enter') {
                 event.preventDefault(); // Ngăn không cho form submit mặc định
@@ -363,17 +403,50 @@ function closeToast() {
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    showToast('Entry data added successfully!', 'Success', true);
+                    showToast('Data added successfully!', 'Success', true);
 
-                    // Reset chỉ `Survival Sample` và `Feeding Weight`
+                    // Reset Survival Sample and Feeding Weight
                     $('input[name="survival_sample"]').val('');
                     $('input[name="feeding_weight"]').val('');
+
+                    // Dynamically update the recent entries
+                    updateRecentEntries();
                 } else {
                     showToast(response.messages, 'Error', false);
                 }
             },
             error: function (xhr, status, error) {
                 console.error('AJAX Error:', error);
+            }
+        });
+    }
+
+    function updateRecentEntries() {
+        $.ajax({
+            url: 'php_action/get_recent_entries.php',
+            type: 'POST',
+            data: { case_study_id: <?php echo json_encode($caseStudyId); ?> },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success && response.data.length > 0) {
+                    const recentEntriesContainer = $('#recentEntriesContainer');
+                    recentEntriesContainer.empty(); // Clear current entries
+
+                    response.data.forEach(entry => {
+                        const entryHtml = `
+                        <div>
+                            <span><strong>${entry.treatment_name}</strong></span> - 
+                            <span>${entry.lab_day}</span> - 
+                            <span>Survival Sample: ${entry.survival_sample}</span> - 
+                            <span>Feeding Weight: ${entry.feeding_weight} g</span>
+                        </div>
+                    `;
+                        recentEntriesContainer.append(entryHtml);
+                    });
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Failed to update recent entries:', error);
             }
         });
     }
@@ -391,7 +464,7 @@ function closeToast() {
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    showToast('Entry data added successfully!', 'Success', true);
+                    showToast('Water Quality data added successfully!', 'Success', true);
                     $('#addWaterQualityForm')[0].reset();
                     $('.btn-close-modal').click();
                 } else {
@@ -448,62 +521,182 @@ function closeToast() {
     }, 10800000);
 </script>
 <style>
-/* Container cho toast */
-.custom-toast-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1100;
-}
-/* Toast container */
-.custom-toast {
-    display: none; /* Ẩn mặc định */
-    padding: 16px;
-    border-radius: 5px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    min-width: 250px;
-    max-width: 300px;
-    animation: fadeInOut 5s forwards;
-    color: #fff;
-}
+    /* Container cho toast */
+    .custom-toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1100;
+    }
 
-.custom-toast.show {
-    display: block;
-}
+    /* Toast container */
+    .custom-toast {
+        display: none;
+        /* Ẩn mặc định */
+        padding: 16px;
+        border-radius: 5px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        min-width: 250px;
+        max-width: 300px;
+        animation: fadeInOut 5s forwards;
+        color: #fff;
+    }
 
-/* Header của toast */
-.custom-toast-header {
-    display: flex;
-    justify-content: space-between;
-    font-weight: bold;
-    margin-bottom: 8px;
-}
+    .custom-toast.show {
+        display: block;
+    }
 
-/* Nút đóng toast */
-.custom-toast-close {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-}
+    /* Header của toast */
+    .custom-toast-header {
+        display: flex;
+        justify-content: space-between;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
 
-/* Nội dung của toast */
-.custom-toast-body {
-    margin-top: 5px;
-}
+    /* Nút đóng toast */
+    .custom-toast-close {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 18px;
+        cursor: pointer;
+    }
 
-/* Hiệu ứng fadeIn và fadeOut */
-@keyframes fadeInOut {
-    0%, 90% { opacity: 1; }
-    100% { opacity: 0; }
-}
+    /* Nội dung của toast */
+    .custom-toast-body {
+        margin-top: 5px;
+    }
 
-/* Màu sắc cho các loại thông báo */
-.custom-toast.bg-success {
-    background-color: #28a745;
-}
-.custom-toast.bg-danger {
-    background-color: #dc3545;
-}
+    /* Hiệu ứng fadeIn và fadeOut */
+    @keyframes fadeInOut {
+
+        0%,
+        90% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 0;
+        }
+    }
+
+    /* Màu sắc cho các loại thông báo */
+    .custom-toast.bg-success {
+        background-color: #28a745;
+    }
+
+    .custom-toast.bg-danger {
+        background-color: #dc3545;
+    }
+
+    .btn-success {
+        font-size: 16px;
+        font-weight: bold;
+        padding: 10px 20px;
+        border-radius: 5px;
+    }
+
+    .btn-success i {
+        margin-right: 5px;
+    }
+
+    .text-right {
+        text-align: right;
+    }
+
+    .recent-entries table {
+        font-size: 12px;
+    }
+
+    .recent-entries th,
+    .recent-entries td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .recent-entries .btn-sm {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+
+    .recent-entries {
+        font-size: 12px;
+        line-height: 1.6;
+        margin-top: 0px;
+    }
+
+    .recent-entries div {
+        margin-bottom: 0px;
+    }
+
+    /* Responsive modal adjustments */
+    /* Ensure proper alignment for the modal on all devices */
+    /* Ensure the modal is vertically and horizontally centered */
+    .modal-dialog-centered {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: auto;
+        /* Ensure proper alignment */
+    }
+
+    /* Prevent modal clipping on all screens */
+    .modal-content {
+        margin: auto;
+        max-height: 90vh;
+        /* Limit modal height to 90% of the viewport */
+        overflow-y: auto;
+        /* Add scroll if content exceeds height */
+    }
+
+    /* Adjust modal header spacing */
+    .modal-header {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    /* Ensure modal title is properly aligned and doesn't clip */
+    .modal-header h4 {
+        font-size: 1.25rem;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Responsive adjustments for smaller screens */
+    @media (max-width: 576px) {
+        .modal-dialog {
+            max-width: 90%;
+            /* Reduce width for smaller screens */
+            margin: 10px auto;
+            /* Add space around the modal */
+        }
+
+        .modal-header h4 {
+            font-size: 1rem;
+            /* Smaller title size */
+        }
+
+        .modal-body {
+            padding: 1rem;
+            /* Adjust padding for smaller screens */
+        }
+
+        .btn {
+            font-size: 0.9rem;
+            /* Adjust button font size */
+        }
+    }
+
+    /* Ensure consistent positioning on large screens */
+    @media (min-width: 577px) {
+        .modal-dialog {
+            max-width: 600px;
+            /* Adjust modal width for desktop */
+            margin: 1.75rem auto;
+            /* Center the modal vertically */
+        }
+    }
 </style>

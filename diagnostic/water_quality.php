@@ -36,12 +36,14 @@ $stmt->close();
 
 // Hàm tính trung bình
 // Function to calculate mean
-function calculateMean($data) {
+function calculateMean($data)
+{
     return count($data) > 0 ? array_sum($data) / count($data) : 0;
 }
 
 // Function to calculate standard deviation
-function calculateSD($data) {
+function calculateSD($data)
+{
     $mean = calculateMean($data);
     $sumOfSquares = array_reduce($data, function ($carry, $item) use ($mean) {
         $carry += pow($item - $mean, 2);
@@ -51,23 +53,24 @@ function calculateSD($data) {
 }
 
 // Separate data by system type and phase
-$phase1Data = array_filter($waterQualityData, function($data) use ($preChallengeEnd) {
+$phase1Data = array_filter($waterQualityData, function ($data) use ($preChallengeEnd) {
     $dataDate = new DateTime($data['day']);
     return $dataDate <= $preChallengeEnd && $data['system_type'] == 'RAS System (NC, PC & Treatments)';
 });
 
-$phase2DataRAS = array_filter($waterQualityData, function($data) use ($preChallengeEnd) {
+$phase2DataRAS = array_filter($waterQualityData, function ($data) use ($preChallengeEnd) {
     $dataDate = new DateTime($data['day']);
     return $dataDate > $preChallengeEnd && $data['system_type'] == 'RAS System (Positive Control, T1, T2, T3 & T4)';
 });
 
-$phase2DataStatic = array_filter($waterQualityData, function($data) use ($preChallengeEnd) {
+$phase2DataStatic = array_filter($waterQualityData, function ($data) use ($preChallengeEnd) {
     $dataDate = new DateTime($data['day']);
     return $dataDate > $preChallengeEnd && $data['system_type'] == 'Static System (Negative Control)';
 });
 
 // Calculate stats for each system type
-function calculateStats($data) {
+function calculateStats($data)
+{
     $salinityValues = array_column($data, 'salinity');
     $tempValues = array_column($data, 'temperature');
     $doValues = array_column($data, 'dissolved_oxygen');
@@ -126,11 +129,11 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                             </tr>
                         </thead>
                         <tbody>
-                        <?php
+                            <?php
                             $dayCounter = 1; // Reset day counter for Phase 1
                             foreach ($phase1Data as $data): ?>
                                 <tr>
-                                    <td><?=  $dayCounter ++; ?></td>
+                                    <td><?= $dayCounter++; ?></td>
                                     <td><?= date('d-M', strtotime($data['day'])); ?></td>
                                     <td><?= $data['salinity']; ?></td>
                                     <td><?= $data['temperature']; ?></td>
@@ -140,10 +143,13 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                                     <td><?= $data['tan']; ?></td>
                                     <td><?= $data['nitrite']; ?></td>
                                     <td>
-                                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editWaterQualityModal" onclick="editWaterQualityData(<?= $data['id']; ?>)">
+                                        <button class="btn btn-warning btn-sm" data-toggle="modal"
+                                            data-target="#editWaterQualityModal"
+                                            onclick="editWaterQualityData(<?= $data['id']; ?>)">
                                             <i class="fa fa-pencil"></i>
                                         </button>
-                                        <button class="btn btn-danger btn-sm" onclick="deleteWaterQualityData(<?= $data['id']; ?>)">
+                                        <button class="btn btn-danger btn-sm"
+                                            onclick="deleteWaterQualityData(<?= $data['id']; ?>)">
                                             <i class="fa fa-trash"></i>
                                         </button>
                                     </td>
@@ -151,13 +157,20 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                             <?php endforeach; ?>
                             <tr>
                                 <td colspan="2"><strong>Mean ± SD</strong></td>
-                                <td><?= number_format($phase1Stats['meanSalinity'], 2) . " ± " . number_format($phase1Stats['sdSalinity'], 2); ?></td>
-                                <td><?= number_format($phase1Stats['meanTemp'], 2) . " ± " . number_format($phase1Stats['sdTemp'], 2); ?></td>
-                                <td><?= number_format($phase1Stats['meanDO'], 2) . " ± " . number_format($phase1Stats['sdDO'], 2); ?></td>
-                                <td><?= number_format($phase1Stats['meanPH'], 2) . " ± " . number_format($phase1Stats['sdPH'], 2); ?></td>
-                                <td><?= number_format($phase1Stats['meanAlkalinity'], 2) . " ± " . number_format($phase1Stats['sdAlkalinity'], 2); ?></td>
-                                <td><?= number_format($phase1Stats['meanTAN'], 2) . " ± " . number_format($phase1Stats['sdTAN'], 2); ?></td>
-                                <td><?= number_format($phase1Stats['meanNitrite'], 2) . " ± " . number_format($phase1Stats['sdNitrite'], 2); ?></td>
+                                <td><?= number_format($phase1Stats['meanSalinity'], 2) . " ± " . number_format($phase1Stats['sdSalinity'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase1Stats['meanTemp'], 2) . " ± " . number_format($phase1Stats['sdTemp'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase1Stats['meanDO'], 2) . " ± " . number_format($phase1Stats['sdDO'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase1Stats['meanPH'], 2) . " ± " . number_format($phase1Stats['sdPH'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase1Stats['meanAlkalinity'], 2) . " ± " . number_format($phase1Stats['sdAlkalinity'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase1Stats['meanTAN'], 2) . " ± " . number_format($phase1Stats['sdTAN'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase1Stats['meanNitrite'], 2) . " ± " . number_format($phase1Stats['sdNitrite'], 2); ?>
+                                </td>
                                 <td></td>
                             </tr>
                         </tbody>
@@ -186,11 +199,11 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                             </tr>
                         </thead>
                         <tbody>
-                        <?php
+                            <?php
                             $dayCounter = 1; // Reset day counter for Phase 2, RAS System
                             foreach ($phase2DataRAS as $data): ?>
                                 <tr>
-                                    <td><?=  $dayCounter ++; ?></td>
+                                    <td><?= $dayCounter++; ?></td>
                                     <td><?= date('d-M', strtotime($data['day'])); ?></td>
                                     <td><?= $data['salinity']; ?></td>
                                     <td><?= $data['temperature']; ?></td>
@@ -200,10 +213,13 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                                     <td><?= $data['tan']; ?></td>
                                     <td><?= $data['nitrite']; ?></td>
                                     <td>
-                                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editWaterQualityModal" onclick="editWaterQualityData(<?= $data['id']; ?>)">
+                                        <button class="btn btn-warning btn-sm" data-toggle="modal"
+                                            data-target="#editWaterQualityModal"
+                                            onclick="editWaterQualityData(<?= $data['id']; ?>)">
                                             <i class="fa fa-pencil"></i>
                                         </button>
-                                        <button class="btn btn-danger btn-sm" onclick="deleteWaterQualityData(<?= $data['id']; ?>)">
+                                        <button class="btn btn-danger btn-sm"
+                                            onclick="deleteWaterQualityData(<?= $data['id']; ?>)">
                                             <i class="fa fa-trash"></i>
                                         </button>
                                     </td>
@@ -211,13 +227,20 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                             <?php endforeach; ?>
                             <tr>
                                 <td colspan="2"><strong>Mean ± SD</strong></td>
-                                <td><?= number_format($phase2RASStats['meanSalinity'], 2) . " ± " . number_format($phase2RASStats['sdSalinity'], 2); ?></td>
-                                <td><?= number_format($phase2RASStats['meanTemp'], 2) . " ± " . number_format($phase2RASStats['sdTemp'], 2); ?></td>
-                                <td><?= number_format($phase2RASStats['meanDO'], 2) . " ± " . number_format($phase2RASStats['sdDO'], 2); ?></td>
-                                <td><?= number_format($phase2RASStats['meanPH'], 2) . " ± " . number_format($phase2RASStats['sdPH'], 2); ?></td>
-                                <td><?= number_format($phase2RASStats['meanAlkalinity'], 2) . " ± " . number_format($phase2RASStats['sdAlkalinity'], 2); ?></td>
-                                <td><?= number_format($phase2RASStats['meanTAN'], 2) . " ± " . number_format($phase2RASStats['sdTAN'], 2); ?></td>
-                                <td><?= number_format($phase2RASStats['meanNitrite'], 2) . " ± " . number_format($phase2RASStats['sdNitrite'], 2); ?></td>
+                                <td><?= number_format($phase2RASStats['meanSalinity'], 2) . " ± " . number_format($phase2RASStats['sdSalinity'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2RASStats['meanTemp'], 2) . " ± " . number_format($phase2RASStats['sdTemp'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2RASStats['meanDO'], 2) . " ± " . number_format($phase2RASStats['sdDO'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2RASStats['meanPH'], 2) . " ± " . number_format($phase2RASStats['sdPH'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2RASStats['meanAlkalinity'], 2) . " ± " . number_format($phase2RASStats['sdAlkalinity'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2RASStats['meanTAN'], 2) . " ± " . number_format($phase2RASStats['sdTAN'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2RASStats['meanNitrite'], 2) . " ± " . number_format($phase2RASStats['sdNitrite'], 2); ?>
+                                </td>
                                 <td></td>
                             </tr>
                         </tbody>
@@ -243,11 +266,11 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                             </tr>
                         </thead>
                         <tbody>
-                        <?php
+                            <?php
                             $dayCounter = 1; // Reset day counter for Phase 2, Static System
                             foreach ($phase2DataStatic as $data): ?>
                                 <tr>
-                                    <td><?= $dayCounter ++; ?></td>
+                                    <td><?= $dayCounter++; ?></td>
                                     <td><?= date('d-M', strtotime($data['day'])); ?></td>
                                     <td><?= $data['salinity']; ?></td>
                                     <td><?= $data['temperature']; ?></td>
@@ -257,10 +280,13 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                                     <td><?= $data['tan']; ?></td>
                                     <td><?= $data['nitrite']; ?></td>
                                     <td>
-                                        <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editWaterQualityModal" onclick="editWaterQualityData(<?= $data['id']; ?>)">
+                                        <button class="btn btn-warning btn-sm" data-toggle="modal"
+                                            data-target="#editWaterQualityModal"
+                                            onclick="editWaterQualityData(<?= $data['id']; ?>)">
                                             <i class="fa fa-pencil"></i>
                                         </button>
-                                        <button class="btn btn-danger btn-sm" onclick="deleteWaterQualityData(<?= $data['id']; ?>)">
+                                        <button class="btn btn-danger btn-sm"
+                                            onclick="deleteWaterQualityData(<?= $data['id']; ?>)">
                                             <i class="fa fa-trash"></i>
                                         </button>
                                     </td>
@@ -268,13 +294,20 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                             <?php endforeach; ?>
                             <tr>
                                 <td colspan="2"><strong>Mean ± SD</strong></td>
-                                <td><?= number_format($phase2StaticStats['meanSalinity'], 2) . " ± " . number_format($phase2StaticStats['sdSalinity'], 2); ?></td>
-                                <td><?= number_format($phase2StaticStats['meanTemp'], 2) . " ± " . number_format($phase2StaticStats['sdTemp'], 2); ?></td>
-                                <td><?= number_format($phase2StaticStats['meanDO'], 2) . " ± " . number_format($phase2StaticStats['sdDO'], 2); ?></td>
-                                <td><?= number_format($phase2StaticStats['meanPH'], 2) . " ± " . number_format($phase2StaticStats['sdPH'], 2); ?></td>
-                                <td><?= number_format($phase2StaticStats['meanAlkalinity'], 2) . " ± " . number_format($phase2StaticStats['sdAlkalinity'], 2); ?></td>
-                                <td><?= number_format($phase2StaticStats['meanTAN'], 2) . " ± " . number_format($phase2StaticStats['sdTAN'], 2); ?></td>
-                                <td><?= number_format($phase2StaticStats['meanNitrite'], 2) . " ± " . number_format($phase2StaticStats['sdNitrite'], 2); ?></td>
+                                <td><?= number_format($phase2StaticStats['meanSalinity'], 2) . " ± " . number_format($phase2StaticStats['sdSalinity'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2StaticStats['meanTemp'], 2) . " ± " . number_format($phase2StaticStats['sdTemp'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2StaticStats['meanDO'], 2) . " ± " . number_format($phase2StaticStats['sdDO'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2StaticStats['meanPH'], 2) . " ± " . number_format($phase2StaticStats['sdPH'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2StaticStats['meanAlkalinity'], 2) . " ± " . number_format($phase2StaticStats['sdAlkalinity'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2StaticStats['meanTAN'], 2) . " ± " . number_format($phase2StaticStats['sdTAN'], 2); ?>
+                                </td>
+                                <td><?= number_format($phase2StaticStats['meanNitrite'], 2) . " ± " . number_format($phase2StaticStats['sdNitrite'], 2); ?>
+                                </td>
                                 <td></td>
                             </tr>
                         </tbody>
@@ -302,21 +335,26 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                             <label>Day</label>
                             <input type="date" name="day" class="form-control" id="editDay" readonly>
                             <label>Salinity (ppt)</label>
-                            <input type="number" name="salinity" class="form-control" id="editSalinity" step="0.1" required>
+                            <input type="number" name="salinity" class="form-control" id="editSalinity" step="0.1"
+                                required>
                             <label>Temperature (°C)</label>
-                            <input type="number" name="temperature" class="form-control" id="editTemperature" step="0.1" required>
+                            <input type="number" name="temperature" class="form-control" id="editTemperature" step="0.1"
+                                required>
                             <label>Dissolved Oxygen (ppm)</label>
-                            <input type="number" name="dissolved_oxygen" class="form-control" id="editDissolvedOxygen" step="0.01" required>
+                            <input type="number" name="dissolved_oxygen" class="form-control" id="editDissolvedOxygen"
+                                step="0.01" required>
                         </div>
                         <div class="col-md-6">
                             <label>pH</label>
                             <input type="number" name="pH" class="form-control" id="editPH" step="0.1" required>
                             <label>Alkalinity (ppm)</label>
-                            <input type="number" name="alkalinity" class="form-control" id="editAlkalinity" step="0.1" required>
+                            <input type="number" name="alkalinity" class="form-control" id="editAlkalinity" step="0.1"
+                                required>
                             <label>TAN (ppm)</label>
                             <input type="number" name="tan" class="form-control" id="editTAN" step="0.1" required>
                             <label>Nitrite (ppm)</label>
-                            <input type="number" name="nitrite" class="form-control" id="editNitrite" step="0.1" required>
+                            <input type="number" name="nitrite" class="form-control" id="editNitrite" step="0.1"
+                                required>
                             <label>System Type</label>
                             <input name="system_type" class="form-control" id="editSystemType" readonly>
                             </input>
@@ -324,7 +362,8 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" onclick="updateWaterQualityData()">Save Changes</button>
+                    <button type="button" class="btn btn-success" onclick="updateWaterQualityData()">Save
+                        Changes</button>
                     <button type="button" class="btn btn-default btn-close-modal" data-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -344,32 +383,37 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
     </div>
 </div>
 <script>
+    document.addEventListener('wheel', function (event) {
+        if (document.activeElement.type === 'number') {
+            event.preventDefault();
+        }
+    }, { passive: false });
     function showToast(message, title = 'Notification', isSuccess = true) {
-    const toastTitle = document.getElementById('toastTitle');
-    const toastBody = document.getElementById('toastBody');
-    const toastElement = document.getElementById('toastMessage');
+        const toastTitle = document.getElementById('toastTitle');
+        const toastBody = document.getElementById('toastBody');
+        const toastElement = document.getElementById('toastMessage');
 
-    // Đặt tiêu đề và nội dung thông báo
-    toastTitle.textContent = title;
-    toastBody.textContent = message;
+        // Đặt tiêu đề và nội dung thông báo
+        toastTitle.textContent = title;
+        toastBody.textContent = message;
 
-    // Thêm lớp cho kiểu thông báo
-    toastElement.classList.remove('bg-success', 'bg-danger');
-    toastElement.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
+        // Thêm lớp cho kiểu thông báo
+        toastElement.classList.remove('bg-success', 'bg-danger');
+        toastElement.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
 
-    // Hiển thị toast
-    toastElement.classList.add('show');
+        // Hiển thị toast
+        toastElement.classList.add('show');
 
-    // Tự động ẩn toast sau 3 giây
-    setTimeout(() => {
-        toastElement.classList.remove('show');
-    }, 3000);
-}
+        // Tự động ẩn toast sau 3 giây
+        setTimeout(() => {
+            toastElement.classList.remove('show');
+        }, 3000);
+    }
 
-// Hàm đóng toast thủ công
-function closeToast() {
-    document.getElementById('toastMessage').classList.remove('show');
-}
+    // Hàm đóng toast thủ công
+    function closeToast() {
+        document.getElementById('toastMessage').classList.remove('show');
+    }
     // Hàm mở modal chỉnh sửa và lấy dữ liệu của entry cần chỉnh sửa
     function editWaterQualityData(id) {
         $.ajax({
@@ -449,62 +493,72 @@ function closeToast() {
 
 <?php include('./constant/layout/footer.php'); ?>
 <style>
-/* Container cho toast */
-.custom-toast-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1100;
-}
-/* Toast container */
-.custom-toast {
-    display: none; /* Ẩn mặc định */
-    padding: 16px;
-    border-radius: 5px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    min-width: 250px;
-    max-width: 300px;
-    animation: fadeInOut 5s forwards;
-    color: #fff;
-}
+    /* Container cho toast */
+    .custom-toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1100;
+    }
 
-.custom-toast.show {
-    display: block;
-}
+    /* Toast container */
+    .custom-toast {
+        display: none;
+        /* Ẩn mặc định */
+        padding: 16px;
+        border-radius: 5px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        min-width: 250px;
+        max-width: 300px;
+        animation: fadeInOut 5s forwards;
+        color: #fff;
+    }
 
-/* Header của toast */
-.custom-toast-header {
-    display: flex;
-    justify-content: space-between;
-    font-weight: bold;
-    margin-bottom: 8px;
-}
+    .custom-toast.show {
+        display: block;
+    }
 
-/* Nút đóng toast */
-.custom-toast-close {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-}
+    /* Header của toast */
+    .custom-toast-header {
+        display: flex;
+        justify-content: space-between;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
 
-/* Nội dung của toast */
-.custom-toast-body {
-    margin-top: 5px;
-}
+    /* Nút đóng toast */
+    .custom-toast-close {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 18px;
+        cursor: pointer;
+    }
 
-/* Hiệu ứng fadeIn và fadeOut */
-@keyframes fadeInOut {
-    0%, 90% { opacity: 1; }
-    100% { opacity: 0; }
-}
+    /* Nội dung của toast */
+    .custom-toast-body {
+        margin-top: 5px;
+    }
 
-/* Màu sắc cho các loại thông báo */
-.custom-toast.bg-success {
-    background-color: #28a745;
-}
-.custom-toast.bg-danger {
-    background-color: #dc3545;
-}
+    /* Hiệu ứng fadeIn và fadeOut */
+    @keyframes fadeInOut {
+
+        0%,
+        90% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 0;
+        }
+    }
+
+    /* Màu sắc cho các loại thông báo */
+    .custom-toast.bg-success {
+        background-color: #28a745;
+    }
+
+    .custom-toast.bg-danger {
+        background-color: #dc3545;
+    }
 </style>
