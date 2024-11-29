@@ -6,7 +6,7 @@ include('./constant/connect.php');
 
 $caseStudyId = $_GET['case_study_id'];
 
-// Lấy `categories_id` từ bảng `case_study`
+// Lấy categories_id từ bảng case_study
 $sql = "SELECT categories_id, start_date, phases FROM case_study WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
@@ -17,7 +17,7 @@ $categoriesId = $caseStudy['categories_id'];
 $startDate = $caseStudy['start_date'];
 $stmt->close();
 
-// Lấy `group_id` từ bảng `category_groups` dựa trên `categories_id`
+// Lấy group_id từ bảng category_groups dựa trên categories_id
 $groupSql = "SELECT group_id FROM category_groups WHERE category_id = ?";
 $stmt = $connect->prepare($groupSql);
 $stmt->bind_param("i", $categoriesId);
@@ -27,7 +27,7 @@ $groupData = $groupResult->fetch_assoc();
 $groupId = $groupData['group_id'];
 $stmt->close();
 
-// Lấy `group_name` từ bảng `groups` dựa trên `group_id`
+// Lấy group_name từ bảng groups dựa trên group_id
 $groupNameSql = "SELECT group_name FROM groups WHERE group_id = ?";
 $stmt = $connect->prepare($groupNameSql);
 $stmt->bind_param("i", $groupId);
@@ -77,7 +77,7 @@ function definePhasesWithDates($phasesJson, $startDate)
 $phases = definePhasesWithDates($phasesJson, $startDate);
 
 
-// Truy vấn dữ liệu `entry_data` theo `case_study_id`
+// Truy vấn dữ liệu entry_data theo case_study_id
 $entrySql = "SELECT * FROM entry_data WHERE case_study_id = ?
                 ORDER BY 
                 CASE
@@ -89,8 +89,8 @@ $entrySql = "SELECT * FROM entry_data WHERE case_study_id = ?
                     WHEN treatment_name = 'Treatment 4' THEN 6
                     ELSE 7
                 END,
-                lab_day ASC, 
-                created_at ASC";
+                lab_day ASC,
+                rep ASC";
 $stmt = $connect->prepare($entrySql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -134,102 +134,117 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
             </h3>
         </div>
     </div>
+
+    <div class="filter-container mb-4">
+        <form id="filterForm" class="d-flex align-items-center">
+            <label for="filterDate" class="mr-2 font-weight-bold">Filter by Date:</label>
+            <input type="date" id="filterDate" name="filterDate" class="form-control mr-2" style="width: 200px;">
+            <button type="button" class="btn btn-primary" onclick="applyDateFilter()">Filter</button>
+            <button type="button" class="btn btn-secondary ml-2" onclick="resetTableFilter()">Reset</button>
+        </form>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <a href="entry_data_survival.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
+                class="btn btn-primary">
+                Change View
+            </a>
+        </div>
+    </div>
+
+
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">
-                <h4>Entries for Group: <?php echo htmlspecialchars($groupName); ?></h4>
-
                 <?php foreach ($groupedEntries as $group): ?>
-                    <h5 style="font-size: 1.5em; color: black; font-weight: bold;">
-                        <?php echo htmlspecialchars($group['phase']['name']); ?>
-                        (<?php echo date('d-m-Y', strtotime($group['phase']['start_date'])); ?> to
-                        <?php echo date('d-m-Y', strtotime($group['phase']['end_date'])); ?>)
-                    </h5>
+                    <div class="phase-container">
+                        <h5 class="phase-title" style="font-size: 1.5em; color: black; font-weight: bold;">
+                            <?php echo htmlspecialchars($group['phase']['name']); ?>
+                            (<?php echo date('d-m-Y', strtotime($group['phase']['start_date'])); ?> to
+                            <?php echo date('d-m-Y', strtotime($group['phase']['end_date'])); ?>)
+                        </h5>
 
-                    <?php $phaseEntries = $group['entries']; ?>
+                        <?php $phaseEntries = $group['entries']; ?>
 
-                    <?php if (!empty($phaseEntries)): ?>
-                        <div class="table-responsive m-t-20">
-                            <table class="table table-bordered table-striped">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 140px;">Treatment Name</th>
-                                        <th style="width: 200px;">Product Application</th>
-                                        <th>Day</th>
-                                        <th style="width: 50px;">Reps</th>
-                                        <th>Survival Sample</th>
-                                        <th>Feeding Weight</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php
-                                    $currentTreatment = '';
-                                    $currentDate = '';
-                                    $repCount = 1;
-
-                                    foreach ($phaseEntries as $entry):
-                                        $isNewTreatment = $currentTreatment !== $entry['treatment_name'];
-                                        $isNewDay = $currentDate !== $entry['lab_day'];
-
-                                        if ($isNewTreatment) {
-                                            $currentTreatment = $entry['treatment_name'];
-                                            $currentDate = $entry['lab_day'];
-                                            $repCount = 1;
-                                        } elseif ($isNewDay) {
-                                            $currentDate = $entry['lab_day'];
-                                            $repCount = 1;
-                                        }
-                                        ?>
+                        <?php if (!empty($phaseEntries)): ?>
+                            <div class="table-responsive m-t-20">
+                                <table class="table table-bordered table-striped">
+                                    <thead>
                                         <tr>
-                                            <?php if ($isNewTreatment): ?>
-                                                <?php
-                                                $treatmentRowCount = count(array_filter($phaseEntries, function ($e) use ($currentTreatment) {
-                                                    return $e['treatment_name'] === $currentTreatment;
-                                                }));
-                                                ?>
-                                                <td rowspan="<?php echo $treatmentRowCount; ?>"
-                                                    style="vertical-align: middle; font-weight: bold;">
-                                                    <?php echo htmlspecialchars($entry['treatment_name']); ?>
-                                                </td>
-                                                <td rowspan="<?php echo $treatmentRowCount; ?>" style="vertical-align: middle;">
-                                                    <?php echo htmlspecialchars($entry['product_application']); ?>
-                                                </td>
-                                            <?php endif; ?>
-
-                                            <?php if ($isNewDay || $isNewTreatment): ?>
-                                                <?php
-                                                $dayRowCount = count(array_filter($phaseEntries, function ($e) use ($currentDate, $currentTreatment) {
-                                                    return $e['lab_day'] === $currentDate && $e['treatment_name'] === $currentTreatment;
-                                                }));
-                                                ?>
-                                                <td rowspan="<?php echo $dayRowCount; ?>" style="vertical-align: middle;">
-                                                    <?php echo date('d-m-Y', strtotime($entry['lab_day'])); ?>
-                                                </td>
-                                            <?php endif; ?>
-
-                                            <td><?php echo $repCount; ?></td>
-                                            <td><?php echo htmlspecialchars($entry['survival_sample']); ?></td>
-                                            <td><?php echo htmlspecialchars($entry['feeding_weight']); ?></td>
-                                            <td>
-                                                <button class="btn btn-warning btn-sm"
-                                                    onclick="editEntryData(<?php echo $entry['entry_data_id']; ?>)">
-                                                    <i class="fa fa-pencil"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm"
-                                                    onclick="deleteEntryData(<?php echo $entry['entry_data_id']; ?>)">
-                                                    <i class="fa fa-trash"></i>
-                                                </button>
-                                            </td>
+                                            <th style="width: 140px;">Treatment Name</th>
+                                            <th style="width: 200px;">Product Application</th>
+                                            <th style="width: 105px;" width: 50px>Day</th>
+                                            <th style="width: 50px;">Reps</th>
+                                            <th>Survival Sample</th>
+                                            <th>Feeding Weight</th>
+                                            <th>Action</th>
                                         </tr>
-                                        <?php $repCount++; ?>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php else: ?>
-                        <p>No entries for this phase.</p>
-                    <?php endif; ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php
+                                        $currentTreatment = '';
+                                        $currentDate = '';
+                                        foreach ($phaseEntries as $entry):
+                                            $isNewTreatment = $currentTreatment !== $entry['treatment_name'];
+                                            $isNewDay = $currentDate !== $entry['lab_day'];
+
+                                            if ($isNewTreatment) {
+                                                $currentTreatment = $entry['treatment_name'];
+                                                $currentDate = $entry['lab_day'];
+                                            } elseif ($isNewDay) {
+                                                $currentDate = $entry['lab_day'];
+                                            }
+                                            ?>
+                                            <tr>
+                                                <?php if ($isNewTreatment): ?>
+                                                    <?php
+                                                    $treatmentRowCount = count(array_filter($phaseEntries, function ($e) use ($currentTreatment) {
+                                                        return $e['treatment_name'] === $currentTreatment;
+                                                    }));
+                                                    ?>
+                                                    <td rowspan="<?php echo $treatmentRowCount; ?>"
+                                                        style="vertical-align: middle; font-weight: bold;">
+                                                        <?php echo htmlspecialchars($entry['treatment_name']); ?>
+                                                    </td>
+                                                    <td rowspan="<?php echo $treatmentRowCount; ?>" style="vertical-align: middle;">
+                                                        <?php echo htmlspecialchars($entry['product_application']); ?>
+                                                    </td>
+                                                <?php endif; ?>
+
+                                                <?php if ($isNewDay || $isNewTreatment): ?>
+                                                    <?php
+                                                    $dayRowCount = count(array_filter($phaseEntries, function ($e) use ($currentDate, $currentTreatment) {
+                                                        return $e['lab_day'] === $currentDate && $e['treatment_name'] === $currentTreatment;
+                                                    }));
+                                                    ?>
+                                                    <td rowspan="<?php echo $dayRowCount; ?>" style="vertical-align: middle;">
+                                                        <?php echo date('d-m-Y', strtotime($entry['lab_day'])); ?>
+                                                    </td>
+                                                <?php endif; ?>
+
+                                                <td><?php echo htmlspecialchars($entry['rep']); ?></td>
+                                                <td><?php echo htmlspecialchars($entry['survival_sample']); ?></td>
+                                                <td><?php echo htmlspecialchars($entry['feeding_weight']); ?></td>
+                                                <td>
+                                                    <button class="btn btn-warning btn-sm"
+                                                        onclick="editEntryData(<?php echo $entry['entry_data_id']; ?>)">
+                                                        <i class="fa fa-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm"
+                                                        onclick="deleteEntryData(<?php echo $entry['entry_data_id']; ?>)">
+                                                        <i class="fa fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <?php ?>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <p>No entries for this phase.</p>
+                        <?php endif; ?>
+                    </div>
                 <?php endforeach; ?>
             </div>
         </div>
@@ -257,6 +272,10 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                         <label>Product Application</label>
                         <input type="text" name="product_application" class="form-control" id="editProductApplication"
                             readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Rep</label>
+                        <input type="number" name="rep" class="form-control" id="editRep">
                     </div>
 
                     <div class="form-group">
@@ -342,6 +361,7 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                     $('#editProductApplication').val(response.data.product_application);
                     $('#editSurvivalSample').val(response.data.survival_sample);
                     $('#editFeedingWeight').val(response.data.feeding_weight);
+                    $('#editRep').val(response.data.rep); // Điền giá trị rep
                     $('#editDataModal').modal('show');
                 } else {
                     showToast(response.messages, 'Error', false);
@@ -352,6 +372,7 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
             }
         });
     }
+    s
 
     // Function to submit updated entry data
     function updateEntryData() {
@@ -400,8 +421,172 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
             });
         }
     }
+    function resetTableFilter() {
+        document.getElementById('filterDate').value = ''; // Xóa giá trị ngày
+        showToast('Reset successfully!', 'Success', true);
+        setTimeout(() => {
+            location.reload();;
+        }, 1000);
+    }
+
+
+    function applyDateFilter(filterDate = null) {
+        // Kiểm tra nếu filterDate chưa được truyền vào
+        if (filterDate === null) {
+            filterDate = document.getElementById('filterDate').value;
+        }
+
+        $.ajax({
+            url: './php_action/filter_entry_data.php',
+            type: 'POST',
+            data: {
+                case_study_id: '<?php echo $caseStudyId; ?>',
+                filterDate: filterDate // Gửi filterDate, có thể là rỗng
+            },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    renderPhases(response.data); // Hiển thị dữ liệu sau khi nhận
+                    const message = filterDate
+                        ? 'Filter applied successfully!'
+                        : 'Filter reset successfully!';
+                    showToast(message, 'Success', true);
+                } else {
+                    showToast(response.message || 'No data found!', 'Error', false);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('AJAX Error:', error);
+            }
+        });
+    }
+
+
+    function formatToDDMMYYYY(dateString) {
+        const parts = dateString.split('-'); // Giả định dateString là YYYY-MM-DD
+        if (parts.length === 3) {
+            const [year, month, day] = parts;
+            return `${day}-${month}-${year}`; // Chuyển đổi sang DD-MM-YYYY
+        }
+        return dateString; // Nếu không phải định dạng YYYY-MM-DD, trả về nguyên bản
+    }
+    function renderPhases(groupedEntries) {
+    const container = document.querySelector('.container-fluid .card-body');
+    container.innerHTML = ''; // Clear previous content
+
+    groupedEntries.forEach(group => {
+        const startDateFormatted = formatToDDMMYYYY(group.start_date);
+        const endDateFormatted = formatToDDMMYYYY(group.end_date);
+
+        const phaseTitle = `
+            <h5 class="phase-title" style="font-size: 1.5em; color: black; font-weight: bold;">
+                ${group.phase} (${startDateFormatted} to ${endDateFormatted})
+            </h5>
+        `;
+
+        // Sắp xếp entries theo lab_day, treatment_name, sau đó theo rep tăng dần
+        const sortedEntries = [...group.entries].sort((a, b) => {
+            if (a.lab_day !== b.lab_day) {
+                return new Date(a.lab_day) - new Date(b.lab_day); // Sắp xếp theo lab_day
+            }
+            if (a.treatment_name !== b.treatment_name) {
+                return a.treatment_name.localeCompare(b.treatment_name); // Sắp xếp theo treatment_name
+            }
+            return a.rep - b.rep; // Sắp xếp theo rep tăng dần
+        });
+
+        let tableRows = '';
+        let currentTreatment = null;
+        let currentDate = null;
+
+        sortedEntries.forEach((entry, index) => {
+            const isNewDay = currentDate !== entry.lab_day;
+            const isNewTreatment = currentTreatment !== entry.treatment_name;
+
+            if (isNewDay) {
+                currentDate = entry.lab_day;
+                currentTreatment = null; // Reset treatment on new day
+            }
+            if (isNewTreatment) {
+                currentTreatment = entry.treatment_name;
+            }
+
+            tableRows += `
+                <tr>
+                    ${isNewDay ? `
+                        <td rowspan="${sortedEntries.filter(e => e.lab_day === currentDate).length}" style="vertical-align: middle; font-weight: bold;">
+                            ${formatToDDMMYYYY(entry.lab_day)}
+                        </td>
+                    ` : ''}
+                    ${isNewTreatment ? `
+                        <td rowspan="${sortedEntries.filter(e => e.lab_day === currentDate && e.treatment_name === currentTreatment).length}" style="vertical-align: middle; font-weight: bold;">
+                            ${entry.treatment_name}
+                        </td>
+                        <td rowspan="${sortedEntries.filter(e => e.lab_day === currentDate && e.treatment_name === currentTreatment).length}" style="vertical-align: middle;">
+                            ${entry.product_application}
+                        </td>
+                    ` : ''}
+                    <td>${entry.rep}</td>
+                    <td>${entry.survival_sample}</td>
+                    <td>${entry.feeding_weight}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" onclick="editEntryData(${entry.entry_data_id || 0})">
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteEntryData(${entry.entry_data_id || 0})">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        const table = `
+            <div class="table-responsive m-t-20">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">Day</th>
+                            <th style="width: 140px;">Treatment Name</th>
+                            <th style="width: 200px;">Product Application</th>
+                            <th style="width: 50px;">Reps</th>
+                            <th>Survival Sample</th>
+                            <th>Feeding Weight</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        container.innerHTML += phaseTitle + table;
+    });
+}
+
+
+
+    function formatToDDMMYYYY(dateString) {
+        const parts = dateString.split('-'); // Giả định dateString là YYYY-MM-DD
+        if (parts.length === 3) {
+            const [year, month, day] = parts;
+            return `${day}-${month}-${year}`; // Chuyển đổi sang DD-MM-YYYY
+        }
+        return dateString; // Nếu không phải định dạng YYYY-MM-DD, trả về nguyên bản
+    }
+
+
 </script>
 <style>
+    .filter-container {
+        padding: 10px;
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+
     /* Container cho toast */
     .custom-toast-container {
         position: fixed;
@@ -469,5 +654,38 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
 
     .custom-toast.bg-danger {
         background-color: #dc3545;
+    }
+
+    /* Tăng độ đậm cho text trong bảng */
+    .table th {
+        font-weight: bold;
+        font-size: 1.1em;
+        color: black;
+    }
+
+    .table td {
+        font-size: 1em;
+        font-weight: bold;
+        color: black;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    /* Tăng độ dày của đường ngăn ngang giữa các treatment */
+    .table-bordered tbody tr td {
+        border: 2px solid #333;
+        /* Đường viền đậm hơn */
+    }
+
+    .table-bordered th {
+        border: 2px solid #333;
+        /* Đường viền đậm hơn */
+    }
+
+    .table-bordered tbody tr td[rowspan] {
+        border-top: 3px solid #333;
+        /* Đường viền trên các treatment đậm hơn */
     }
 </style>

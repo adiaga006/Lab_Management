@@ -9,6 +9,7 @@ if ($_POST) {
     $productApplication = $_POST['product_application'];
     $survivalSample = $_POST['survival_sample'];
     $feedingWeight = $_POST['feeding_weight'];
+    $rep = $_POST['rep']; // Lấy giá trị rep từ form
 
     // Luôn luôn lấy lab_day hiện tại từ cơ sở dữ liệu
     $stmt = $connect->prepare("SELECT lab_day FROM entry_data WHERE entry_data_id = ?");
@@ -18,15 +19,22 @@ if ($_POST) {
     $stmt->fetch();
     $stmt->close();
 
-    // Cập nhật các trường khác, giữ nguyên lab_day
+    if (!$labDay) {
+        $response['messages'] = 'Error: Entry not found or lab_day is missing.';
+        echo json_encode($response);
+        exit;
+    }
+
+    // Cập nhật các trường khác, bao gồm rep, giữ nguyên lab_day
     $stmt = $connect->prepare("UPDATE entry_data 
         SET treatment_name = ?, 
             product_application = ?, 
             survival_sample = ?, 
             lab_day = ?, 
-            feeding_weight = ? 
+            feeding_weight = ?, 
+            rep = ? 
         WHERE entry_data_id = ?");
-    $stmt->bind_param("ssdsdi", $treatmentName, $productApplication, $survivalSample, $labDay, $feedingWeight, $entryId);
+    $stmt->bind_param("ssdsdii", $treatmentName, $productApplication, $survivalSample, $labDay, $feedingWeight, $rep, $entryId);
 
     if ($stmt->execute()) {
         $response['success'] = true;

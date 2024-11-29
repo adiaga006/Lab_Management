@@ -8,7 +8,8 @@ if ($caseStudyId) {
         SELECT treatment_name, 
                DATE_FORMAT(lab_day, '%d-%m-%Y') AS lab_day, 
                survival_sample, 
-               feeding_weight 
+               feeding_weight,
+               rep
         FROM entry_data 
         WHERE case_study_id = ? 
         ORDER BY created_at DESC 
