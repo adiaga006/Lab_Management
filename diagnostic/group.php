@@ -148,15 +148,9 @@ $groupResult = $connect->query($groupSql);
                         <input type="hidden" name="case_study_id" id="modalCaseStudyId">
                         <div class="form-group">
                             <label>Treatment Name</label>
-                            <select name="treatment_name" class="form-control" required
+                            <select name="treatment_name" id="treatmentName" class="form-control" required
                                 onchange="updateProductApplication()">
                                 <option value="">Select Treatment</option>
-                                <option value="Negative control">Negative control</option>
-                                <option value="Positive control">Positive control</option>
-                                <option value="Treatment 1">Treatment 1 (1,000 ppm_Prototype 13A)</option>
-                                <option value="Treatment 2">Treatment 2 (2,000 ppm_Prototype 13A)</option>
-                                <option value="Treatment 3">Treatment 3 (1,000 ppm_AviPlus Aqua)</option>
-                                <option value="Treatment 4">Treatment 4 (2,000 ppm_AviPlus Aqua)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -164,6 +158,7 @@ $groupResult = $connect->query($groupSql);
                             <input type="text" name="product_application" class="form-control" id="productApplication"
                                 readonly required>
                         </div>
+
                         <div class="form-group">
                             <label>Day (DD/MM/YYYY)</label>
                             <input type="text" name="lab_day" class="form-control datepicker" required>
@@ -199,7 +194,7 @@ $groupResult = $connect->query($groupSql);
                                         <tr>
                                             <td><?php echo htmlspecialchars($entry['treatment_name']); ?></td>
                                             <td><?php echo date('d-m-Y', strtotime($entry['lab_day'])); ?></td>
-                                            <td><?php echo htmlspecialchars($entry['rep']); ?></td> 
+                                            <td><?php echo htmlspecialchars($entry['rep']); ?></td>
                                             <td><?php echo htmlspecialchars($entry['survival_sample']); ?></td>
                                             <td><?php echo htmlspecialchars($entry['feeding_weight']); ?> g</td>
                                         </tr>
@@ -415,40 +410,40 @@ $groupResult = $connect->query($groupSql);
         });
         // Submit dữ liệu Entry Data và reset chỉ hai trường cụ thể
         function submitEntryData() {
-    const labDay = $('input[name="lab_day"]').val().split('/').reverse().join('-');
-    $('input[name="lab_day"]').val(labDay);
+            const labDay = $('input[name="lab_day"]').val().split('/').reverse().join('-');
+            $('input[name="lab_day"]').val(labDay);
 
-    const formData = $('#addDataForm').serialize(); // Bao gồm cả `rep`
+            const formData = $('#addDataForm').serialize(); // Bao gồm cả `rep`
 
-    $.ajax({
-        url: 'php_action/add_entry_data.php',
-        type: 'POST',
-        data: formData,
-        dataType: 'json',
-        success: function (response) {
-            if (response.success) {
-                showToast('Data added successfully!', 'Success', true);
+            $.ajax({
+                url: 'php_action/add_entry_data.php',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        showToast('Data added successfully!', 'Success', true);
 
-                // Reset các trường cụ thể
-                $('input[name="survival_sample"]').val('');
-                $('input[name="feeding_weight"]').val('');
+                        // Reset các trường cụ thể
+                        $('input[name="survival_sample"]').val('');
+                        $('input[name="feeding_weight"]').val('');
 
-                // Tăng rep lên 1 cho lần nhập tiếp theo
-                const currentRep = parseInt($('input[name="rep"]').val(), 10);
-                $('input[name="rep"]').val(currentRep + 1);
+                        // Tăng rep lên 1 cho lần nhập tiếp theo
+                        const currentRep = parseInt($('input[name="rep"]').val(), 10);
+                        $('input[name="rep"]').val(currentRep + 1);
 
-                // Cập nhật danh sách các mục nhập gần đây
-                updateRecentEntries();
-            } else {
-                // Hiển thị thông báo lỗi nếu có
-                showToast(response.messages, 'Error', false);
-            }
-        },
-        error: function (xhr, status, error) {
-            console.error('AJAX Error:', error);
+                        // Cập nhật danh sách các mục nhập gần đây
+                        updateRecentEntries();
+                    } else {
+                        // Hiển thị thông báo lỗi nếu có
+                        showToast(response.messages, 'Error', false);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                }
+            });
         }
-    });
-}
 
 
 
@@ -533,38 +528,6 @@ $groupResult = $connect->query($groupSql);
                 }
             });
         }
-        // Cập nhật Product Application tự động và lưu vào sessionStorage
-        function updateProductApplication() {
-            const treatment = $('select[name="treatment_name"]').val();
-            let productApplication = "";
-
-            // Kiểm tra các trường hợp để xác định product application
-            switch (treatment) {
-                case "Negative control":
-                case "Positive control":
-                    productApplication = "0";
-                    break;
-                case "Treatment 1":
-                    productApplication = "1,000 ppm (Prototype 13A)";
-                    break;
-                case "Treatment 2":
-                    productApplication = "2,000 ppm (Prototype 13A)";
-                    break;
-                case "Treatment 3":
-                    productApplication = "1,000 ppm (AviPlus Aqua)";
-                    break;
-                case "Treatment 4":
-                    productApplication = "2,000 ppm (AviPlus Aqua)";
-                    break;
-                default:
-                    productApplication = "";
-            }
-
-            // Gán giá trị vào trường product_application và lưu vào sessionStorage
-            $('#productApplication').val(productApplication);
-            sessionStorage.setItem('treatment_name', treatment);
-            sessionStorage.setItem('product_application', productApplication);
-        }
 
         // Lưu ngày vào sessionStorage khi người dùng nhập
         $('input[name="lab_day"]').on('change', function () {
@@ -576,6 +539,62 @@ $groupResult = $connect->query($groupSql);
             sessionStorage.removeItem('product_application');
             sessionStorage.removeItem('lab_day');
         }, 10800000);
+        document.addEventListener("DOMContentLoaded", function () {
+            const treatmentDropdown = document.getElementById("treatmentName");
+
+            // Lấy case_study_id từ URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const caseStudyId = urlParams.get("case_study_id");
+
+            if (!caseStudyId) {
+                console.error("Missing case_study_id in URL.");
+                return;
+            }
+
+            // Gọi API để lấy danh sách treatments
+            fetch(`php_action/getTreatments.php?case_study_id=${encodeURIComponent(caseStudyId)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const treatments = data.data;
+
+                        // Điền options vào dropdown
+                        treatments.forEach(treatment => {
+                            const option = document.createElement("option");
+                            option.value = treatment.name;
+                            option.textContent = treatment.name;
+                            option.setAttribute("data-application", treatment.product_application);
+                            treatmentDropdown.appendChild(option);
+                        });
+                    } else {
+                        console.error("Error fetching treatments:", data.message);
+                    }
+                })
+                .catch(error => console.error("Error fetching treatments:", error));
+        });
+
+
+        function updateProductApplication() {
+    const treatmentDropdown = document.getElementById("treatmentName");
+    const selectedOption = treatmentDropdown.options[treatmentDropdown.selectedIndex];
+    const productApplicationField = document.getElementById("productApplication");
+
+    // Lấy giá trị từ thuộc tính data-application
+    if (selectedOption && selectedOption.getAttribute("data-application")) {
+        const productApplication = selectedOption.getAttribute("data-application");
+        productApplicationField.value = productApplication;
+        sessionStorage.setItem('product_application', productApplication); // Lưu vào session
+    } else {
+        productApplicationField.value = "";
+        sessionStorage.removeItem('product_application');
+    }
+}
+
     </script>
     <style>
         /* Container cho toast */

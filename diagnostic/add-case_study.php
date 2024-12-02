@@ -143,6 +143,24 @@
                                             placeholder="Duration in days" required>
                                     </div>
                                 </div>
+                                <!-- Treatments Section -->
+                                <div class="form-group">
+                                    <div class="row">
+                                        <label class="col-sm-3 control-label">Treatments</label>
+                                        <div class="col-sm-9">
+                                            <div id="treatmentsContainer">
+                                                <div class="treatmentRow">
+                                                    <input type="text" name="treatment_name[]" class="form-control"
+                                                        placeholder="Treatment Name" required>
+                                                    <input type="text" name="product_application[]" class="form-control"
+                                                        placeholder="Product Application" required>
+                                                </div>
+                                            </div>
+                                            <button type="button" id="addTreatmentRow"
+                                                class="btn btn-secondary btn-sm">Add Treatment</button>
+                                        </div>
+                                    </div>
+                                </div>
 
 
                                 <button type="submit" class="btn btn-primary">Submit</button>
@@ -249,9 +267,55 @@
                         showNotification('An error occurred while processing your request.', 'error');
                     });
             });
+            document.getElementById('addTreatmentRow').addEventListener('click', function () {
+                const treatmentsContainer = document.getElementById('treatmentsContainer');
+
+                // Tạo một hàng mới
+                const newRow = document.createElement('div');
+                newRow.className = 'treatmentRow';
+                newRow.style.marginBottom = '10px';
+
+                // Nội dung của hàng mới
+                newRow.innerHTML = `
+        <input type="text" name="treatment_name[]" class="form-control" placeholder="Treatment Name" required>
+        <input type="text" name="product_application[]" class="form-control" placeholder="Product Application" required>
+        <button type="button" class="btn btn-danger btn-sm removeTreatmentRow">Remove</button>
+    `;
+
+                treatmentsContainer.appendChild(newRow);
+
+                // Thêm sự kiện xóa hàng
+                newRow.querySelector('.removeTreatmentRow').addEventListener('click', function () {
+                    newRow.remove();
+                });
+            });
 
         </script>
         <style>
+            .treatmentRow {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 10px;
+                align-items: center;
+            }
+
+            .treatmentRow input {
+                flex: 1;
+            }
+
+            .removeTreatmentRow {
+                background-color: #f44336;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+
+            .removeTreatmentRow:hover {
+                background-color: #d32f2f;
+            }
+
             .phaseRow {
                 margin-bottom: 10px;
             }

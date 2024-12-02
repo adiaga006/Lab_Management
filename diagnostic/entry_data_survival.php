@@ -47,7 +47,7 @@ foreach ($phases as $phase) {
 }
 
 // Fetch entry_data
-$sql = "SELECT treatment_name, survival_sample, lab_day , created_at
+$sql = "SELECT treatment_name, survival_sample, lab_day , rep
         FROM entry_data 
         WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
@@ -63,7 +63,7 @@ while ($row = $result->fetch_assoc()) {
     $tempData[] = $row; // Lưu từng dòng kết quả vào mảng
 }
 
-// Sắp xếp lại $tempData theo treatment_name, lab_day, và created_at
+// Sắp xếp lại $tempData theo treatment_name, lab_day
 usort($tempData, function ($a, $b) {
     if ($a['treatment_name'] !== $b['treatment_name']) {
         return strcmp($a['treatment_name'], $b['treatment_name']);

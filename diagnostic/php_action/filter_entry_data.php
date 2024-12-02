@@ -68,13 +68,14 @@ $entriesSql .= " ORDER BY
     CASE
         WHEN treatment_name = 'Negative control' THEN 1
         WHEN treatment_name = 'Positive control' THEN 2
-        WHEN treatment_name = 'Treatment 1' THEN 3
-        WHEN treatment_name = 'Treatment 2' THEN 4
-        WHEN treatment_name = 'Treatment 3' THEN 5
-        WHEN treatment_name = 'Treatment 4' THEN 6
+        WHEN treatment_name = 'Treatment 1' OR treatment_name = 'Treatment T1' THEN 3
+        WHEN treatment_name = 'Treatment 2' OR treatment_name = 'Treatment T2' THEN 4
+        WHEN treatment_name = 'Treatment 3' OR treatment_name = 'Treatment T3' THEN 5
+        WHEN treatment_name = 'Treatment 4' OR treatment_name = 'Treatment T4' THEN 6
         ELSE 7
     END,
     lab_day ASC, created_at ASC";
+
 
 $stmt = $connect->prepare($entriesSql);
 $stmt->bind_param($types, ...$params);

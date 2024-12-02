@@ -83,14 +83,15 @@ $entrySql = "SELECT * FROM entry_data WHERE case_study_id = ?
                 CASE
                     WHEN treatment_name = 'Negative control' THEN 1
                     WHEN treatment_name = 'Positive control' THEN 2
-                    WHEN treatment_name = 'Treatment 1' THEN 3
-                    WHEN treatment_name = 'Treatment 2' THEN 4
-                    WHEN treatment_name = 'Treatment 3' THEN 5
-                    WHEN treatment_name = 'Treatment 4' THEN 6
+                    WHEN treatment_name = 'Treatment 1' OR treatment_name = 'Treatment T1' THEN 3
+                    WHEN treatment_name = 'Treatment 2' OR treatment_name = 'Treatment T2' THEN 4
+                    WHEN treatment_name = 'Treatment 3' OR treatment_name = 'Treatment T3' THEN 5
+                    WHEN treatment_name = 'Treatment 4' OR treatment_name = 'Treatment T4' THEN 6
                     ELSE 7
                 END,
                 lab_day ASC,
                 rep ASC";
+
 $stmt = $connect->prepare($entrySql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -471,47 +472,47 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
         return dateString; // Nếu không phải định dạng YYYY-MM-DD, trả về nguyên bản
     }
     function renderPhases(groupedEntries) {
-    const container = document.querySelector('.container-fluid .card-body');
-    container.innerHTML = ''; // Clear previous content
+        const container = document.querySelector('.container-fluid .card-body');
+        container.innerHTML = ''; // Clear previous content
 
-    groupedEntries.forEach(group => {
-        const startDateFormatted = formatToDDMMYYYY(group.start_date);
-        const endDateFormatted = formatToDDMMYYYY(group.end_date);
+        groupedEntries.forEach(group => {
+            const startDateFormatted = formatToDDMMYYYY(group.start_date);
+            const endDateFormatted = formatToDDMMYYYY(group.end_date);
 
-        const phaseTitle = `
+            const phaseTitle = `
             <h5 class="phase-title" style="font-size: 1.5em; color: black; font-weight: bold;">
                 ${group.phase} (${startDateFormatted} to ${endDateFormatted})
             </h5>
         `;
 
-        // Sắp xếp entries theo lab_day, treatment_name, sau đó theo rep tăng dần
-        const sortedEntries = [...group.entries].sort((a, b) => {
-            if (a.lab_day !== b.lab_day) {
-                return new Date(a.lab_day) - new Date(b.lab_day); // Sắp xếp theo lab_day
-            }
-            if (a.treatment_name !== b.treatment_name) {
-                return a.treatment_name.localeCompare(b.treatment_name); // Sắp xếp theo treatment_name
-            }
-            return a.rep - b.rep; // Sắp xếp theo rep tăng dần
-        });
+            // Sắp xếp entries theo lab_day, treatment_name, sau đó theo rep tăng dần
+            const sortedEntries = [...group.entries].sort((a, b) => {
+                if (a.lab_day !== b.lab_day) {
+                    return new Date(a.lab_day) - new Date(b.lab_day); // Sắp xếp theo lab_day
+                }
+                if (a.treatment_name !== b.treatment_name) {
+                    return a.treatment_name.localeCompare(b.treatment_name); // Sắp xếp theo treatment_name
+                }
+                return a.rep - b.rep; // Sắp xếp theo rep tăng dần
+            });
 
-        let tableRows = '';
-        let currentTreatment = null;
-        let currentDate = null;
+            let tableRows = '';
+            let currentTreatment = null;
+            let currentDate = null;
 
-        sortedEntries.forEach((entry, index) => {
-            const isNewDay = currentDate !== entry.lab_day;
-            const isNewTreatment = currentTreatment !== entry.treatment_name;
+            sortedEntries.forEach((entry, index) => {
+                const isNewDay = currentDate !== entry.lab_day;
+                const isNewTreatment = currentTreatment !== entry.treatment_name;
 
-            if (isNewDay) {
-                currentDate = entry.lab_day;
-                currentTreatment = null; // Reset treatment on new day
-            }
-            if (isNewTreatment) {
-                currentTreatment = entry.treatment_name;
-            }
+                if (isNewDay) {
+                    currentDate = entry.lab_day;
+                    currentTreatment = null; // Reset treatment on new day
+                }
+                if (isNewTreatment) {
+                    currentTreatment = entry.treatment_name;
+                }
 
-            tableRows += `
+                tableRows += `
                 <tr>
                     ${isNewDay ? `
                         <td rowspan="${sortedEntries.filter(e => e.lab_day === currentDate).length}" style="vertical-align: middle; font-weight: bold;">
@@ -539,9 +540,9 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                     </td>
                 </tr>
             `;
-        });
+            });
 
-        const table = `
+            const table = `
             <div class="table-responsive m-t-20">
                 <table class="table table-bordered table-striped">
                     <thead>
@@ -562,9 +563,9 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
             </div>
         `;
 
-        container.innerHTML += phaseTitle + table;
-    });
-}
+            container.innerHTML += phaseTitle + table;
+        });
+    }
 
 
 

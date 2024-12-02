@@ -29,8 +29,8 @@ $result = $connect->query($sql)->fetch_assoc();
             <div class="col-lg-8" style="margin-left: 10%;">
                 <div class="card">
                     <div class="card-body">
-                        <div class="input-states">
-                            <!-- Form cập nhật thông tin case study -->
+                    <div class="input-states">
+                    <!-- Form cập nhật thông tin case study -->
                             <form class="form-horizontal" method="POST" id="submitCaseStudyForm"
                                 action="php_action/editCaseStudy.php?id=<?php echo $_GET['id']; ?>"
                                 enctype="multipart/form-data">
@@ -153,6 +153,36 @@ $result = $connect->query($sql)->fetch_assoc();
                                         ?>
                                     </div>
 
+                                            <label class="col-sm-3 control-label">Treatments</label>
+                                            <div class="col-sm-9">
+                                                <div id="treatmentsContainer">
+                                                    <?php
+                                                    // Parse JSON treatments từ database
+                                                    $treatments = json_decode($result['treatment'], true);
+                                                    if (!empty($treatments)) {
+                                                        foreach ($treatments as $treatment) {
+                                                            ?>
+                                                            <div class="treatmentRow">
+                                                                <input type="text" name="treatment_name[]" class="form-control"
+                                                                    value="<?php echo htmlspecialchars($treatment['name']); ?>"
+                                                                    placeholder="Treatment Name" required>
+                                                                <input type="text" name="product_application[]"
+                                                                    class="form-control"
+                                                                    value="<?php echo htmlspecialchars($treatment['product_application']); ?>"
+                                                                    placeholder="Product Application" required>
+                                                                <button type="button"
+                                                                    class="btn btn-danger btn-sm removeTreatmentRow">Remove</button>
+                                                            </div>
+                                                            <?php
+                                                        }
+                                                    }
+                                                    ?>
+                                                </div>
+                                                <button type="button" id="addTreatmentRow"
+                                                    class="btn btn-secondary btn-sm">Add Treatment</button>
+                                            </div>
+
+                                    
 
                                     <button type="submit" name="update" id="updateCaseStudyBtn"
                                         class="btn btn-primary btn-flat m-b-30 m-t-30">Update</button>
@@ -185,6 +215,30 @@ $result = $connect->query($sql)->fetch_assoc();
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <script>
+        document.getElementById('addTreatmentRow').addEventListener('click', function () {
+            const treatmentsContainer = document.getElementById('treatmentsContainer');
+            const newRow = document.createElement('div');
+            newRow.className = 'treatmentRow';
+            newRow.innerHTML = `
+        <input type="text" name="treatment_name[]" class="form-control" placeholder="Treatment Name" required>
+        <input type="text" name="product_application[]" class="form-control" placeholder="Product Application" required>
+        <button type="button" class="btn btn-danger btn-sm removeTreatmentRow">Remove</button>
+    `;
+            treatmentsContainer.appendChild(newRow);
+
+            // Thêm sự kiện xóa hàng
+            newRow.querySelector('.removeTreatmentRow').addEventListener('click', function () {
+                newRow.remove();
+            });
+        });
+
+        // Thêm sự kiện xóa cho các dòng `treatment` đã tải từ server
+        document.querySelectorAll('.removeTreatmentRow').forEach(button => {
+            button.addEventListener('click', function () {
+                button.parentElement.remove();
+            });
+        });
+
         document.addEventListener('wheel', function (event) {
             if (document.activeElement.type === 'number') {
                 event.preventDefault();
