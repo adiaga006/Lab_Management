@@ -189,11 +189,12 @@ $feedingResults = array_map(function ($treatmentName, $totalFeedingWeight) {
         <!-- Table for feeding weight -->
         <div class="card">
             <div class="card-body">
-                <h4 style="font-size: 1.5em; color: black; font-weight: bold;">Total Feed Consumption</h4>
+                <h4 style="font-size: 1.5em; color: black; font-weight: bold; text-align: center;">Total Feed
+                    Consumption</h4>
                 <div class="table-responsive">
-                    <table class="table table-bordered">
+                    <table class="table table-bordered text-center">
                         <thead>
-                            <tr>
+                            <tr style="font-weight: bold;">
                                 <th>Treatment Name</th>
                                 <th>Total Feed Consumption (g)</th>
                             </tr>
@@ -210,37 +211,68 @@ $feedingResults = array_map(function ($treatmentName, $totalFeedingWeight) {
                 </div>
             </div>
         </div>
+        <div class="card">
+            <div class="card-body text-center">
+                <button style="color:white" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addShrimpModal">
+                    Add/Update the number of shrimp that survived after immunosampling
+                </button>
+            </div>
+        </div>
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 style="font-size: 1.25em; font-weight: bold;color:black;">
+                Number of survival shrimp after immunology sampling:                     <?php
+                    $sql = "SELECT no_of_survival_shrimp_after_immunology_sampling FROM case_study WHERE case_study_id = ?";
+                    $stmt = $connect->prepare($sql);
+                    $stmt->bind_param("s", $caseStudyId);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $data = $result->fetch_assoc();
+                    $shrimpCount = $data['no_of_survival_shrimp_after_immunology_sampling'];
+                    $stmt->close();
+                    echo htmlspecialchars($shrimpCount ?? "Not set");
+                    ?>
+                </h5>
+            </div>
+        </div>
 
         <!-- Separate Tables for Survival Rates for each phase -->
         <?php foreach ($phases as $phase): ?>
             <div class="card">
                 <div class="card-body">
-                    <h4 style="font-size: 1.5em; color: black; font-weight: bold;">
+                    <h4 style="font-size: 1.5em; color: black; font-weight: bold; text-align: center;">
                         Survival Rate: <?php echo htmlspecialchars($phase['name']); ?>
                         (<?php echo (new DateTime($phase['start_date']))->format('d-m-Y'); ?> to
                         <?php echo (new DateTime($phase['end_date']))->format('d-m-Y'); ?>)
                     </h4>
                     <div class="table-responsive">
-                        <table class="table table-bordered">
+                        <table class="table table-bordered text-center">
                             <thead>
-                                <tr>
+                                <tr style="font-weight: bold;">
                                     <th>Treatment Name</th>
                                     <th>Average Survival Rate (%)</th>
                                     <th>Standard Deviation</th>
+                                    <th>Average Survival Rate ± SD</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (!empty($survivalResults[$phase['name']])): ?>
                                     <?php foreach ($survivalResults[$phase['name']] as $result): ?>
+                                        <?php
+                                        $mean = $result['average_survival_rate'];
+                                        $sd = $result['standard_deviation'];
+                                        $meanPlusMinusSD = number_format($mean, 2) . ' ± ' . number_format($sd, 2);
+                                        ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars($result['treatment_name']); ?></td>
-                                            <td><?php echo $result['average_survival_rate']; ?></td>
-                                            <td><?php echo $result['standard_deviation']; ?></td>
+                                            <td><?php echo $mean; ?></td>
+                                            <td><?php echo $sd; ?></td>
+                                            <td><?php echo $meanPlusMinusSD; ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="3">No data available</td>
+                                        <td colspan="4">No data available</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -251,4 +283,105 @@ $feedingResults = array_map(function ($treatmentName, $totalFeedingWeight) {
         <?php endforeach; ?>
     </div>
 </div>
+
+<div id="addShrimpModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="addShrimpForm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 style="color:black" class="modal-title">Add/Update Immunosampling Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label style="color:black" form="shrimpCount" class="form-label">Number of survival shrimp after immunology sampling</label>
+                        <input type="number" class="form-control" id="shrimpCount" name="shrimpCount" min="0" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Save</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Styling -->
+<style>
+    .table th,
+    .table td {
+        text-align: center;
+        /* Center align all cells */
+        vertical-align: middle;
+        /* Vertically center align */
+        font-weight: bold;
+        /* Make font bold */
+        font-size: 1.1em;
+        /* Slightly increase font size */
+    }
+
+    .table thead th {
+        background-color: #f8f9fa;
+        /* Light gray header background */
+    }
+
+    .table tbody tr:nth-child(even) {
+        background-color: white;
+        /* Alternating row colors */
+        color: black;
+    }
+
+    .table tbody tr td {
+        border: 1px solid #ddd;
+        color: black;
+        /* Add border for clarity */
+    }
+
+    .table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    h4 {
+        text-align: center;
+        /* Center the phase header text */
+    }
+
+    tbody tr td:last-child {
+        text-align: center;
+    }
+
+    thead tr th:last-child {
+        text-align: center;
+    }
+</style>
+<script>
+    document.getElementById('addShrimpForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const shrimpCount = document.getElementById('shrimpCount').value;
+        const caseStudyId = <?php echo json_encode($caseStudyId); ?>;
+
+        // Send the data via AJAX
+        fetch('php_action/add_shrimp_data.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ case_study_id: caseStudyId, shrimpCount: shrimpCount })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload(); // Reload the page to reflect changes
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    });
+</script>
+
 <?php include('./constant/layout/footer.php'); ?>

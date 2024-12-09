@@ -4,6 +4,9 @@ include('./constant/layout/header.php');
 include('./constant/layout/sidebar.php');
 include('./constant/layout/footer.php');
 include('./constant/connect.php');
+header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
+header("Pragma: no-cache"); // HTTP 1.0
+header("Expires: 0"); // Proxies
 $caseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : 0;
 // Lấy `start_date` từ bảng `case_study` dựa trên `case_study_id`
 $sql = "SELECT start_date FROM case_study WHERE case_study_id = ?";
@@ -93,6 +96,8 @@ $groupResult = $connect->query($groupSql);
                                                     $url = "entry_data.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
                                                 } elseif ($group['group_id'] == 3) {
                                                     $url = "water_quality.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
+                                                } elseif ($group['group_id'] == 2) {
+                                                    $url = "death_data.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
                                                 } else {
                                                     $url = "#";
                                                 }
@@ -108,6 +113,12 @@ $groupResult = $connect->query($groupSql);
                                                     <button class="btn btn-primary" data-toggle="modal"
                                                         data-target="#addDataModalGroup1"
                                                         onclick="openAddDataModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
+                                                        Add Data
+                                                    </button>
+                                                <?php elseif ($group['group_id'] == 2): ?>
+                                                    <button class="btn btn-primary" data-toggle="modal"
+                                                        data-target="#addDataModalGroup2"
+                                                        onclick="openShrimpDeathModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
                                                         Add Data
                                                     </button>
                                                 <?php elseif ($group['group_id'] == 3): ?>
@@ -150,7 +161,7 @@ $groupResult = $connect->query($groupSql);
                             <label>Treatment Name</label>
                             <select name="treatment_name" id="treatmentName" class="form-control" required
                                 onchange="updateProductApplication()">
-                                <option value="">Select Treatment</option>
+                                <option value="" disabled selected hidden>Select Treatment</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -216,6 +227,65 @@ $groupResult = $connect->query($groupSql);
             </form>
         </div>
     </div>
+    <!-- Add Data Modal for Group 2 (Shrimp Death Data) -->
+    <div id="addDataModalGroup2" class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered">
+            <form id="addShrimpDeathDataForm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 style="color: black" class="modal-title">Add Shrimp Death Data</h4>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="case_study_id" id="modalCaseStudyId2">
+
+                        <div class="form-group">
+                            <label>Treatment Name</label>
+                            <select name="treatmentNameGroup2" id="treatmentNameGroup2" class="form-control" required
+                                onchange="updateProductApplicationGroup2()">
+                                <option value="" disabled selected hidden>Select Treatment</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Product Application</label>
+                            <input type="text" name="productApplicationGroup2" class="form-control"
+                                id="productApplicationGroup2" readonly required>
+                        </div>
+                        <div class="form-group">
+                            <label>Rep</label>
+                            <input type="number" name="rep_2" class="form-control" required min="1" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Death Sample</label>
+                            <input type="number" name="death_sample" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Test Time (Date & Time)</label>
+                            <!-- Nhập ngày -->
+                            <input type="date" name="test_date" id="testTimePicker" class="form-control" required>
+                            <!-- Nhập giờ -->
+                            <select name="test_hour" id="testHour" class="form-control mt-2" required>
+                                <option value="" disabled selected hidden>Select Hour</option>
+                                <option value="03">03:00</option>
+                                <option value="07">07:00</option>
+                                <option value="11">11:00</option>
+                                <option value="15">15:00</option>
+                                <option value="19">19:00</option>
+                                <option value="23">23:00</option>
+                            </select>
+                        </div>
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-success" onclick="submitShrimpDeathData()">Add</button>
+                        <button type="button" class="btn btn-default btn-close-modal"
+                            data-dismiss="modal">Close</button>
+                    </div>
+                    <div id="recentEntriesContainerGroup2" class="mt-4"></div>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Add Data Modal for Group 3 (Water Quality) -->
     <div id="addDataModalGroup3" class="modal" tabindex="-1" role="dialog">
@@ -276,7 +346,7 @@ $groupResult = $connect->query($groupSql);
                             <div class="form-group col-md-12">
                                 <label>System Type</label>
                                 <select name="system_type" class="form-control" required>
-                                    <option value="">Select System Type</option>
+                                    <option value="" disabled selected hidden>Select System</option>
                                     <option value="RAS System (NC, PC & Treatments)">RAS System (NC, PC & Treatments)
                                     </option>
                                     <option value="Static System (Negative Control)">Static System (Negative Control)
@@ -309,7 +379,42 @@ $groupResult = $connect->query($groupSql);
             </div>
         </div>
     </div>
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     <script>
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                sessionStorage.clear(); // Xóa sessionStorage
+                $('input, select').val(''); // Reset các trường dữ liệu
+                location.reload(); // Tải lại trang
+            }
+        });
+        document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === "visible") {
+                sessionStorage.clear(); // Xóa sessionStorage
+                $('input, select').val(''); // Reset các trường dữ liệu
+            }
+        });
+        window.addEventListener("beforeunload", function () {
+            sessionStorage.clear(); // Xóa sessionStorage
+            $('input, select').val(''); // Reset các trường dữ liệu
+        });
+        if (window.performance && window.performance.getEntriesByType("navigation")[0].type === "back_forward") {
+            location.reload(); // Tải lại trang để xóa dữ liệu cũ
+        }
+        window.addEventListener("pagehide", function () {
+            sessionStorage.clear(); // Xóa sessionStorage khi trang bị ẩn
+            $('input, select').val('');
+        });
+        window.onpageshow = function (event) {
+            if (event.persisted) {
+                sessionStorage.clear(); // Xóa sessionStorage khi trang bị ẩn
+                $('input, select').val('');
+            }
+        };
         document.addEventListener('wheel', function (event) {
             if (document.activeElement.type === 'number') {
                 event.preventDefault();
@@ -378,7 +483,10 @@ $groupResult = $connect->query($groupSql);
         function openAddDataModal(caseStudyId, groupName) {
             $('#modalCaseStudyId').val(caseStudyId);
             $('#modalGroupName').text(groupName);
-
+            // Gỡ bỏ sự kiện "keydown" trước khi đăng ký mới
+            $('#addDataForm').off('keydown');
+            // Gỡ bỏ sự kiện "keydown" trước khi đăng ký mới
+            $('#addShrimpDeathDataForm').off('keydown');
             // Kiểm tra và nạp lại dữ liệu từ session nếu tồn tại
             if (sessionStorage.getItem('treatment_name')) {
                 $('select[name="treatment_name"]').val(sessionStorage.getItem('treatment_name')).change();
@@ -406,14 +514,29 @@ $groupResult = $connect->query($groupSql);
         }
         // Đóng form và hủy sự kiện "keydown" để tránh xung đột
         $('.btn-close-modal').on('click', function () {
-            $('#addDataForm').off('keydown');
+            $('#addDataForm').off('keydown'); // Xóa sự kiện cho Form 1
+            $('#addShrimpDeathDataForm').off('keydown'); // Xóa sự kiện cho Form 2
         });
+
         // Submit dữ liệu Entry Data và reset chỉ hai trường cụ thể
         function submitEntryData() {
-            const labDay = $('input[name="lab_day"]').val().split('/').reverse().join('-');
-            $('input[name="lab_day"]').val(labDay);
+            // Validate required fields
+            const treatmentName = $('select[name="treatment_name"]').val();
+            const labDay = $('input[name="lab_day"]').val();
+            const rep = $('input[name="rep"]').val();
+            const survivalSample = $('input[name="survival_sample"]').val();
+            const feedingWeight = $('input[name="feeding_weight"]').val();
 
-            const formData = $('#addDataForm').serialize(); // Bao gồm cả `rep`
+            if (!treatmentName || !labDay || !rep || !survivalSample || !feedingWeight) {
+                showToast('Please fill in all required fields.', 'Error', false);
+                return;
+            }
+
+            // Proceed if all fields are valid
+            const labDayFormatted = labDay.split('/').reverse().join('-');
+            $('input[name="lab_day"]').val(labDayFormatted);
+
+            const formData = $('#addDataForm').serialize();
 
             $.ajax({
                 url: 'php_action/add_entry_data.php',
@@ -424,18 +547,17 @@ $groupResult = $connect->query($groupSql);
                     if (response.success) {
                         showToast('Data added successfully!', 'Success', true);
 
-                        // Reset các trường cụ thể
+                        // Reset specific fields
                         $('input[name="survival_sample"]').val('');
                         $('input[name="feeding_weight"]').val('');
 
-                        // Tăng rep lên 1 cho lần nhập tiếp theo
+                        // Increment rep for the next entry
                         const currentRep = parseInt($('input[name="rep"]').val(), 10);
                         $('input[name="rep"]').val(currentRep + 1);
 
-                        // Cập nhật danh sách các mục nhập gần đây
+                        // Update recent entries
                         updateRecentEntries();
                     } else {
-                        // Hiển thị thông báo lỗi nếu có
                         showToast(response.messages, 'Error', false);
                     }
                 },
@@ -446,19 +568,16 @@ $groupResult = $connect->query($groupSql);
         }
 
 
-
         function updateRecentEntries() {
+            const caseStudyId = $('#modalCaseStudyId').val(); // Lấy `case_study_id` từ modal
+
             $.ajax({
-                url: 'php_action/get_recent_entries.php',
+                url: 'php_action/get_recent_entries.php', // Endpoint để lấy recent entries
                 type: 'POST',
-                data: { case_study_id: <?php echo json_encode($caseStudyId); ?> },
+                data: { case_study_id: caseStudyId },
                 dataType: 'json',
                 success: function (response) {
-                    if (response.success && response.data.length > 0) {
-                        const recentEntriesContainer = $('#recentEntriesContainer');
-                        recentEntriesContainer.empty(); // Clear current entries
-
-                        // Tạo bảng Recent Entries
+                    if (response.success) {
                         let tableHtml = `
                     <table class="table table-bordered table-striped">
                         <thead>
@@ -474,37 +593,62 @@ $groupResult = $connect->query($groupSql);
                 `;
 
                         response.data.forEach(entry => {
+                            const formattedDate = formatDate(entry.lab_day); // Định dạng ngày
                             tableHtml += `
                         <tr>
                             <td>${entry.treatment_name}</td>
-                            <td>${entry.lab_day}</td>
+                            <td>${formattedDate}</td>
                             <td>${entry.rep}</td>
                             <td>${entry.survival_sample}</td>
-                            <td>${entry.feeding_weight} g</td>
+                            <td>${entry.feeding_weight}</td>
                         </tr>
                     `;
                         });
 
-                        tableHtml += `
-                        </tbody>
-                    </table>
-                `;
-
-                        // Thêm bảng vào container
-                        recentEntriesContainer.append(tableHtml);
+                        tableHtml += '</tbody></table>';
+                        $('#recentEntriesContainer').html(tableHtml); // Cập nhật container recent entries
                     } else {
                         $('#recentEntriesContainer').html('<p>No recent entries found.</p>');
                     }
                 },
                 error: function (xhr, status, error) {
-                    console.error('Failed to update recent entries:', error);
+                    console.error('Failed to fetch recent entries:', error);
                 }
             });
         }
 
+
+        // Hàm định dạng ngày sang dd-mm-yyyy
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            if (isNaN(date)) return dateString; // Nếu không phải ngày hợp lệ, trả về giá trị gốc
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // Tháng bắt đầu từ 0
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+        }
+
+
         // Submit dữ liệu Water Quality bằng Ajax
         function submitWaterQualityData() {
-            const dayFormatted = $('input[name="day"]').val().split('/').reverse().join('-');
+            // Validate required fields
+            const day = $('input[name="day"]').val();
+            const salinity = $('input[name="salinity"]').val();
+            const temperature = $('input[name="temperature"]').val();
+            const dissolvedOxygen = $('input[name="dissolved_oxygen"]').val();
+            const pH = $('input[name="pH"]').val();
+            const alkalinity = $('input[name="alkalinity"]').val();
+            const tan = $('input[name="tan"]').val();
+            const nitrite = $('input[name="nitrite"]').val();
+            const systemType = $('select[name="system_type"]').val();
+
+            if (!day || !salinity || !temperature || !dissolvedOxygen || !pH || !alkalinity || !tan || !nitrite || !systemType) {
+                showToast('Please fill in all required fields.', 'Error', false);
+                return;
+            }
+
+            // Proceed if all fields are valid
+            const dayFormatted = day.split('/').reverse().join('-');
             $('input[name="day"]').val(dayFormatted);
 
             const formData = $('#addWaterQualityForm').serialize();
@@ -540,8 +684,11 @@ $groupResult = $connect->query($groupSql);
             sessionStorage.removeItem('lab_day');
         }, 10800000);
         document.addEventListener("DOMContentLoaded", function () {
+            // Xóa sessionStorage của form 2 khi tải lại trang
+            $('input, select').val('');
+            sessionStorage.clear(); // Xóa mọi dữ liệu trong sessionStorage
             const treatmentDropdown = document.getElementById("treatmentName");
-
+            const treatmentDropdown2 = document.getElementById("treatmentNameGroup2");
             // Lấy case_study_id từ URL
             const urlParams = new URLSearchParams(window.location.search);
             const caseStudyId = urlParams.get("case_study_id");
@@ -563,13 +710,20 @@ $groupResult = $connect->query($groupSql);
                     if (data.success) {
                         const treatments = data.data;
 
-                        // Điền options vào dropdown
+                        // Điền options vào dropdown của group 1
                         treatments.forEach(treatment => {
-                            const option = document.createElement("option");
-                            option.value = treatment.name;
-                            option.textContent = treatment.name;
-                            option.setAttribute("data-application", treatment.product_application);
-                            treatmentDropdown.appendChild(option);
+                            const option1 = document.createElement("option");
+                            option1.value = treatment.name;
+                            option1.textContent = treatment.name;
+                            option1.setAttribute("data-application", treatment.product_application);
+                            treatmentDropdown.appendChild(option1);
+
+                            // Điền options vào dropdown của group 2
+                            const option2 = document.createElement("option");
+                            option2.value = treatment.name;
+                            option2.textContent = treatment.name;
+                            option2.setAttribute("data-application", treatment.product_application);
+                            treatmentDropdown2.appendChild(option2);
                         });
                     } else {
                         console.error("Error fetching treatments:", data.message);
@@ -580,20 +734,208 @@ $groupResult = $connect->query($groupSql);
 
 
         function updateProductApplication() {
-    const treatmentDropdown = document.getElementById("treatmentName");
-    const selectedOption = treatmentDropdown.options[treatmentDropdown.selectedIndex];
-    const productApplicationField = document.getElementById("productApplication");
+            const treatmentDropdown = document.getElementById("treatmentName");
+            const selectedOption = treatmentDropdown.options[treatmentDropdown.selectedIndex];
+            const productApplicationField = document.getElementById("productApplication");
 
-    // Lấy giá trị từ thuộc tính data-application
-    if (selectedOption && selectedOption.getAttribute("data-application")) {
-        const productApplication = selectedOption.getAttribute("data-application");
-        productApplicationField.value = productApplication;
-        sessionStorage.setItem('product_application', productApplication); // Lưu vào session
-    } else {
-        productApplicationField.value = "";
-        sessionStorage.removeItem('product_application');
-    }
-}
+            // Lấy giá trị từ thuộc tính data-application
+            if (selectedOption && selectedOption.getAttribute("data-application")) {
+                const productApplication = selectedOption.getAttribute("data-application");
+                productApplicationField.value = productApplication;
+                sessionStorage.setItem('product_application', productApplication); // Lưu vào session
+            } else {
+                productApplicationField.value = "";
+                sessionStorage.removeItem('product_application');
+            }
+        }
+        function openShrimpDeathModal(caseStudyId, groupName) {
+            $('#modalCaseStudyId2').val(caseStudyId);
+            updateRecentEntriesGroup2();
+
+            const savedTreatmentName = sessionStorage.getItem('treatmentNameGroup2');
+            const savedTestDate = sessionStorage.getItem('test_date_group2');
+            const savedTestHour = sessionStorage.getItem('test_hour_group2');
+            const savedProductApplication = sessionStorage.getItem('product_application_group2');
+
+            if (savedTreatmentName) {
+                $('select[name="treatmentNameGroup2"]').val(savedTreatmentName);
+                console.log('Loaded treatmentNameGroup2:', savedTreatmentName);
+            }
+            if (savedTestDate) {
+                $('input[name="test_date"]').val(savedTestDate);
+                console.log('Loaded test_date_group2:', savedTestDate);
+            }
+            if (savedTestHour) {
+                $('select[name="test_hour"]').val(savedTestHour);
+                console.log('Loaded test_hour_group2:', savedTestHour);
+            }
+            if (savedProductApplication) {
+                $('#productApplicationGroup2').val(savedProductApplication);
+                console.log('Loaded product_application_group2:', savedProductApplication);
+            }
+            $('input[name="test_date"]').on('change', function () {
+                sessionStorage.setItem('test_date_group2', $(this).val());
+            });
+
+            $('select[name="test_hour"]').on('change', function () {
+                sessionStorage.setItem('test_hour_group2', $(this).val());
+            });
+
+            $('select[name="treatmentNameGroup2"]').on('change', function () {
+                const selectedValue = $(this).val();
+                sessionStorage.setItem('treatmentNameGroup2', selectedValue);
+            });
+
+            // Đăng ký sự kiện nhấn Enter
+            $('#addShrimpDeathDataForm').on('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    submitShrimpDeathData();
+                }
+            });
+        }
+        // Xóa session sau 3 tiếng
+        setTimeout(function () {
+            sessionStorage.removeItem('treatmentNameGroup2');
+            sessionStorage.removeItem('test_date_group2');
+            sessionStorage.removeItem('test_hour_group2');
+            sessionStorage.removeItem('product_application_group2');
+        }, 10800000); // 3 tiếng
+        function updateProductApplicationGroup2() {
+            const treatmentDropdown2 = document.getElementById("treatmentNameGroup2");
+            const selectedOption = treatmentDropdown2.options[treatmentDropdown2.selectedIndex]; // Sửa từ `treatmentDropdown` thành `treatmentDropdown2`
+            const productApplicationField = document.getElementById("productApplicationGroup2");
+
+            // Lấy giá trị từ thuộc tính data-application
+            if (selectedOption && selectedOption.getAttribute("data-application")) {
+                const productApplication = selectedOption.getAttribute("data-application");
+                productApplicationField.value = productApplication;
+                sessionStorage.setItem('product_application_group2', productApplication); // Lưu vào session
+            } else {
+                productApplicationField.value = "";
+                sessionStorage.removeItem('product_application_group2');
+            }
+        }
+
+        function submitShrimpDeathData() {
+            const caseStudyId = $('#modalCaseStudyId2').val();
+            const treatmentName = $('select[name="treatmentNameGroup2"]').val();
+            const productApplication = $('#productApplicationGroup2').val();
+            const deathSample = $('input[name="death_sample"]').val();
+            const rep = $('input[name="rep_2"]').val();
+
+            if (!treatmentName || !productApplication || !deathSample || !rep) {
+                showToast("All fields are required.", "Error", false);
+                return;
+            }
+
+            // Xử lý ngày và giờ
+            const testDate = $('input[name="test_date"]').val();
+            const testHour = $('select[name="test_hour"]').val();
+            if (!testDate || !testHour) {
+                showToast("Please select both date and time.", "Error", false);
+                return;
+            }
+
+            const formattedDate = testDate.split("-").reverse().join("-");
+            const testTime = `${formattedDate} ${testHour}:00:00`;
+
+            const formData = {
+                case_study_id: caseStudyId,
+                treatment_name: treatmentName,
+                product_application: productApplication,
+                death_sample: deathSample,
+                rep: rep,
+                test_time: testTime,
+            };
+
+            $.ajax({
+                url: 'php_action/add_shrimp_death_data.php',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        showToast('Shrimp Death Data added successfully!', 'Success', true);
+
+                        // Lưu giá trị hiện tại vào sessionStorage
+                        sessionStorage.setItem('treatmentNameGroup2', treatmentName);
+                        sessionStorage.setItem('test_date_group2', testDate);
+                        sessionStorage.setItem('test_hour_group2', testHour);
+
+                        // Chỉ reset các trường không cần giữ lại
+                        $('input[name="death_sample"]').val('');
+                        const currentRep = parseInt($('input[name="rep_2"]').val(), 10);
+                        $('input[name="rep_2"]').val(currentRep + 1); // Tăng rep thêm 1
+
+                        // Làm mới danh sách recent entries
+                        updateRecentEntriesGroup2();
+                    } else {
+                        showToast(response.message, 'Error', false);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("AJAX Error:", error);
+                }
+            });
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            flatpickr("#testTimePicker", {
+                //   enableTime: true, // Cho phép chọn giờ
+                dateFormat: "d-m-Y", // Định dạng ngày và giờ (phù hợp với MySQL)
+                time_24hr: true, // Hiển thị giờ ở định dạng 24 giờ
+                defaultDate: new Date(), // Gán ngày hiện tại làm mặc định
+            });
+        });
+        // Cập nhật danh sách Recent Entries cho Group 2
+        function updateRecentEntriesGroup2() {
+            const caseStudyId = $('#modalCaseStudyId2').val();
+
+            $.ajax({
+                url: 'php_action/get_recent_entries_death.php',
+                type: 'POST',
+                data: { case_study_id: caseStudyId },
+                dataType: 'json',
+                success: function (response) {
+                    console.log('Recent Entries Response:', response);
+
+                    if (response.success) {
+                        let tableHtml = `
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Treatment Name</th>
+                                <th>Test Time</th>
+                                <th>Rep</th>
+                                <th>Death Sample</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                        response.data.forEach(entry => {
+                            tableHtml += `
+                        <tr>
+                            <td>${entry.treatment_name}</td>
+                            <td>${entry.test_time}</td>
+                            <td>${entry.rep}</td>
+                            <td>${entry.death_sample}</td>
+                        </tr>
+                    `;
+                        });
+                        tableHtml += '</tbody></table>';
+
+                        $('#recentEntriesContainerGroup2').html(tableHtml);
+                    } else {
+                        $('#recentEntriesContainerGroup2').html('<p>No recent entries found.</p>');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Failed to fetch recent entries:', error);
+                }
+            });
+        }
 
     </script>
     <style>

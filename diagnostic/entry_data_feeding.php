@@ -57,7 +57,7 @@ $endDate->modify("+" . ($totalDuration - 1) . " days");
 
 
 // Fetch entry_data
-$sql = "SELECT treatment_name, survival_sample, lab_day, rep FROM entry_data WHERE case_study_id = ?";
+$sql = "SELECT treatment_name, feeding_weight, lab_day, rep FROM entry_data WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -84,7 +84,7 @@ usort($tempData, function ($a, $b) {
 foreach ($tempData as $row) {
     $entryData[$row['treatment_name']][$row['lab_day']][] = [
         'rep' => $row['rep'],
-        'survival_sample' => $row['survival_sample'],
+        'feeding_weight' => $row['feeding_weight'],
     ];
 }
 
@@ -102,7 +102,7 @@ function formatDate($date)
             <div class="card-body">
             <div class="header-title">
     <h3 class="text-primary">
-        View of Survival Data for Case Study ID: <?php echo htmlspecialchars($caseStudyId); ?>
+        View of Feeding Data for Case Study ID: <?php echo htmlspecialchars($caseStudyId); ?>
     </h3>
     <div style="font-size: 1em; color: black; font-weight: bold;"class="date-range">
         Start Date: <?php echo $startDate->format('d-m-Y'); ?> ||
@@ -185,7 +185,7 @@ function formatDate($date)
 
                                                     if (isset($daysData[$currentDate][$rep])) {
                                                         $sampleData = $daysData[$currentDate][$rep];
-                                                        echo htmlspecialchars($sampleData['survival_sample']);
+                                                        echo htmlspecialchars($sampleData['feeding_weight']);
                                                     } else {
                                                         echo '-';
                                                     }
