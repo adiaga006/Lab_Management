@@ -107,7 +107,8 @@ foreach ($entries as $entry) {
             <h3 class="text-primary">Death Data for Case Study ID: <?php echo htmlspecialchars($caseStudyId); ?></h3>
         </div>
     </div>
-    <div class="filter-container mb-4">
+    <div class="filter-container mb-4 d-flex justify-content-between align-items-center">
+        <!-- Bộ lọc ngày -->
         <form id="filterForm" class="d-flex align-items-center">
             <label for="filterDate" class="mr-2 font-weight-bold">Filter by Date:</label>
             <input type="text" id="filterDate" name="filterDate" class="form-control mr-2" style="width: 200px;"
@@ -115,7 +116,12 @@ foreach ($entries as $entry) {
             <button type="button" class="btn btn-primary" onclick="applyDateFilter()">Filter</button>
             <button type="button" class="btn btn-secondary ml-2" onclick="resetFilter()">Reset</button>
         </form>
+
+        <!-- Nút Change View -->
+        <button type="button" id="changeViewButton" class="btn btn-info float-right" onclick="changeView()">Change
+            View</button>
     </div>
+
 
     <div class="container-fluid">
         <?php foreach ($groupedByDate as $date => $dailyEntries): ?>
@@ -254,7 +260,6 @@ foreach ($entries as $entry) {
 
     // Function to render filtered data
     function renderFilteredData(groupedByDate) {
-        console.log(groupedByDate); // Kiểm tra cấu trúc dữ liệu
         const container = document.querySelector(".container-fluid");
         container.innerHTML = ""; // Xóa nội dung cũ
 
@@ -366,12 +371,10 @@ foreach ($entries as $entry) {
     }
     // Open the Edit Modal and populate data
     function editEntry(entryID) {
-        console.log("Editing entry with ID:", entryID); // Debugging
-
         $.ajax({
             url: 'php_action/get_entry_death.php',
             type: 'POST',
-            data: { id: entryID},
+            data: { id: entryID },
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
@@ -489,6 +492,20 @@ foreach ($entries as $entry) {
         }
     }
 
+    function changeView() {
+    const caseStudyId = "<?php echo htmlspecialchars($caseStudyId); ?>"; // Lấy giá trị caseStudyId từ PHP
+    const filterDate = document.getElementById('filterDate').value || null;
+
+    // Xây dựng URL với các tham số (nếu có)
+    let url = `view_death_data.php?case_study_id=${caseStudyId}`;
+    if (filterDate) {
+        const formattedDate = filterDate.split('-').reverse().join('-'); // Định dạng ngày
+        url += `&filterDate=${formattedDate}`;
+    }
+
+    // Chuyển hướng đến file view_death_data.php
+    window.location.href = url;
+}
 
 </script>
 <style>

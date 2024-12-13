@@ -74,7 +74,18 @@ while ($row = $result->fetch_assoc()) {
     $entries[] = $row;
 }
 $stmt->close();
-
+// Fetch the number of survival shrimp after immunology sampling
+$sql = "SELECT no_of_survival_shrimp_after_immunology_sampling FROM case_study WHERE case_study_id = ?";
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$stmt->bind_result($shrimpAfterImmunology);
+$stmt->fetch();
+$stmt->close();
+// Kiểm tra nếu `no_of_survival_shrimp_after_immunology_sampling` bằng 0 hoặc không có giá trị
+if ($shrimpAfterImmunology === null || $shrimpAfterImmunology == 0) {
+    $shrimpAfterImmunology = null; // Đặt giá trị null để báo lỗi trong phase "Post-challenge"
+}
 // Group data by treatment
 $treatmentData = [];
 foreach ($entries as $entry) {
@@ -119,41 +130,71 @@ function calculateStandardDeviation($values)
 $survivalResults = [];
 // Calculate survival rates for each phase
 foreach ($phases as $phase) {
-    $phaseName = $phase['name'];
+    $phaseName = strtolower($phase['name']); // Chuyển phase name về chữ thường
     $phaseStartDate = $phase['start_date'];
     $phaseEndDate = $phase['end_date'];
 
     foreach ($treatmentData as $treatmentName => $data) {
-        // Lấy dữ liệu cho start_date và end_date
-        $startSamples = $data[$phaseStartDate] ?? [];
-        $endSamples = ($phaseStartDate === $phaseEndDate)
-            ? $startSamples // Nếu start_date == end_date, sử dụng cùng một dữ liệu
-            : ($data[$phaseEndDate] ?? []);
+        $survivalRates = []; // Lưu tất cả survival rates cho phase
 
-        // Tính tỷ lệ sống
-        $survivalRates = [];
-        $totalPairs = min(count($startSamples), count($endSamples)); // Pair start and end samples
-        for ($i = 0; $i < $totalPairs; $i++) {
-            $rate = calculateSurvivalRate($startSamples[$i], $endSamples[$i]);
-            if ($rate !== null) {
-                $survivalRates[] = $rate;
+        // Special handling for "Post-challenge" phase
+        if ($phaseName === strtolower("Post-challenge")) {
+            if ($shrimpAfterImmunology === null) {
+                // Nếu không có dữ liệu hoặc giá trị bằng 0
+                $survivalResults[$phase['name']][] = [
+                    'treatment_name' => $treatmentName,
+                    'average_survival_rate' => 'No data available',
+                    'standard_deviation' => 'No data available',
+                ];
+                continue;
+            }
+
+            // Lấy tất cả endSamples từ phase "Post-challenge"
+            $endSamples = $data[$phaseEndDate] ?? [];
+
+            // Tính survival rate cho từng cặp
+            foreach ($endSamples as $endSample) {
+                $rate = calculateSurvivalRate($shrimpAfterImmunology, $endSample);
+                if ($rate !== null) {
+                    $survivalRates[] = $rate;
+                }
+            }
+        } else {
+            // Logic cho các phase khác
+            $startSamples = $data[$phaseStartDate] ?? [];
+            $endSamples = ($phaseStartDate === $phaseEndDate)
+                ? $startSamples // Nếu start_date == end_date, sử dụng cùng một dữ liệu
+                : ($data[$phaseEndDate] ?? []);
+
+            // Tính survival rate cho từng cặp
+            $totalPairs = min(count($startSamples), count($endSamples));
+            for ($i = 0; $i < $totalPairs; $i++) {
+                $rate = calculateSurvivalRate($startSamples[$i], $endSamples[$i]);
+                if ($rate !== null) {
+                    $survivalRates[] = $rate;
+                }
             }
         }
 
-        // Tính trung bình và độ lệch chuẩn
+        // Tính trung bình và độ lệch chuẩn nếu có dữ liệu
         if (!empty($survivalRates)) {
             $averageSurvivalRate = round(array_sum($survivalRates) / count($survivalRates), 2);
             $standardDeviation = calculateStandardDeviation($survivalRates);
 
-            $survivalResults[$phaseName][] = [
+            $survivalResults[$phase['name']][] = [
                 'treatment_name' => $treatmentName,
                 'average_survival_rate' => $averageSurvivalRate,
                 'standard_deviation' => $standardDeviation,
             ];
+        } else {
+            $survivalResults[$phase['name']][] = [
+                'treatment_name' => $treatmentName,
+                'average_survival_rate' => 'No data available',
+                'standard_deviation' => 'No data available',
+            ];
         }
     }
 }
-
 
 
 // Prepare feeding weight results
@@ -213,7 +254,8 @@ $feedingResults = array_map(function ($treatmentName, $totalFeedingWeight) {
         </div>
         <div class="card">
             <div class="card-body text-center">
-                <button style="color:white" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addShrimpModal">
+                <button style="color:white" class="btn btn-primary" data-bs-toggle="modal"
+                    data-bs-target="#addShrimpModal">
                     Add/Update the number of shrimp that survived after immunosampling
                 </button>
             </div>
@@ -221,7 +263,7 @@ $feedingResults = array_map(function ($treatmentName, $totalFeedingWeight) {
         <div class="card mt-3">
             <div class="card-body">
                 <h5 style="font-size: 1.25em; font-weight: bold;color:black;">
-                Number of survival shrimp after immunology sampling:                     <?php
+                    Number of survival shrimp after immunology sampling: <?php
                     $sql = "SELECT no_of_survival_shrimp_after_immunology_sampling FROM case_study WHERE case_study_id = ?";
                     $stmt = $connect->prepare($sql);
                     $stmt->bind_param("s", $caseStudyId);
@@ -294,7 +336,8 @@ $feedingResults = array_map(function ($treatmentName, $totalFeedingWeight) {
                 </div>
                 <div class="modal-body">
                     <div class="form-group mb-3">
-                        <label style="color:black" form="shrimpCount" class="form-label">Number of survival shrimp after immunology sampling</label>
+                        <label style="color:black" form="shrimpCount" class="form-label">Number of survival shrimp after
+                            immunology sampling</label>
                         <input type="number" class="form-control" id="shrimpCount" name="shrimpCount" min="0" required>
                     </div>
                 </div>

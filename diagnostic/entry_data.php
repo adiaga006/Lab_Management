@@ -162,97 +162,97 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
         <div class="card">
             <div class="card-body">
                 <?php foreach ($groupedEntries as $group): ?>
-                        <div class="phase-container">
-                            <h5 class="phase-title"
-                                style="text-align: center;background-color:#A8CD89;font-size: 1.5em; color: black; font-weight: bold;">
-                                <?php echo htmlspecialchars($group['phase']['name']); ?>
-                                (<?php echo date('d-m-Y', strtotime($group['phase']['start_date'])); ?> to
-                                <?php echo date('d-m-Y', strtotime($group['phase']['end_date'])); ?>)
-                            </h5>
+                    <div class="phase-container">
+                        <h5 class="phase-title"
+                            style="text-align: center;background-color:#A8CD89;font-size: 1.5em; color: black; font-weight: bold;">
+                            <?php echo htmlspecialchars($group['phase']['name']); ?>
+                            (<?php echo date('d-m-Y', strtotime($group['phase']['start_date'])); ?> to
+                            <?php echo date('d-m-Y', strtotime($group['phase']['end_date'])); ?>)
+                        </h5>
 
-                            <?php $phaseEntries = $group['entries']; ?>
+                        <?php $phaseEntries = $group['entries']; ?>
 
-                            <?php if (!empty($phaseEntries)): ?>
-                                    <div class="table-responsive m-t-20">
-                                        <table class="table table-bordered table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width: 160px;">Treatment Name</th>
-                                                    <th style="width: 200px;">Product Application</th>
-                                                    <th style="width: 105px;" width: 50px>Day</th>
-                                                    <th style="width: 50px;">Reps</th>
-                                                    <th style="text-align: center;width: 150px;">Survival Sample</th>
-                                                    <th style="text-align: center;width: 150px;">Feeding Weight</th>
-                                                    <th style=" text-align: center">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php
-                                                $currentTreatment = '';
-                                                $currentDate = '';
-                                                foreach ($phaseEntries as $entry):
-                                                    $isNewTreatment = $currentTreatment !== $entry['treatment_name'];
-                                                    $isNewDay = $currentDate !== $entry['lab_day'];
+                        <?php if (!empty($phaseEntries)): ?>
+                            <div class="table-responsive m-t-20">
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 160px;">Treatment Name</th>
+                                            <th style="width: 200px;">Product Application</th>
+                                            <th style="width: 105px;" width: 50px>Day</th>
+                                            <th style="width: 50px;">Reps</th>
+                                            <th style="text-align: center;width: 150px;">Survival Sample</th>
+                                            <th style="text-align: center;width: 150px;">Feeding Weight</th>
+                                            <th style=" text-align: center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php
+                                        $currentTreatment = '';
+                                        $currentDate = '';
+                                        foreach ($phaseEntries as $entry):
+                                            $isNewTreatment = $currentTreatment !== $entry['treatment_name'];
+                                            $isNewDay = $currentDate !== $entry['lab_day'];
 
-                                                    if ($isNewTreatment) {
-                                                        $currentTreatment = $entry['treatment_name'];
-                                                        $currentDate = $entry['lab_day'];
-                                                    } elseif ($isNewDay) {
-                                                        $currentDate = $entry['lab_day'];
-                                                    }
+                                            if ($isNewTreatment) {
+                                                $currentTreatment = $entry['treatment_name'];
+                                                $currentDate = $entry['lab_day'];
+                                            } elseif ($isNewDay) {
+                                                $currentDate = $entry['lab_day'];
+                                            }
+                                            ?>
+                                            <tr>
+                                                <?php if ($isNewTreatment): ?>
+                                                    <?php
+                                                    $treatmentRowCount = count(array_filter($phaseEntries, function ($e) use ($currentTreatment) {
+                                                        return $e['treatment_name'] === $currentTreatment;
+                                                    }));
                                                     ?>
-                                                        <tr>
-                                                            <?php if ($isNewTreatment): ?>
-                                                                    <?php
-                                                                    $treatmentRowCount = count(array_filter($phaseEntries, function ($e) use ($currentTreatment) {
-                                                                        return $e['treatment_name'] === $currentTreatment;
-                                                                    }));
-                                                                    ?>
-                                                                    <td rowspan="<?php echo $treatmentRowCount; ?>"
-                                                                        style="vertical-align: middle; font-weight: bold;">
-                                                                        <?php echo htmlspecialchars($entry['treatment_name']); ?>
-                                                                    </td>
-                                                                    <td rowspan="<?php echo $treatmentRowCount; ?>" style="vertical-align: middle;">
-                                                                        <?php echo htmlspecialchars($entry['product_application']); ?>
-                                                                    </td>
-                                                            <?php endif; ?>
+                                                    <td rowspan="<?php echo $treatmentRowCount; ?>"
+                                                        style="vertical-align: middle; font-weight: bold;">
+                                                        <?php echo htmlspecialchars($entry['treatment_name']); ?>
+                                                    </td>
+                                                    <td rowspan="<?php echo $treatmentRowCount; ?>" style="vertical-align: middle;">
+                                                        <?php echo htmlspecialchars($entry['product_application']); ?>
+                                                    </td>
+                                                <?php endif; ?>
 
-                                                            <?php if ($isNewDay || $isNewTreatment): ?>
-                                                                    <?php
-                                                                    $dayRowCount = count(array_filter($phaseEntries, function ($e) use ($currentDate, $currentTreatment) {
-                                                                        return $e['lab_day'] === $currentDate && $e['treatment_name'] === $currentTreatment;
-                                                                    }));
-                                                                    ?>
-                                                                    <td rowspan="<?php echo $dayRowCount; ?>" style="vertical-align: middle;">
-                                                                        <?php echo date('d-m-Y', strtotime($entry['lab_day'])); ?>
-                                                                    </td>
-                                                            <?php endif; ?>
+                                                <?php if ($isNewDay || $isNewTreatment): ?>
+                                                    <?php
+                                                    $dayRowCount = count(array_filter($phaseEntries, function ($e) use ($currentDate, $currentTreatment) {
+                                                        return $e['lab_day'] === $currentDate && $e['treatment_name'] === $currentTreatment;
+                                                    }));
+                                                    ?>
+                                                    <td rowspan="<?php echo $dayRowCount; ?>" style="vertical-align: middle;">
+                                                        <?php echo date('d-m-Y', strtotime($entry['lab_day'])); ?>
+                                                    </td>
+                                                <?php endif; ?>
 
-                                                            <td><?php echo htmlspecialchars($entry['rep']); ?></td>
-                                                            <td><?php echo htmlspecialchars($entry['survival_sample']); ?></td>
-                                                            <td><?php echo htmlspecialchars($entry['feeding_weight']); ?></td>
-                                                            <td>
-                                                                <div class="action-buttons">
-                                                                    <button class="btn btn-warning btn-sm"
-                                                                        onclick="editEntryData(<?php echo $entry['entry_data_id']; ?>)">
-                                                                        <i class="fa fa-pencil">Edit</i>
-                                                                    </button>
-                                                                    <button class="btn btn-danger btn-sm"
-                                                                        onclick="deleteEntryData(<?php echo $entry['entry_data_id']; ?>)">
-                                                                        <i class="fa fa-trash">Delete</i>
-                                                                    </button>
-                                                                </div>
-                                    </td>
-                                                        </tr>
-                                                        <?php ?>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                            <?php else: ?>
-                                    <p>No entries for this phase.</p>
-                            <?php endif; ?>
-                        </div>
+                                                <td><?php echo htmlspecialchars($entry['rep']); ?></td>
+                                                <td><?php echo htmlspecialchars($entry['survival_sample']); ?></td>
+                                                <td><?php echo htmlspecialchars($entry['feeding_weight']); ?></td>
+                                                <td>
+                                                    <div class="action-buttons">
+                                                        <button class="btn btn-warning btn-sm"
+                                                            onclick="editEntryData(<?php echo $entry['entry_data_id']; ?>)">
+                                                            <i class="fa fa-pencil">Edit</i>
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm"
+                                                            onclick="deleteEntryData(<?php echo $entry['entry_data_id']; ?>)">
+                                                            <i class="fa fa-trash">Delete</i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <?php ?>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <p>No entries for this phase.</p>
+                        <?php endif; ?>
+                    </div>
                 <?php endforeach; ?>
             </div>
         </div>
@@ -281,6 +281,11 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                         <input type="text" name="product_application" class="form-control" id="editProductApplication"
                             readonly>
                     </div>
+                    <div class="form-group">
+                        <label>Lab Day</label>
+                        <input type="text" name="lab_day" class="form-control" id="editLabDay" readonly>
+                    </div>
+
                     <div class="form-group">
                         <label>Rep</label>
                         <input type="number" name="rep" class="form-control" id="editRep">
@@ -378,6 +383,7 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                     $('#editSurvivalSample').val(response.data.survival_sample);
                     $('#editFeedingWeight').val(response.data.feeding_weight);
                     $('#editRep').val(response.data.rep); // Điền giá trị rep
+                    $('#editLabDay').val(formatToDDMMYYYY(response.data.lab_day)); // Định dạng dd-mm-yyyy
                     $('#editDataModal').modal('show');
                 } else {
                     showToast(response.messages, 'Error', false);

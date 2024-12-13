@@ -392,12 +392,7 @@ $groupResult = $connect->query($groupSql);
                 location.reload(); // Tải lại trang
             }
         });
-        document.addEventListener("visibilitychange", function () {
-            if (document.visibilityState === "visible") {
-                sessionStorage.clear(); // Xóa sessionStorage
-                $('input, select').val(''); // Reset các trường dữ liệu
-            }
-        });
+
         window.addEventListener("beforeunload", function () {
             sessionStorage.clear(); // Xóa sessionStorage
             $('input, select').val(''); // Reset các trường dữ liệu
@@ -747,6 +742,8 @@ $groupResult = $connect->query($groupSql);
                 productApplicationField.value = "";
                 sessionStorage.removeItem('product_application');
             }
+                 // Gọi hàm resetRep để reset giá trị rep về 1
+                 resetRep(treatmentDropdown);
         }
         function openShrimpDeathModal(caseStudyId, groupName) {
             $('#modalCaseStudyId2').val(caseStudyId);
@@ -815,6 +812,8 @@ $groupResult = $connect->query($groupSql);
                 productApplicationField.value = "";
                 sessionStorage.removeItem('product_application_group2');
             }
+            // Gọi hàm resetRep để reset giá trị rep về 1
+            resetRep(treatmentDropdown2);
         }
 
         function submitShrimpDeathData() {
@@ -837,7 +836,7 @@ $groupResult = $connect->query($groupSql);
                 return;
             }
 
-            const formattedDate = testDate.split("-").reverse().join("-");
+            const formattedDate = testDate.split("-").reverse().join("-"); // Định dạng ngày
             const testTime = `${formattedDate} ${testHour}:00:00`;
 
             const formData = {
@@ -849,36 +848,34 @@ $groupResult = $connect->query($groupSql);
                 test_time: testTime,
             };
 
+            // Gửi AJAX
             $.ajax({
                 url: 'php_action/add_shrimp_death_data.php',
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
                 success: function (response) {
+                    console.log('API Response:', response); // Logging để kiểm tra
                     if (response.success) {
                         showToast('Shrimp Death Data added successfully!', 'Success', true);
 
-                        // Lưu giá trị hiện tại vào sessionStorage
-                        sessionStorage.setItem('treatmentNameGroup2', treatmentName);
-                        sessionStorage.setItem('test_date_group2', testDate);
-                        sessionStorage.setItem('test_hour_group2', testHour);
-
-                        // Chỉ reset các trường không cần giữ lại
+                        // Reset các trường sau khi thành công
                         $('input[name="death_sample"]').val('');
                         const currentRep = parseInt($('input[name="rep_2"]').val(), 10);
-                        $('input[name="rep_2"]').val(currentRep + 1); // Tăng rep thêm 1
+                        $('input[name="rep_2"]').val(currentRep + 1);
 
-                        // Làm mới danh sách recent entries
                         updateRecentEntriesGroup2();
                     } else {
-                        showToast(response.message, 'Error', false);
+                        showToast(response.messages, 'Error', false); // Hiển thị lỗi từ API
                     }
                 },
                 error: function (xhr, status, error) {
                     console.error("AJAX Error:", error);
+                    showToast("An unexpected error occurred.", "Error", false); // Lỗi không mong muốn
                 }
             });
         }
+
 
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -936,7 +933,14 @@ $groupResult = $connect->query($groupSql);
                 }
             });
         }
+        function resetRep(selectElement) {
+            const formGroup = selectElement.closest('.form-group').parentElement;
+            const repInput = formGroup.querySelector('input[name="rep"], input[name="rep_2"]');
 
+            if (repInput) {
+                repInput.value = 1; // Reset rep về 1
+            }
+        }
     </script>
     <style>
         /* Container cho toast */
@@ -1116,5 +1120,9 @@ $groupResult = $connect->query($groupSql);
                 margin: 1.75rem auto;
                 /* Center the modal vertically */
             }
+        }
+
+        .custom-toast.show {
+            display: block !important;
         }
     </style>
