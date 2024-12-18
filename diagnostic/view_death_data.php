@@ -4,7 +4,7 @@ include('./constant/layout/header.php');
 include('./constant/layout/sidebar.php');
 include('./constant/connect.php');
 
-// Fetch the `case_study_id` from the URL
+// Fetch the case_study_id from the URL
 $caseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : 0;
 if (!$caseStudyId) {
     die("Error: Missing case_study_id in URL");
@@ -27,10 +27,10 @@ $startDate = new DateTime($caseStudy['start_date']);
 $numReps = $caseStudy['num_reps']; // Số lần đo trong mỗi ngày
 
 // Fetch shrimp_death_data
-$sql = "SELECT treatment_name, rep, product_application, test_time, death_sample 
-        FROM shrimp_death_data 
-        WHERE case_study_id = ?
-        ORDER BY treatment_name, test_time, rep";
+$sql = "SELECT treatment_name, rep, product_application, test_time, death_sample
+FROM shrimp_death_data
+WHERE case_study_id = ?
+ORDER BY treatment_name, test_time, rep";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -48,12 +48,28 @@ $stmt->close();
 
 // Define the 6 specific time slots
 $timeSlots = ['03:00', '07:00', '11:00', '15:00', '19:00', '23:00'];
+// Lấy ngày nhỏ nhất trong database
+$sql = "SELECT MIN(DATE(test_time)) AS earliest_date FROM shrimp_death_data WHERE case_study_id = ?";
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$result = $stmt->get_result();
+$row = $result->fetch_assoc();
+$stmt->close();
+
+if (!$row || !$row['earliest_date']) {
+    die("Error: Unable to fetch the earliest date from the database.");
+}
+
+// Xác định ngày gốc
+$baseDate = $row['earliest_date']; // Ngày nhỏ nhất
+$baseTime = new DateTime($baseDate . ' 15:00'); // Thêm giờ gốc 15:00
 
 // Helper function to format date
 function formatDate($date)
 {
     $dateObj = DateTime::createFromFormat('Y-m-d', $date);
-    return $dateObj ? $dateObj->format('d-m') : $date;
+    return $dateObj ? $dateObj->format('d-m-Y') : $date;
 }
 ?>
 
@@ -99,7 +115,7 @@ function formatDate($date)
                         <table class="table table-bordered">
                             <thead>
                                 <!-- Hàng tiêu đề ngày -->
-                                <tr>
+                                <tr class="date-header">
                                     <?php $dayIndex = 0; ?>
                                     <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
                                         <th colspan="<?php echo count($timeSlots); ?>"
@@ -110,7 +126,7 @@ function formatDate($date)
                                     <?php endforeach; ?>
                                 </tr>
                                 <!-- Hàng tiêu đề khung giờ -->
-                                <tr>
+                                <tr class="time-header">
                                     <?php $dayIndex = 0; ?>
                                     <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
                                         <?php foreach ($timeSlots as $slot): ?>
@@ -122,11 +138,26 @@ function formatDate($date)
                                     <?php endforeach; ?>
                                 </tr>
                             </thead>
-
-
-
-
-
+                            <!-- Hàng tiêu đề độ lệch giờ -->
+                            <tr class="offset-header">
+                                <?php $dayIndex = 0; ?>
+                                <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
+                                    <?php foreach ($timeSlots as $slot): ?>
+                                        <?php
+                                        $currentSlot = new DateTime("$date $slot"); // Kết hợp ngày và giờ hiện tại
+                                        $interval = $baseTime->diff($currentSlot); // Tính khoảng cách đến thời gian gốc
+                                        $hourDifference = ($interval->days * 24) + $interval->h; // Chênh lệch giờ
+                                        if ($interval->invert) {
+                                            $hourDifference = -$hourDifference; // Nếu trước thời gian gốc thì giá trị âm
+                                        }
+                                        ?>
+                                        <th style="background-color: white;">
+                                            <?php echo $hourDifference; ?>
+                                        </th>
+                                    <?php endforeach; ?>
+                                    <?php $dayIndex++; ?>
+                                <?php endforeach; ?>
+                            </tr>
                             <tbody>
                                 <?php foreach ($deathData as $treatmentName => $dates): ?>
                                     <?php for ($rep = 1; $rep <= $numReps; $rep++): ?>
@@ -137,9 +168,12 @@ function formatDate($date)
                                                 <?php foreach ($timeSlots as $slot): ?>
                                                     <td class="<?php echo $dayColor; ?>">
                                                         <?php
-                                                        echo isset($reps[$rep][$slot])
-                                                            ? htmlspecialchars($reps[$rep][$slot])
-                                                            : '-';
+                                                        // Kiểm tra dữ liệu có tồn tại cho rep và time slot
+                                                        if (isset($reps[$rep][$slot])) {
+                                                            echo htmlspecialchars($reps[$rep][$slot]);
+                                                        } else {
+                                                            echo '-'; // Hiển thị trống nếu không có dữ liệu
+                                                        }
                                                         ?>
                                                     </td>
                                                 <?php endforeach; ?>
@@ -149,9 +183,6 @@ function formatDate($date)
                                     <?php endfor; ?>
                                 <?php endforeach; ?>
                             </tbody>
-
-
-
                         </table>
                     </div>
 
@@ -236,21 +267,36 @@ function formatDate($date)
                             /* Tạo viền khi cố định */
                         }
 
-                        /* Date header (cố định khi cuộn xuống bên dưới phase) */
+                        /* Header cố định */
                         .date-header th {
                             position: sticky;
-                            top: 80px;
-                            /* Ngay bên dưới phase header */
-                            z-index: 2;
-                            /* Cao hơn nội dung, thấp hơn phase */
-                            background: #f8f9fa;
+                            top: 0;
+                            /* Vị trí cố định khi cuộn */
+                            z-index: 4;
+                            /* Cao hơn nội dung khác */
+                            background-color: #e9ecef;
+                            /* Màu nền cho tiêu đề */
                             font-weight: bold;
                             text-align: center;
                             vertical-align: middle;
                             border: 0.1px solid #000;
-                            /* Gạch ngang và dọc đậm */
                             box-shadow: inset 0 0 0 1px #000;
-                            /* Tạo viền khi cố định */
+                            /* Tạo viền bên trong */
+                        }
+
+                        /* Hàng khung giờ cố định ngay dưới header ngày */
+                        .offset-header th {
+                            position: sticky;
+                            top: 96.4px;
+                            /* Ngay bên dưới hàng date-header */
+                            z-index: 3;
+                            /* Thấp hơn date-header nhưng cao hơn nội dung */
+                            background-color: #f8f9fa;
+                            font-weight: bold;
+                            text-align: center;
+                            vertical-align: middle;
+                            border: 0.1px solid #000;
+                            box-shadow: inset 0 0 0 1px #000;
                         }
 
                         /* Tiêu đề Treatment Name và Reps */
@@ -267,7 +313,7 @@ function formatDate($date)
                             /* Gạch ngang và dọc đậm */
                             text-align: center;
                             font-weight: bold;
-                            height: 96px;
+                            height: 145px;
                             box-shadow: inset 0 0 0 1px #000;
                             /* Tạo viền bên trong */
                         }
@@ -281,6 +327,22 @@ function formatDate($date)
                             /* Gạch ngang và dọc đậm */
                             box-shadow: inset 0 0 0 1px #000;
                             /* Tạo viền bên trong */
+                        }
+
+                        /* Cố định hàng tiêu đề */
+
+                        .time-header th {
+                            position: sticky;
+                            top: 48.2px;
+                            /* Ngay bên dưới hàng date-header */
+                            z-index: 3;
+                            /* Thấp hơn date-header nhưng cao hơn nội dung */
+                            background-color: #f8f9fa;
+                            font-weight: bold;
+                            text-align: center;
+                            vertical-align: middle;
+                            border: 0.1px solid #000;
+                            box-shadow: inset 0 0 0 1px #000;
                         }
 
                         /* Gộp các ô với căn giữa */
@@ -321,6 +383,7 @@ function formatDate($date)
                             color: #555;
                             font-weight: normal;
                         }
+
                         /* Màu hồng nhạt cho các ngày */
                         .bg-pink {
                             background-color: #f8d7da !important;

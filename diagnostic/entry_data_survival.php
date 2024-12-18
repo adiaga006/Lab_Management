@@ -100,15 +100,15 @@ function formatDate($date)
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">
-            <div class="header-title">
-    <h3 class="text-primary">
-        View of Survival Data for Case Study ID: <?php echo htmlspecialchars($caseStudyId); ?>
-    </h3>
-    <div style="font-size: 1em; color: black; font-weight: bold;"class="date-range">
-        Start Date: <?php echo $startDate->format('d-m-Y'); ?> ||
-        End Date: <?php echo $endDate->format('d-m-Y'); ?>
-    </div>
-</div>
+                <div class="header-title">
+                    <h3 class="text-primary">
+                        View of Survival Data for Case Study ID: <?php echo htmlspecialchars($caseStudyId); ?>
+                    </h3>
+                    <div style="font-size: 1em; color: black; font-weight: bold;" class="date-range">
+                        Start Date: <?php echo $startDate->format('d-m-Y'); ?> ||
+                        End Date: <?php echo $endDate->format('d-m-Y'); ?>
+                    </div>
+                </div>
 
 
                 <!-- Fixed table for Treatment Name and Reps -->
@@ -119,7 +119,7 @@ function formatDate($date)
                                 <tr class="header-row">
                                     <th rowspan="2" style="width: 100px;" class="sticky-header">Treatment Name</th>
                                     <th rowspan="2" style="width: 20px;" class="sticky-header">Reps</th>
-                                    </tr>
+                                </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($treatmentList as $treatment): ?>
@@ -175,22 +175,25 @@ function formatDate($date)
                                 <?php endforeach; ?>
                             </tr>
                             <tbody>
-                                <?php foreach ($entryData as $treatment => $daysData): ?>
-                                    <?php for ($rep = 0; $rep < $numReps; $rep++): ?>
+                                <?php foreach ($treatmentList as $treatment): ?>
+                                    <?php for ($rep = 1; $rep <= $numReps; $rep++): ?>
                                         <tr>
                                             <?php foreach ($dates as $dateInfo): ?>
-                                                <td>
-                                                    <?php
-                                                    $currentDate = $dateInfo['date'];
-
-                                                    if (isset($daysData[$currentDate][$rep])) {
-                                                        $sampleData = $daysData[$currentDate][$rep];
-                                                        echo htmlspecialchars($sampleData['survival_sample']);
-                                                    } else {
-                                                        echo '-';
+                                                <?php
+                                                $currentDate = $dateInfo['date'];
+                                                $foundData = '-'; // Mặc định hiển thị trống nếu không có dữ liệu
+                                    
+                                                // Kiểm tra và hiển thị dữ liệu tương ứng với treatment, date và rep
+                                                if (isset($entryData[$treatment['name']][$currentDate])) {
+                                                    foreach ($entryData[$treatment['name']][$currentDate] as $data) {
+                                                        if ($data['rep'] == $rep) {
+                                                            $foundData = htmlspecialchars($data['survival_sample']);
+                                                            break; // Dừng vòng lặp khi tìm thấy dữ liệu
+                                                        }
                                                     }
-                                                    ?>
-                                                </td>
+                                                }
+                                                ?>
+                                                <td><?php echo $foundData; ?></td>
                                             <?php endforeach; ?>
                                         </tr>
                                     <?php endfor; ?>
@@ -228,22 +231,26 @@ function formatDate($date)
         border-right: 1px solid #000;
         /* Gạch dọc đậm hơn */
         text-align: center;
-        padding-bottom: 16px; /* Giữ cố định cùng chiều cao */
+        padding-bottom: 16px;
+        /* Giữ cố định cùng chiều cao */
     }
 
     /* Bảng cuộn */
-   /* Bảng cuộn */
-.table-scrollable {
-    flex: 1 1 auto;
-    overflow-x: auto; /* Hiển thị thanh cuộn ngang */
-    overflow-y: auto; /* Duy trì cuộn dọc */
-}
+    /* Bảng cuộn */
+    .table-scrollable {
+        flex: 1 1 auto;
+        overflow-x: auto;
+        /* Hiển thị thanh cuộn ngang */
+        overflow-y: auto;
+        /* Duy trì cuộn dọc */
+    }
 
     /* Đồng bộ hóa bảng */
     .table-fixed table,
     .table-scrollable table {
         border-collapse: collapse;
     }
+
     .table-fixed th,
     .table-fixed td,
     .table-scrollable th,
@@ -316,8 +323,7 @@ function formatDate($date)
     }
 
     /* Nội dung bảng */
-    .table-fixed td 
-    .table-scrollable td{
+    .table-fixed td .table-scrollable td {
         background: white;
         z-index: 1;
         /* Thấp hơn tiêu đề */
@@ -347,24 +353,24 @@ function formatDate($date)
     thead tr th:last-child {
         text-align: center;
     }
+
     .header-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ddd;
-}
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+    }
 
-.header-title .text-primary {
-    margin: 0;
-}
+    .header-title .text-primary {
+        margin: 0;
+    }
 
-.header-title .year-header {
-    font-size: 16px;
-    color: #555;
-    font-weight: normal;
-}
-
+    .header-title .year-header {
+        font-size: 16px;
+        color: #555;
+        font-weight: normal;
+    }
 </style>
 
 <!-- Đồng bộ cuộn -->

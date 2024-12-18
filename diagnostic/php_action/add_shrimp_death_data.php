@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->close();
 
     if ($isDuplicateRep > 0) {
-        $response['messages'] = "Error: Rep already exists for $treatmentName on $testDate at the same hour.";
+        $response['messages'] = "Error: Data already exists for $treatmentName on $testDate at the same hour.";
         echo json_encode($response);
         exit;
     }

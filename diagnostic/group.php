@@ -38,6 +38,34 @@ $stmt->execute();
 $recentEntriesResult = $stmt->get_result();
 $recentEntries = $recentEntriesResult->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
+// Fetch duration của tất cả phases từ database
+$sql = "SELECT phases FROM case_study WHERE case_study_id = ?";
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$stmt->bind_result($phasesJson);
+$stmt->fetch();
+$stmt->close();
+
+// Giải mã phases JSON và tính tổng duration
+$phases = json_decode($phasesJson, true);
+$totalDuration = 0;
+
+if (is_array($phases)) {
+    foreach ($phases as $phase) {
+        $totalDuration += (int) $phase['duration'];
+    }
+}
+
+// Tính `end_date` dựa trên `start_date` và tổng duration (trừ 1 ngày)
+$endDate = (new DateTime($startDate))
+    ->modify("+$totalDuration days") // Cộng tổng duration
+    ->modify("-1 day")              // Trừ đi 1 ngày
+    ->format('Y-m-d');              // Định dạng kết quả thành Y-m-d
+
+
+// Encode end_date thành JSON để sử dụng trong JavaScript
+$endDateJs = json_encode($endDate);
 
 // Lấy thông tin case study và category ID
 $sql = "SELECT case_name, categories_id FROM case_study WHERE case_study_id = '$caseStudyId'";
@@ -172,7 +200,7 @@ $groupResult = $connect->query($groupSql);
 
                         <div class="form-group">
                             <label>Day (DD/MM/YYYY)</label>
-                            <input type="text" name="lab_day" class="form-control datepicker" required>
+                            <input type="text" name="lab_day" id="testTimePicker" class="form-control" required>
                         </div>
                         <div class="form-group">
                             <label>Rep</label>
@@ -261,7 +289,7 @@ $groupResult = $connect->query($groupSql);
                         <div class="form-group">
                             <label>Test Time (Date & Time)</label>
                             <!-- Nhập ngày -->
-                            <input type="date" name="test_date" id="testTimePicker" class="form-control" required>
+                            <input type="text" name="test_date" id="testTimePicker" class="form-control" required>
                             <!-- Nhập giờ -->
                             <select name="test_hour" id="testHour" class="form-control mt-2" required>
                                 <option value="" disabled selected hidden>Select Hour</option>
@@ -301,7 +329,7 @@ $groupResult = $connect->query($groupSql);
                         <div class="form-row">
                             <div class="form-group col-md-6">
                                 <label>Day</label>
-                                <input type="text" name="day" class="form-control datepicker" required>
+                                <input type="text" name="day" id="testTimePicker" class="form-control" required>
                             </div>
                             <div class="form-group col-md-6">
                                 <label>Salinity (ppt)</label>
@@ -487,8 +515,19 @@ $groupResult = $connect->query($groupSql);
                 $('select[name="treatment_name"]').val(sessionStorage.getItem('treatment_name')).change();
             }
             if (sessionStorage.getItem('lab_day')) {
-                $('input[name="lab_day"]').val(sessionStorage.getItem('lab_day'));
+                // Lấy giá trị từ sessionStorage (định dạng Y-M-d)
+                const labDay = sessionStorage.getItem('lab_day');
+                const parts = labDay.split('-'); // Tách thành mảng [Y, M, d]
+
+                if (parts.length === 3) {
+                    // Chuyển đổi sang định dạng d-M-Y
+                    const formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    $('input[name="lab_day"]').val(formattedDate); // Hiển thị vào input
+                } else {
+                    console.error('Invalid date format in sessionStorage:', labDay);
+                }
             }
+
             // Đăng ký sự kiện "keydown" khi form đang hiển thị
             $('#addDataForm').on('keydown', function (event) {
                 if (event.key === 'Enter') {
@@ -515,53 +554,66 @@ $groupResult = $connect->query($groupSql);
 
         // Submit dữ liệu Entry Data và reset chỉ hai trường cụ thể
         function submitEntryData() {
-            // Validate required fields
+            const caseStudyId = $('#modalCaseStudyId').val();
             const treatmentName = $('select[name="treatment_name"]').val();
-            const labDay = $('input[name="lab_day"]').val();
-            const rep = $('input[name="rep"]').val();
+            const productApplication = $('#productApplication').val();
             const survivalSample = $('input[name="survival_sample"]').val();
             const feedingWeight = $('input[name="feeding_weight"]').val();
+            const rep = $('input[name="rep"]').val();
+            const labDay = $('input[name="lab_day"]').val();
 
-            if (!treatmentName || !labDay || !rep || !survivalSample || !feedingWeight) {
-                showToast('Please fill in all required fields.', 'Error', false);
+            // Kiểm tra các trường bắt buộc
+            if (!treatmentName || !productApplication || !survivalSample || !feedingWeight || !rep || !labDay) {
+                showToast("All fields are required.", "Error", false);
                 return;
             }
 
-            // Proceed if all fields are valid
-            const labDayFormatted = labDay.split('/').reverse().join('-');
-            $('input[name="lab_day"]').val(labDayFormatted);
+            // Validate ngày và chuyển đổi định dạng nếu cần
+            if (!validateDateInput(labDay)) {
+                return; // Ngừng nếu ngày không hợp lệ
+            }
+            const formattedDate = labDay.split("-").reverse().join("-"); // Định dạng ngày dd-MM-yyyy thành yyyy-MM-dd
 
-            const formData = $('#addDataForm').serialize();
+            // Chuẩn bị dữ liệu để gửi
+            const formData = {
+                case_study_id: caseStudyId,
+                treatment_name: treatmentName,
+                product_application: productApplication,
+                survival_sample: survivalSample,
+                feeding_weight: feedingWeight,
+                rep: rep,
+                lab_day: formattedDate,
+            };
 
+            // Gửi AJAX
             $.ajax({
                 url: 'php_action/add_entry_data.php',
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
                 success: function (response) {
+                    console.log('API Response:', response); // Logging để kiểm tra
                     if (response.success) {
                         showToast('Data added successfully!', 'Success', true);
 
-                        // Reset specific fields
+                        // Reset các trường cụ thể
                         $('input[name="survival_sample"]').val('');
                         $('input[name="feeding_weight"]').val('');
-
-                        // Increment rep for the next entry
                         const currentRep = parseInt($('input[name="rep"]').val(), 10);
-                        $('input[name="rep"]').val(currentRep + 1);
+                        $('input[name="rep"]').val(currentRep + 1); // Tăng giá trị Rep
 
-                        // Update recent entries
+                        // Cập nhật recent entries
                         updateRecentEntries();
                     } else {
-                        showToast(response.messages, 'Error', false);
+                        showToast(response.messages, 'Error', false); // Hiển thị lỗi từ API
                     }
                 },
                 error: function (xhr, status, error) {
-                    console.error('AJAX Error:', error);
+                    console.error("AJAX Error:", error);
+                    showToast("An unexpected error occurred.", "Error", false);
                 }
             });
         }
-
 
         function updateRecentEntries() {
             const caseStudyId = $('#modalCaseStudyId').val(); // Lấy `case_study_id` từ modal
@@ -626,7 +678,7 @@ $groupResult = $connect->query($groupSql);
 
         // Submit dữ liệu Water Quality bằng Ajax
         function submitWaterQualityData() {
-            // Validate required fields
+            const caseStudyId = $('#modalCaseStudyId3').val();
             const day = $('input[name="day"]').val();
             const salinity = $('input[name="salinity"]').val();
             const temperature = $('input[name="temperature"]').val();
@@ -637,40 +689,67 @@ $groupResult = $connect->query($groupSql);
             const nitrite = $('input[name="nitrite"]').val();
             const systemType = $('select[name="system_type"]').val();
 
+            // Kiểm tra các trường bắt buộc
             if (!day || !salinity || !temperature || !dissolvedOxygen || !pH || !alkalinity || !tan || !nitrite || !systemType) {
                 showToast('Please fill in all required fields.', 'Error', false);
                 return;
             }
 
-            // Proceed if all fields are valid
-            const dayFormatted = day.split('/').reverse().join('-');
-            $('input[name="day"]').val(dayFormatted);
+            // Validate ngày và chuyển đổi định dạng nếu cần
+            if (!validateDateInput(day)) {
+                return; // Dừng nếu ngày không hợp lệ
+            }
+            const formattedDate = day.split("-").reverse().join("-"); // Định dạng ngày dd-MM-yyyy thành yyyy-MM-dd
 
-            const formData = $('#addWaterQualityForm').serialize();
+            // Chuẩn bị dữ liệu để gửi
+            const formData = {
+                case_study_id: caseStudyId,
+                day: formattedDate,
+                salinity: salinity,
+                temperature: temperature,
+                dissolved_oxygen: dissolvedOxygen,
+                pH: pH,
+                alkalinity: alkalinity,
+                tan: tan,
+                nitrite: nitrite,
+                system_type: systemType,
+            };
 
+            // Gửi AJAX
             $.ajax({
                 url: 'php_action/add_water_quality.php',
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
                 success: function (response) {
+                    console.log('API Response:', response); // Logging để kiểm tra
                     if (response.success) {
                         showToast('Water Quality data added successfully!', 'Success', true);
+
+                        // Reset form sau khi thành công
                         $('#addWaterQualityForm')[0].reset();
                         $('.btn-close-modal').click();
                     } else {
-                        showToast(response.messages, 'Error', false);
+                        showToast(response.messages, 'Error', false); // Hiển thị lỗi từ API
                     }
                 },
                 error: function (xhr, status, error) {
-                    console.error('AJAX Error:', error);
+                    console.error("AJAX Error:", error);
+                    showToast("An unexpected error occurred.", "Error", false);
                 }
             });
         }
 
+
         // Lưu ngày vào sessionStorage khi người dùng nhập
         $('input[name="lab_day"]').on('change', function () {
-            sessionStorage.setItem('lab_day', $(this).val());
+            const labDay = $('input[name="lab_day"]').val(); // Giá trị đầu vào (d-M-Y)
+            const parts = labDay.split('-'); // Tách thành [d, M, Y]
+            if (parts.length === 3) {
+                const formattedDate = `${parts[0]}-${parts[1]}-${parts[2]}`; // Chuyển sang Y-M-d
+                sessionStorage.setItem('lab_day', formattedDate); // Lưu Y-M-d
+                console.log('Saved to sessionStorage as Y-M-d:', formattedDate);
+            }
         });
         // Tạo timeout để tự động xóa session sau 3 tiếng (10800000 ms)
         setTimeout(function () {
@@ -742,8 +821,8 @@ $groupResult = $connect->query($groupSql);
                 productApplicationField.value = "";
                 sessionStorage.removeItem('product_application');
             }
-                 // Gọi hàm resetRep để reset giá trị rep về 1
-                 resetRep(treatmentDropdown);
+            // Gọi hàm resetRep để reset giá trị rep về 1
+            resetRep(treatmentDropdown);
         }
         function openShrimpDeathModal(caseStudyId, groupName) {
             $('#modalCaseStudyId2').val(caseStudyId);
@@ -830,6 +909,9 @@ $groupResult = $connect->query($groupSql);
 
             // Xử lý ngày và giờ
             const testDate = $('input[name="test_date"]').val();
+            if (!validateDateInput(testDate)) {
+                return; // Dừng submit nếu ngày không hợp lệ
+            }
             const testHour = $('select[name="test_hour"]').val();
             if (!testDate || !testHour) {
                 showToast("Please select both date and time.", "Error", false);
@@ -878,14 +960,40 @@ $groupResult = $connect->query($groupSql);
 
 
 
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener("DOMContentLoaded", function () {
+            const endDate = new Date(<?php echo $endDateJs; ?>); // end_date từ PHP
+            const formattedEndDate = endDate.toLocaleDateString('en-GB').replace(/\//g, '-'); // Chuyển định dạng
+            const formattedStartDate = startDate.toLocaleDateString('en-GB').replace(/\//g, '-'); // Chuyển định dạng
+
+            // Khởi tạo Flatpickr
             flatpickr("#testTimePicker", {
-                //   enableTime: true, // Cho phép chọn giờ
-                dateFormat: "d-m-Y", // Định dạng ngày và giờ (phù hợp với MySQL)
-                time_24hr: true, // Hiển thị giờ ở định dạng 24 giờ
-                defaultDate: new Date(), // Gán ngày hiện tại làm mặc định
+                dateFormat: "d-m-Y", // Định dạng ngày
+                defaultDate: new Date(), // Ngày mặc định
+                onChange: function (selectedDates, dateStr, instance) {
+                    if (selectedDates.length > 0) {
+                        const selectedDate = new Date(selectedDates[0]);
+                        selectedDate.setHours(0, 0, 0, 0); // Chuẩn hóa về date-only
+
+                        const normalizedStartDate = new Date(startDate);
+                        normalizedStartDate.setHours(0, 0, 0, 0);
+
+                        const normalizedEndDate = new Date(endDate);
+                        normalizedEndDate.setHours(0, 0, 0, 0);
+                        // So sánh với `end_date`
+                        if (selectedDate > normalizedEndDate) {
+                            showToast(`The selected date exceeds the project's end date (${formattedEndDate}).`, 'Error', false);
+                            instance.clear(); // Xóa giá trị nếu không hợp lệ
+                        }
+                        // Kiểm tra nếu selectedDate nhỏ hơn startDate
+                        if (selectedDate < normalizedStartDate) {
+                            showToast(`The selected date cannot be earlier than the project's start date (${formattedStartDate}).`, "Error", false);
+                            instance.clear(); // Xóa giá trị nếu không hợp lệ
+                        }
+                    }
+                }
             });
         });
+
         // Cập nhật danh sách Recent Entries cho Group 2
         function updateRecentEntriesGroup2() {
             const caseStudyId = $('#modalCaseStudyId2').val();
@@ -940,6 +1048,78 @@ $groupResult = $connect->query($groupSql);
             if (repInput) {
                 repInput.value = 1; // Reset rep về 1
             }
+        }
+        const endDate = new Date(<?php echo $endDateJs; ?>);
+        if (isNaN(endDate)) {
+            console.error("Invalid endDate: ", endDate);
+        }
+
+        // Chuyển endDate sang định dạng d-m-Y
+        const formattedEndDate = new Date(endDate).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        }).replace(/\//g, '-'); // Chuyển dấu / thành dấu -
+        const formattedStartDate = new Date(startDate).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        }).replace(/\//g, '-'); // Chuyển dấu / thành dấu -
+        function validateDateInput(inputDate) {
+            // Kiểm tra nếu inputDate là chuỗi rỗng hoặc không hợp lệ
+            if (!inputDate || typeof inputDate !== "string") {
+                showToast("Invalid date format.", "Error", false);
+                return false;
+            }
+
+            // Tách ngày, tháng, năm từ định dạng dd-MM-YYYY
+            const parts = inputDate.split("-");
+            if (parts.length !== 3) {
+                showToast("Invalid date format. Use dd-MM-YYYY.", "Error", false);
+                return false;
+            }
+
+            const [day, month, year] = parts.map(Number);
+
+            // Kiểm tra nếu ngày, tháng, năm không hợp lệ
+            if (
+                isNaN(day) || isNaN(month) || isNaN(year) ||
+                day < 1 || day > 31 || month < 1 || month > 12 || year < 1900
+            ) {
+                showToast("Invalid date entered.", "Error", false);
+                return false;
+            }
+
+            // Tạo đối tượng Date từ ngày nhập và chuẩn hóa về date-only
+            const selectedDate = new Date(year, month - 1, day); // Tháng bắt đầu từ 0
+            selectedDate.setHours(0, 0, 0, 0); // Loại bỏ giờ, phút, giây
+
+            // Chuẩn hóa startDate và endDate về date-only
+            const normalizedStartDate = new Date(startDate);
+            normalizedStartDate.setHours(0, 0, 0, 0); // Loại bỏ giờ, phút, giây
+
+            const normalizedEndDate = new Date(endDate);
+            normalizedEndDate.setHours(0, 0, 0, 0); // Loại bỏ giờ, phút, giây
+
+            // Kiểm tra nếu selectedDate không hợp lệ
+            if (isNaN(selectedDate)) {
+                showToast("Invalid date entered.", "Error", false);
+                return false;
+            }
+
+            // So sánh với startDate
+            if (selectedDate < normalizedStartDate) {
+                showToast(`The selected date cannot be earlier than the project's start date (${formattedStartDate}).`, "Error", false);
+                return false;
+            }
+
+            // So sánh với endDate
+            if (selectedDate > normalizedEndDate) {
+                showToast(`The selected date cannot be later than the project's end date (${formattedEndDate}).`, "Error", false);
+                return false;
+            }
+
+            return true;
         }
     </script>
     <style>

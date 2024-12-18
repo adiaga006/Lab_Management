@@ -9,7 +9,6 @@ $caseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : 0;
 if (!$caseStudyId) {
     die("Error: Missing case_study_id in URL");
 }
-
 // Query case study details
 $sql = "SELECT start_date, phases FROM case_study WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
@@ -64,7 +63,7 @@ function definePhasesWithDates($phasesJson, $startDate)
 }
 $phases = definePhasesWithDates($phasesJson, $startDate);
 // Query entry_data for all treatments
-$sql = "SELECT treatment_name, survival_sample, feeding_weight, lab_day FROM entry_data WHERE case_study_id = ?";
+$sql = "SELECT treatment_name, survival_sample,rep, feeding_weight, lab_day FROM entry_data WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -195,33 +194,74 @@ foreach ($phases as $phase) {
         }
     }
 }
+// Fetch số lần đo (num_reps) từ bảng case_study
+$sql = "SELECT num_reps FROM case_study WHERE case_study_id = ?";
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$stmt->bind_result($numReps);
+$stmt->fetch();
+$stmt->close();
 
-
-// Prepare feeding weight results
-$feedingResults = [];
-
-// Initialize feeding weights for each treatment
+if (!$numReps || $numReps <= 0) {
+    die("Error: Invalid num_reps value");
+}
+// Tạo mảng dữ liệu feeding weight theo treatment và rep
+$feedingData = [];
 foreach ($entries as $entry) {
     $treatmentName = $entry['treatment_name'];
-    $feedingWeight = $entry['feeding_weight'];
-
-    if (!isset($feedingResults[$treatmentName])) {
-        $feedingResults[$treatmentName] = 0;
-    }
+    $rep = (int)$entry['rep']; // Ép kiểu rep thành integer
+    $feedingWeight = (float)$entry['feeding_weight']; // Ép kiểu feeding weight thành float
 
     if ($feedingWeight !== null) {
-        $feedingResults[$treatmentName] += $feedingWeight; // Add feeding weight for the treatment
+        // Cộng dồn giá trị feeding weight, không cần làm tròn vì DB đã đảm bảo DECIMAL(10,2)
+        if (!isset($feedingData[$treatmentName][$rep])) {
+            $feedingData[$treatmentName][$rep] = 0.00; // Khởi tạo giá trị float
+        }
+
+        $feedingData[$treatmentName][$rep] += $feedingWeight;
     }
 }
 
-// Format the feeding results
-$feedingResults = array_map(function ($treatmentName, $totalFeedingWeight) {
-    return [
-        'treatment_name' => $treatmentName,
-        'total_feeding_weight' => round($totalFeedingWeight, 2),
-    ];
-}, array_keys($feedingResults), $feedingResults);
+// Làm tròn tổng cuối cùng để đảm bảo định dạng float 2 chữ số thập phân
+foreach ($feedingData as $treatmentName => &$repTotals) {
+    foreach ($repTotals as $rep => &$total) {
+        $total = round($total, 2);
+    }
+}
+unset($repTotals); // Giải phóng tham chiếu
 
+
+
+
+// Tính toán kết quả trung bình và độ lệch chuẩn
+$feedingResults = [];
+foreach ($feedingData as $treatmentName => $repTotals) {
+    // Loại bỏ các giá trị 0 trong repTotals
+    $validRepTotals = array_filter($repTotals, function ($value) {
+        return $value > 0;
+    });
+
+    if (!empty($validRepTotals)) {
+        // Tính trung bình
+        $averageFeedingWeight = round(array_sum($validRepTotals) / count($validRepTotals), 2);
+
+        // Tính độ lệch chuẩn
+        $standardDeviation = calculateStandardDeviation(array_values($validRepTotals));
+
+        // Lưu kết quả
+        $feedingResults[] = [
+            'treatment_name' => $treatmentName,
+            'average_feeding_weight' => $averageFeedingWeight,
+            'standard_deviation' => $standardDeviation,
+            'feeding_weight ± sd' => $averageFeedingWeight . ' ± ' . $standardDeviation,
+        ];
+    }
+}
+
+// Xuất dữ liệu JSON
+header('Content-Type: application/json'); // Set header là JSON
+//echo json_encode($feedingData, JSON_PRETTY_PRINT);
 ?>
 
 <!-- Feeding and Survival Rate Tables -->
@@ -230,21 +270,24 @@ $feedingResults = array_map(function ($treatmentName, $totalFeedingWeight) {
         <!-- Table for feeding weight -->
         <div class="card">
             <div class="card-body">
-                <h4 style="font-size: 1.5em; color: black; font-weight: bold; text-align: center;">Total Feed
-                    Consumption</h4>
+                <h4 style="font-size: 1.5em; color: black; font-weight: bold; text-align: center;">Feeding Results</h4>
                 <div class="table-responsive">
                     <table class="table table-bordered text-center">
                         <thead>
                             <tr style="font-weight: bold;">
                                 <th>Treatment Name</th>
-                                <th>Total Feed Consumption (g)</th>
+                                <th>Average Feeding Weight (g)</th>
+                                <th>Standard Deviation</th>
+                                <th>Average Feed ± SD</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($feedingResults as $result): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($result['treatment_name']); ?></td>
-                                    <td><?php echo $result['total_feeding_weight']; ?></td>
+                                    <td><?php echo $result['average_feeding_weight']; ?></td>
+                                    <td><?php echo $result['standard_deviation']; ?></td>
+                                    <td><?php echo $result['feeding_weight ± sd']; ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -252,6 +295,9 @@ $feedingResults = array_map(function ($treatmentName, $totalFeedingWeight) {
                 </div>
             </div>
         </div>
+
+
+
         <div class="card">
             <div class="card-body text-center">
                 <button style="color:white" class="btn btn-primary" data-bs-toggle="modal"

@@ -12,6 +12,22 @@ if ($_POST) {
     $feedingWeight = $_POST['feeding_weight'];
     $rep = $_POST['rep']; // Lấy giá trị rep từ form
 
+    // Xử lý labDay (dd/mm/yyyy -> yyyy-mm-dd)
+    try {
+        $dateTime = DateTime::createFromFormat('Y-m-d', $labDay);
+        if (!$dateTime) {
+            $response['messages'] = "Invalid date format for lab_day";
+            echo json_encode($response);
+            exit;
+        }
+        $labDayFormatted = $dateTime->format('Y-m-d'); // Chuyển sang định dạng yyyy-mm-dd
+        $labDayDisplay = $dateTime->format('d-m-Y'); // Hiển thị dạng dd-mm-yyyy
+    } catch (Exception $e) {
+        $response['messages'] = "Error parsing date for lab_day.";
+        echo json_encode($response);
+        exit;
+    }
+
     // Lấy `num_reps` từ bảng `case_study`
     $stmt = $connect->prepare("SELECT num_reps FROM case_study WHERE case_study_id = ?");
     $stmt->bind_param("s", $caseStudyId);
@@ -26,10 +42,6 @@ if ($_POST) {
         exit;
     }
 
-    // Convert date format from dd/mm/yyyy to yyyy-mm-dd
-    $labDayFormatted = date('Y-m-d', strtotime(str_replace('/', '-', $labDay)));
-    $labDayFormatted_1 = date('d-m-Y', strtotime(str_replace('/', '-', $labDay)));
-
     // Kiểm tra nếu giá trị `rep` nhập vào vượt quá `num_reps`
     if ($rep > $numReps) {
         $response['messages'] = "Error: Rep $rep exceeds the maximum allowed value ($numReps) for this case study.";
@@ -39,28 +51,28 @@ if ($_POST) {
 
     // Kiểm tra số lần `rep` đã tồn tại cho `treatment_name` và `lab_day`
     $stmt = $connect->prepare("SELECT COUNT(*) AS currentReps FROM entry_data WHERE case_study_id = ? AND treatment_name = ? AND lab_day = ?");
-    $stmt->bind_param("sss", $caseStudyId, $treatmentName, $labDay);
+    $stmt->bind_param("sss", $caseStudyId, $treatmentName, $labDayFormatted);
     $stmt->execute();
     $stmt->bind_result($currentReps);
     $stmt->fetch();
     $stmt->close();
 
     if ($currentReps >= $numReps) {
-        $response['messages'] = "Error: Maximum reps ($numReps) exceeded for $treatmentName on $labDayFormatted_1.";
+        $response['messages'] = "Error: Maximum reps ($numReps) exceeded for $treatmentName on $labDayDisplay.";
         echo json_encode($response);
         exit;
     }
 
     // Kiểm tra nếu `rep` bị trùng
     $stmt = $connect->prepare("SELECT COUNT(*) FROM entry_data WHERE case_study_id = ? AND treatment_name = ? AND lab_day = ? AND rep = ?");
-    $stmt->bind_param("sssi", $caseStudyId, $treatmentName, $labDay, $rep);
+    $stmt->bind_param("sssi", $caseStudyId, $treatmentName, $labDayFormatted, $rep);
     $stmt->execute();
     $stmt->bind_result($isDuplicateRep);
     $stmt->fetch();
     $stmt->close();
 
     if ($isDuplicateRep > 0) {
-        $response['messages'] = "Error: Rep $rep already exists for $treatmentName on $labDayFormatted_1.";
+        $response['messages'] = "Error: Data of Rep $rep already exists for $treatmentName on $labDayDisplay.";
         echo json_encode($response);
         exit;
     }
@@ -86,13 +98,13 @@ if ($_POST) {
         exit;
     }
 
-    // Prepare SQL statement to insert data without group_id
+    // Thêm dữ liệu vào bảng `entry_data`
     $stmt = $connect->prepare("INSERT INTO entry_data (case_study_id, treatment_name, product_application, survival_sample, lab_day, feeding_weight, rep) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssdsdi", $caseStudyId, $treatmentName, $productApplication, $survivalSample, $labDay, $feedingWeight, $rep);
+    $stmt->bind_param("sssdsdi", $caseStudyId, $treatmentName, $productApplication, $survivalSample, $labDayFormatted, $feedingWeight, $rep);
 
     if ($stmt->execute()) {
         $response['success'] = true;
-        $response['messages'] = 'Entry data added successfully';
+        $response['messages'] = 'Entry data added successfully.';
     } else {
         $response['messages'] = 'Error adding entry data: ' . $stmt->error;
     }
@@ -102,4 +114,3 @@ if ($_POST) {
 
 $connect->close();
 echo json_encode($response);
-?>

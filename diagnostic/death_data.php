@@ -66,7 +66,10 @@ foreach ($entries as $entry) {
                         <input type="text" class="form-control" id="editProductApplication" name="product_application"
                             readonly>
                     </div>
-
+                    <div class="form-group">
+                        <label for="editRep">Rep</label>
+                        <input type="text" class="form-control" id="editRep" name="rep" readonly>
+                    </div>
                     <!-- Test Time (readonly, formatted as d-m-Y || H:i) -->
                     <div class="form-group">
                         <label for="editTestTime">Test Time</label>
@@ -258,12 +261,33 @@ foreach ($entries as $entry) {
         location.reload(); // Reload the page
     }
 
-    // Function to render filtered data
+    function compareTreatmentOrder(a, b) {
+        const order = {
+            "Negative control": 1,
+            "Positive control": 2,
+            "Treatment 1": 3,
+            "Treatment T1": 3,
+            "Treatment 2": 4,
+            "Treatment T2": 4,
+            "Treatment 3": 5,
+            "Treatment T3": 5,
+            "Treatment 4": 6,
+            "Treatment T4": 6,
+        };
+
+        const orderA = order[a] || 7; // Mặc định là 7 nếu không có trong thứ tự
+        const orderB = order[b] || 7;
+        return orderA - orderB;
+    }
+
     function renderFilteredData(groupedByDate) {
         const container = document.querySelector(".container-fluid");
         container.innerHTML = ""; // Xóa nội dung cũ
 
         for (const [date, treatments] of Object.entries(groupedByDate)) {
+            // Sắp xếp `treatments` theo thứ tự đã định nghĩa
+            const sortedTreatments = Object.keys(treatments).sort(compareTreatmentOrder);
+
             // Tạo card cho mỗi ngày
             const card = document.createElement("div");
             card.className = "card";
@@ -295,8 +319,9 @@ foreach ($entries as $entry) {
 
             const tbody = document.createElement("tbody");
 
-            // Lặp qua treatments và reps
-            for (const [treatmentName, reps] of Object.entries(treatments)) {
+            // Lặp qua các treatment đã được sắp xếp
+            for (const treatmentName of sortedTreatments) {
+                const reps = treatments[treatmentName];
                 for (const [rep, entries] of Object.entries(reps)) {
                     const repRowspan = entries.length;
 
@@ -316,17 +341,16 @@ foreach ($entries as $entry) {
                         row.innerHTML += `
                     <td>${entry.hour}:00</td>
                     <td>${entry.death_sample}</td>
-            <td>
-    <div class="action-buttons">
-        <button class="btn btn-warning btn-sm" onclick="editEntry(${entry.id})">
-            <i class="fa fa-pencil"></i> Edit
-        </button>
-        <button class="btn btn-danger btn-sm" onclick="deleteEntry(${entry.id})">
-            <i class="fa fa-trash"></i> Delete
-        </button>
-    </div>
-</td>
-
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-warning btn-sm" onclick="editEntry(${entry.id})">
+                                <i class="fa fa-pencil"></i> Edit
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteEntry(${entry.id})">
+                                <i class="fa fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </td>
                 `;
 
                         tbody.appendChild(row);
@@ -399,6 +423,7 @@ foreach ($entries as $entry) {
                     document.getElementById('editProductApplication').value = data.product_application;
                     document.getElementById('editTestTime').value = `${formattedDate} || ${data.test_hour}:00`;
                     document.getElementById('editDeathSample').value = data.death_sample;
+                    document.getElementById('editRep').value = data.rep; // Điền giá trị Rep
 
                     // Hiển thị modal
                     $('#editEntryModal').modal('show');
@@ -493,19 +518,19 @@ foreach ($entries as $entry) {
     }
 
     function changeView() {
-    const caseStudyId = "<?php echo htmlspecialchars($caseStudyId); ?>"; // Lấy giá trị caseStudyId từ PHP
-    const filterDate = document.getElementById('filterDate').value || null;
+        const caseStudyId = "<?php echo htmlspecialchars($caseStudyId); ?>"; // Lấy giá trị caseStudyId từ PHP
+        const filterDate = document.getElementById('filterDate').value || null;
 
-    // Xây dựng URL với các tham số (nếu có)
-    let url = `view_death_data.php?case_study_id=${caseStudyId}`;
-    if (filterDate) {
-        const formattedDate = filterDate.split('-').reverse().join('-'); // Định dạng ngày
-        url += `&filterDate=${formattedDate}`;
+        // Xây dựng URL với các tham số (nếu có)
+        let url = `view_death_data.php?case_study_id=${caseStudyId}`;
+        if (filterDate) {
+            const formattedDate = filterDate.split('-').reverse().join('-'); // Định dạng ngày
+            url += `&filterDate=${formattedDate}`;
+        }
+
+        // Chuyển hướng đến file view_death_data.php
+        window.location.href = url;
     }
-
-    // Chuyển hướng đến file view_death_data.php
-    window.location.href = url;
-}
 
 </script>
 <style>
