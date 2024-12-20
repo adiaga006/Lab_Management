@@ -90,17 +90,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                <!-- Number of Repetitions -->
-                                <div class="form-group">
-                                    <div class="row">
-                                        <label class="col-sm-3 control-label">Number of Repetitions</label>
-                                        <div class="col-sm-9">
-                                            <input type="number" class="form-control" id="numReps" name="num_reps"
-                                                placeholder="Enter Number of Repetitions" min="1" required />
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <!-- Status -->
                                 <div class="form-group">
                                     <div class="row">
@@ -154,6 +143,8 @@
                                                         placeholder="Treatment Name" required>
                                                     <input type="text" name="product_application[]" class="form-control"
                                                         placeholder="Product Application" required>
+                                                    <input type="number" name="num_reps[]" class="form-control"
+                                                        placeholder="Num Reps" min="1"required>
                                                 </div>
                                             </div>
                                             <button type="button" id="addTreatmentRow"
@@ -279,6 +270,7 @@
                 newRow.innerHTML = `
         <input type="text" name="treatment_name[]" class="form-control" placeholder="Treatment Name" required>
         <input type="text" name="product_application[]" class="form-control" placeholder="Product Application" required>
+        <input type="number" name="num_reps[]" class="form-control" placeholder="Num Reps" min="1" required>
         <button type="button" class="btn btn-danger btn-sm removeTreatmentRow">Remove</button>
     `;
 
@@ -289,6 +281,7 @@
                     newRow.remove();
                 });
             });
+
 
         </script>
         <style>

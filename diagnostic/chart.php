@@ -11,7 +11,7 @@ if (!$caseStudyId) {
 }
 
 // Query case study details
-$sql = "SELECT start_date, phases, num_reps FROM case_study WHERE case_study_id = ?";
+$sql = "SELECT start_date, phases FROM case_study WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -23,10 +23,6 @@ if (!$caseStudy) {
     die("Error: Case study not found.");
 }
 
-$numReps = $caseStudy['num_reps']; // Lưu giá trị num_reps
-if (empty($numReps) || $numReps <= 0) {
-    die("Error: Invalid num_reps value.");
-}
 
 if (!$caseStudy) {
     die("Error: Case study not found.");
@@ -107,21 +103,22 @@ foreach ($phases as $phase) {
     $phaseName = trim($phaseName); // Loại bỏ khoảng trắng nếu có
     $phaseStartDate = $phase['start_date'];
     $phaseEndDate = $phase['end_date'];
+
     foreach ($treatmentData as $treatmentName => $data) {
         $survivalRates = [];
 
         // Special case for "Post-challenge"
         if (strtolower($phaseName) === "post-challenge") {
-            
             if (empty($shrimpAfterImmunology) || $shrimpAfterImmunology == 0) {
                 // Nếu không có dữ liệu, báo lỗi
                 $survivalRatesByPhase[$phaseName][$treatmentName] = 'No data available';
                 continue;
             }
+
             // Lấy tất cả endSamples từ phase "Post-challenge"
             $endSamples = $data[$phaseEndDate] ?? [];
 
-            // Tính survival rate cho từng cặp
+            // Tính survival rate cho từng mẫu kết thúc
             foreach ($endSamples as $endSample) {
                 $rate = calculateSurvivalRate($shrimpAfterImmunology, $endSample);
                 if ($rate !== null) {
@@ -131,16 +128,21 @@ foreach ($phases as $phase) {
         } else {
             // Logic cho các phase khác
             $startSamples = $data[$phaseStartDate] ?? [];
-            $endSamples = $data[$phaseEndDate] ?? [];
+            $endSamples = ($phaseStartDate === $phaseEndDate)
+                ? $startSamples // Nếu start_date == end_date, sử dụng cùng một dữ liệu
+                : ($data[$phaseEndDate] ?? []);
 
-        // Tính toán survival rate
-        for ($i = 0; $i < $numReps; $i++) {
-            $rate = calculateSurvivalRate($startSamples[$i], $endSamples[$i]);
-            if ($rate !== null) {
-                $survivalRates[] = $rate;
+            // Tính survival rate cho từng cặp startSamples và endSamples
+            $totalPairs = min(count($startSamples), count($endSamples));
+            for ($i = 0; $i < $totalPairs; $i++) {
+                $rate = calculateSurvivalRate($startSamples[$i], $endSamples[$i]);
+                if ($rate !== null) {
+                    $survivalRates[] = $rate;
+                }
             }
         }
-    }
+
+        // Tính trung bình nếu có dữ liệu
         if (!empty($survivalRates)) {
             $averageSurvivalRate = round(array_sum($survivalRates) / count($survivalRates), 2);
             $survivalRatesByPhase[$phaseName][$treatmentName] = $averageSurvivalRate;

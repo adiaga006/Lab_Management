@@ -36,25 +36,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Lấy `num_reps` từ bảng `case_study`
-    $stmt = $connect->prepare("SELECT num_reps FROM case_study WHERE case_study_id = ?");
+    // Lấy thông tin `treatment` từ bảng `case_study`
+    $stmt = $connect->prepare("SELECT treatment FROM case_study WHERE case_study_id = ?");
     $stmt->bind_param("s", $caseStudyId);
     $stmt->execute();
-    $stmt->bind_result($numReps);
+    $stmt->bind_result($treatmentJson);
     $stmt->fetch();
     $stmt->close();
 
-    if (!$numReps) {
-        $response['messages'] = 'Error: Case study not found.';
+    if (!$treatmentJson) {
+        $response['messages'] = 'Error: Case study not found or treatment data is missing.';
         echo json_encode($response);
         exit;
     }
 
-    // Kiểm tra nếu rep vượt quá num_reps
-    if ($rep > $numReps) {
-        $response['messages'] = "Error: Rep $rep exceeds the maximum allowed value ($numReps) for this case study.";
+    // Giải mã JSON `treatment` thành mảng
+    $treatments = json_decode($treatmentJson, true);
+
+    if (!$treatments || !is_array($treatments)) {
+        $response['messages'] = 'Error: Invalid treatment data format.';
         echo json_encode($response);
         exit;
+    }
+
+    // Kiểm tra nếu giá trị `rep` vượt quá `num_reps` cho từng treatment
+    $treatmentFound = false;
+    foreach ($treatments as $treatment) {
+        if ($treatment['name'] === $treatmentName) {
+            $treatmentFound = true;
+            if ($rep > $treatment['num_reps']) {
+                $response['messages'] = "Error: Rep $rep exceeds the maximum allowed value ({$treatment['num_reps']}) for treatment '{$treatment['name']}'.";
+                echo json_encode($response);
+                exit;
+            }
+        }
     }
 
     // Kiểm tra trùng lặp (trùng ngày, khung giờ, treatment_name, và rep)

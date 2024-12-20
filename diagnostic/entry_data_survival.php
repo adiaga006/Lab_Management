@@ -11,7 +11,7 @@ if (!$caseStudyId) {
 }
 
 // Fetch case study details
-$sql = "SELECT start_date, num_reps, phases, treatment FROM case_study WHERE case_study_id = ?";
+$sql = "SELECT start_date, phases, treatment FROM case_study WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -24,11 +24,10 @@ if (!$caseStudy) {
 }
 
 $startDate = new DateTime($caseStudy['start_date']);
-$numReps = $caseStudy['num_reps'];
 $phases = json_decode($caseStudy['phases'], true);
 $treatmentList = json_decode($caseStudy['treatment'], true); // Decode JSON for treatment list
 
-if (!$phases || !$treatmentList || $numReps <= 0) {
+if (!$phases || !$treatmentList) {
     die("Error: Invalid case study data.");
 }
 
@@ -46,15 +45,14 @@ foreach ($phases as $phase) {
         $currentDate->modify('+1 day');
     }
 }
-// Tính toán end_date từ start_date và duration của các phase
+
+// Calculate end_date
 $totalDuration = array_reduce($phases, function ($carry, $phase) {
     return $carry + $phase['duration'];
 }, 0);
 
-// Tạo end_date
 $endDate = clone $startDate;
 $endDate->modify("+" . ($totalDuration - 1) . " days");
-
 
 // Fetch entry_data
 $sql = "SELECT treatment_name, survival_sample, lab_day, rep FROM entry_data WHERE case_study_id = ?";
@@ -64,24 +62,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 $entryData = [];
-$tempData = [];
 while ($row = $result->fetch_assoc()) {
-    $tempData[] = $row;
-}
-
-// Sort $tempData by treatment_name, lab_day, and rep
-usort($tempData, function ($a, $b) {
-    if ($a['treatment_name'] !== $b['treatment_name']) {
-        return strcmp($a['treatment_name'], $b['treatment_name']);
-    }
-    if ($a['lab_day'] !== $b['lab_day']) {
-        return strcmp($a['lab_day'], $b['lab_day']);
-    }
-    return $a['rep'] <=> $b['rep'];
-});
-
-// Reorganize $entryData after sorting
-foreach ($tempData as $row) {
     $entryData[$row['treatment_name']][$row['lab_day']][] = [
         'rep' => $row['rep'],
         'survival_sample' => $row['survival_sample'],
@@ -110,7 +91,6 @@ function formatDate($date)
                     </div>
                 </div>
 
-
                 <!-- Fixed table for Treatment Name and Reps -->
                 <div class="table-container">
                     <div class="table-fixed">
@@ -123,10 +103,10 @@ function formatDate($date)
                             </thead>
                             <tbody>
                                 <?php foreach ($treatmentList as $treatment): ?>
-                                    <?php for ($rep = 1; $rep <= $numReps; $rep++): ?>
+                                    <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
                                         <tr>
                                             <?php if ($rep === 1): ?>
-                                                <td rowspan="<?php echo $numReps; ?>" class="centered">
+                                                <td rowspan="<?php echo $treatment['num_reps']; ?>" class="centered">
                                                     <?php echo htmlspecialchars($treatment['name']); ?>
                                                 </td>
                                             <?php endif; ?>
@@ -176,19 +156,17 @@ function formatDate($date)
                             </tr>
                             <tbody>
                                 <?php foreach ($treatmentList as $treatment): ?>
-                                    <?php for ($rep = 1; $rep <= $numReps; $rep++): ?>
+                                    <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
                                         <tr>
                                             <?php foreach ($dates as $dateInfo): ?>
                                                 <?php
                                                 $currentDate = $dateInfo['date'];
-                                                $foundData = '-'; // Mặc định hiển thị trống nếu không có dữ liệu
-                                    
-                                                // Kiểm tra và hiển thị dữ liệu tương ứng với treatment, date và rep
+                                                $foundData = '-';
                                                 if (isset($entryData[$treatment['name']][$currentDate])) {
                                                     foreach ($entryData[$treatment['name']][$currentDate] as $data) {
                                                         if ($data['rep'] == $rep) {
                                                             $foundData = htmlspecialchars($data['survival_sample']);
-                                                            break; // Dừng vòng lặp khi tìm thấy dữ liệu
+                                                            break;
                                                         }
                                                     }
                                                 }
@@ -206,6 +184,7 @@ function formatDate($date)
         </div>
     </div>
 </div>
+
 
 
 <!-- Add CSS for sticky columns -->

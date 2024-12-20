@@ -12,8 +12,6 @@ try {
         $startDate = $_POST['start_date'];
         $pondId = isset($_POST['pond_id']) ? $_POST['pond_id'] : NULL; // Xử lý nếu pond_id không có giá trị
         $status = $_POST['status'];
-        $numReps = isset($_POST['num_reps']) ? intval($_POST['num_reps']) : 1;
-
         // Xử lý dữ liệu phases
         $phases = [];
         if (isset($_POST['phase_name']) && isset($_POST['phase_duration'])) {
@@ -27,23 +25,26 @@ try {
                         'product_application' => $productApplication
                     ];
                 }
-                
+
             }
         }
 
         // Chuyển phases thành JSON
         $phasesJson = json_encode($phases);
-        // Xử lý danh sách treatments
+
+        // Xử lý danh sách treatments với num_reps riêng
         $treatments = [];
-        if (isset($_POST['treatment_name']) && isset($_POST['product_application'])) {
+        if (isset($_POST['treatment_name']) && isset($_POST['num_reps']) && isset($_POST['product_application'])) {
             for ($i = 0; $i < count($_POST['treatment_name']); $i++) {
                 $treatmentName = $_POST['treatment_name'][$i];
                 $productApplication = $_POST['product_application'][$i];
+                $numReps = isset($_POST['num_reps'][$i]) ? intval($_POST['num_reps'][$i]) : 1;
 
-                if (!empty($treatmentName) && !empty($productApplication)) {
+                if (!empty($treatmentName)) {
                     $treatments[] = [
                         'name' => $treatmentName,
-                        'product_application' => $productApplication
+                        'product_application' => $productApplication,
+                        'num_reps' => $numReps
                     ];
                 }
             }
@@ -51,6 +52,7 @@ try {
 
         // Chuyển treatments thành JSON
         $treatmentsJson = json_encode($treatments);
+
         // Kiểm tra xem case_study_id đã tồn tại chưa
         $checkSql = "SELECT * FROM case_study WHERE case_study_id = ?";
         $stmt = $connect->prepare($checkSql);
@@ -66,19 +68,23 @@ try {
             $valid['messages'] = "Case Study ID is available. Please choose another ID.";
         } else {
             // Chèn case study mới
-            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, pond_id, status, phases, treatment, num_reps) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, pond_id, status, treatment) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $connect->prepare($sql);
             if (!$stmt)
                 throw new Exception("Prepare failed: " . $connect->error);
 
-            $stmt->bind_param("sssisisssi", $caseStudyId, 
-            $caseName, 
-            $location, 
-            $categoryId,
-             $startDate,
-              $pondId,
-               $status, $phasesJson, $treatmentsJson, $numReps);
+            $stmt->bind_param(
+                "sssisiss",
+                $caseStudyId,
+                $caseName,
+                $location,
+                $categoryId,
+                $startDate,
+                $pondId,
+                $status,
+                $treatmentsJson
+            );
 
             if ($stmt->execute()) {
                 $valid['success'] = true;

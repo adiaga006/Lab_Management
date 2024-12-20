@@ -4,13 +4,14 @@ include('./constant/layout/header.php');
 include('./constant/layout/sidebar.php');
 include('./constant/connect.php');
 
-// Fetch the `case_study_id` from the URL
+// Lấy `case_study_id` từ URL
 $caseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : 0;
 if (!$caseStudyId) {
     die("Error: Missing case_study_id in URL");
 }
-// Query case study details
-$sql = "SELECT start_date, phases FROM case_study WHERE case_study_id = ?";
+
+// Lấy thông tin `start_date`, `phases`, và `treatment` từ bảng `case_study`
+$sql = "SELECT start_date, phases, treatment FROM case_study WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -23,7 +24,16 @@ if (!$caseStudy) {
 }
 
 $startDate = $caseStudy['start_date'];
-$phasesJson = $caseStudy['phases'] ?? '[]'; // Default to empty JSON array if phases is null
+$phasesJson = $caseStudy['phases'] ?? '[]'; // Mặc định là JSON rỗng nếu phases không tồn tại
+$treatmentJson = $caseStudy['treatment'] ?? '[]'; // Mặc định là JSON rỗng nếu treatment không tồn tại
+
+// Giải mã JSON cột `treatment` để lấy `num_reps` theo từng treatment
+$treatmentData = json_decode($treatmentJson, true);
+if (!is_array($treatmentData)) {
+    die("Error: Invalid JSON structure in treatment column.");
+}
+
+
 function definePhasesWithDates($phasesJson, $startDate)
 {
     // Decode JSON to array
@@ -194,71 +204,49 @@ foreach ($phases as $phase) {
         }
     }
 }
-// Fetch số lần đo (num_reps) từ bảng case_study
-$sql = "SELECT num_reps FROM case_study WHERE case_study_id = ?";
-$stmt = $connect->prepare($sql);
-$stmt->bind_param("s", $caseStudyId);
-$stmt->execute();
-$stmt->bind_result($numReps);
-$stmt->fetch();
-$stmt->close();
-
-if (!$numReps || $numReps <= 0) {
-    die("Error: Invalid num_reps value");
-}
-// Tạo mảng dữ liệu feeding weight theo treatment và rep
+// Nhóm dữ liệu `feeding_weight` theo treatment và rep
 $feedingData = [];
 foreach ($entries as $entry) {
     $treatmentName = $entry['treatment_name'];
-    $rep = (int)$entry['rep']; // Ép kiểu rep thành integer
-    $feedingWeight = (float)$entry['feeding_weight']; // Ép kiểu feeding weight thành float
+    $rep = (int)$entry['rep'];
+    $feedingWeight = (float)$entry['feeding_weight'];
 
     if ($feedingWeight !== null) {
-        // Cộng dồn giá trị feeding weight, không cần làm tròn vì DB đã đảm bảo DECIMAL(10,2)
         if (!isset($feedingData[$treatmentName][$rep])) {
-            $feedingData[$treatmentName][$rep] = 0.00; // Khởi tạo giá trị float
+            $feedingData[$treatmentName][$rep] = 0.00;
         }
-
         $feedingData[$treatmentName][$rep] += $feedingWeight;
     }
 }
 
-// Làm tròn tổng cuối cùng để đảm bảo định dạng float 2 chữ số thập phân
-foreach ($feedingData as $treatmentName => &$repTotals) {
-    foreach ($repTotals as $rep => &$total) {
-        $total = round($total, 2);
+
+// Làm tròn giá trị tổng của `feeding_weight`
+foreach ($feedingData as $treatmentName => &$reps) {
+    foreach ($reps as $rep => &$totalWeight) {
+        $totalWeight = round($totalWeight, 2);
     }
 }
-unset($repTotals); // Giải phóng tham chiếu
+unset($reps);
 
 
 
 
-// Tính toán kết quả trung bình và độ lệch chuẩn
+// Kết quả trung bình và độ lệch chuẩn
 $feedingResults = [];
-foreach ($feedingData as $treatmentName => $repTotals) {
-    // Loại bỏ các giá trị 0 trong repTotals
-    $validRepTotals = array_filter($repTotals, function ($value) {
-        return $value > 0;
-    });
+foreach ($feedingData as $treatmentName => $reps) {
+    $validWeights = array_values($reps);
+    if (!empty($validWeights)) {
+        $averageWeight = round(array_sum($validWeights) / count($validWeights), 2);
+        $stdDeviation = calculateStandardDeviation($validWeights);
 
-    if (!empty($validRepTotals)) {
-        // Tính trung bình
-        $averageFeedingWeight = round(array_sum($validRepTotals) / count($validRepTotals), 2);
-
-        // Tính độ lệch chuẩn
-        $standardDeviation = calculateStandardDeviation(array_values($validRepTotals));
-
-        // Lưu kết quả
         $feedingResults[] = [
             'treatment_name' => $treatmentName,
-            'average_feeding_weight' => $averageFeedingWeight,
-            'standard_deviation' => $standardDeviation,
-            'feeding_weight ± sd' => $averageFeedingWeight . ' ± ' . $standardDeviation,
+            'average_feeding_weight' => $averageWeight,
+            'standard_deviation' => $stdDeviation,
+            'feeding_weight ± sd' => "{$averageWeight} ± {$stdDeviation}",
         ];
     }
 }
-
 // Xuất dữ liệu JSON
 header('Content-Type: application/json'); // Set header là JSON
 //echo json_encode($feedingData, JSON_PRETTY_PRINT);

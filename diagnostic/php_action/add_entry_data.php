@@ -28,41 +28,52 @@ if ($_POST) {
         exit;
     }
 
-    // Lấy `num_reps` từ bảng `case_study`
-    $stmt = $connect->prepare("SELECT num_reps FROM case_study WHERE case_study_id = ?");
+    // Lấy thông tin `treatment` từ bảng `case_study`
+    $stmt = $connect->prepare("SELECT treatment FROM case_study WHERE case_study_id = ?");
     $stmt->bind_param("s", $caseStudyId);
     $stmt->execute();
-    $stmt->bind_result($numReps);
+    $stmt->bind_result($treatmentJson);
     $stmt->fetch();
     $stmt->close();
 
-    if (!$numReps) {
-        $response['messages'] = 'Error: Case study not found.';
+    if (!$treatmentJson) {
+        $response['messages'] = 'Error: Case study not found or treatments data is missing.';
         echo json_encode($response);
         exit;
     }
 
-    // Kiểm tra nếu giá trị `rep` nhập vào vượt quá `num_reps`
-    if ($rep > $numReps) {
-        $response['messages'] = "Error: Rep $rep exceeds the maximum allowed value ($numReps) for this case study.";
+    // Giải mã JSON `treatment` thành mảng
+    $treatments = json_decode($treatmentJson, true);
+
+    if (!$treatments || !is_array($treatments)) {
+        $response['messages'] = 'Error: Invalid treatment data format.';
         echo json_encode($response);
         exit;
     }
 
-    // Kiểm tra số lần `rep` đã tồn tại cho `treatment_name` và `lab_day`
-    $stmt = $connect->prepare("SELECT COUNT(*) AS currentReps FROM entry_data WHERE case_study_id = ? AND treatment_name = ? AND lab_day = ?");
-    $stmt->bind_param("sss", $caseStudyId, $treatmentName, $labDayFormatted);
-    $stmt->execute();
-    $stmt->bind_result($currentReps);
-    $stmt->fetch();
-    $stmt->close();
+    // Lặp qua từng treatment để kiểm tra logic
+    foreach ($treatments as $treatment) {
+        // Kiểm tra nếu giá trị `rep` vượt quá `num_reps`
+        if ($rep > $treatment['num_reps']) {
+            $response['messages'] = "Error: Rep $rep exceeds the maximum allowed value ({$treatment['num_reps']}) for treatment '{$treatment['name']}'.";
+            echo json_encode($response);
+            exit;
+        }
 
-    if ($currentReps >= $numReps) {
-        $response['messages'] = "Error: Maximum reps ($numReps) exceeded for $treatmentName on $labDayDisplay.";
-        echo json_encode($response);
-        exit;
+        // Kiểm tra số lần `rep` đã tồn tại trong bảng `entry_data`
+        $stmt = $connect->prepare("SELECT COUNT(*) AS currentReps FROM entry_data WHERE case_study_id = ? AND treatment_name = ? AND lab_day = ?");
+        $stmt->bind_param("sss", $caseStudyId, $treatment['name'], $labDayFormatted);
+        $stmt->execute();
+        $stmt->bind_result($currentReps);
+        $stmt->fetch();
+        $stmt->close();
+
+        if ($currentReps >= $treatment['num_reps']) {
+            $response['messages'] = "Error: Data for rep {$currentReps} already exists for treatment '{$treatment['name']}' on $labDayDisplay.";
+            echo json_encode($response);
+            exit;
+        }
     }
-
     // Kiểm tra nếu `rep` bị trùng
     $stmt = $connect->prepare("SELECT COUNT(*) FROM entry_data WHERE case_study_id = ? AND treatment_name = ? AND lab_day = ? AND rep = ?");
     $stmt->bind_param("sssi", $caseStudyId, $treatmentName, $labDayFormatted, $rep);

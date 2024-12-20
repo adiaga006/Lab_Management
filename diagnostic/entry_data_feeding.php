@@ -11,7 +11,7 @@ if (!$caseStudyId) {
 }
 
 // Fetch case study details
-$sql = "SELECT start_date, num_reps, phases, treatment FROM case_study WHERE case_study_id = ?";
+$sql = "SELECT start_date, phases, treatment FROM case_study WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -24,11 +24,10 @@ if (!$caseStudy) {
 }
 
 $startDate = new DateTime($caseStudy['start_date']);
-$numReps = $caseStudy['num_reps'];
 $phases = json_decode($caseStudy['phases'], true);
-$treatmentList = json_decode($caseStudy['treatment'], true); // Decode JSON for treatment list
+$treatmentList = json_decode($caseStudy['treatment'], true);
 
-if (!$phases || !$treatmentList || $numReps <= 0) {
+if (!$phases || !$treatmentList) {
     die("Error: Invalid case study data.");
 }
 
@@ -46,15 +45,11 @@ foreach ($phases as $phase) {
         $currentDate->modify('+1 day');
     }
 }
-// Tính toán end_date từ start_date và duration của các phase
-$totalDuration = array_reduce($phases, function ($carry, $phase) {
-    return $carry + $phase['duration'];
-}, 0);
 
-// Tạo end_date
+// Calculate the end_date
+$totalDuration = array_reduce($phases, fn($carry, $phase) => $carry + $phase['duration'], 0);
 $endDate = clone $startDate;
 $endDate->modify("+" . ($totalDuration - 1) . " days");
-
 
 // Fetch entry_data
 $sql = "SELECT treatment_name, feeding_weight, lab_day, rep FROM entry_data WHERE case_study_id = ?";
@@ -64,32 +59,15 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 $entryData = [];
-$tempData = [];
 while ($row = $result->fetch_assoc()) {
-    $tempData[] = $row;
-}
-
-// Sort $tempData by treatment_name, lab_day, and rep
-usort($tempData, function ($a, $b) {
-    if ($a['treatment_name'] !== $b['treatment_name']) {
-        return strcmp($a['treatment_name'], $b['treatment_name']);
-    }
-    if ($a['lab_day'] !== $b['lab_day']) {
-        return strcmp($a['lab_day'], $b['lab_day']);
-    }
-    return $a['rep'] <=> $b['rep'];
-});
-
-// Reorganize $entryData after sorting
-foreach ($tempData as $row) {
     $entryData[$row['treatment_name']][$row['lab_day']][] = [
         'rep' => $row['rep'],
         'feeding_weight' => $row['feeding_weight'],
     ];
 }
-
 $stmt->close();
 
+// Utility function to format dates
 function formatDate($date)
 {
     $dateObj = DateTime::createFromFormat('Y-m-d', $date);
@@ -100,33 +78,32 @@ function formatDate($date)
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">
-            <div class="header-title">
-    <h3 class="text-primary">
-        View of Feeding Data for Case Study ID: <?php echo htmlspecialchars($caseStudyId); ?>
-    </h3>
-    <div style="font-size: 1em; color: black; font-weight: bold;"class="date-range">
-        Start Date: <?php echo $startDate->format('d-m-Y'); ?> ||
-        End Date: <?php echo $endDate->format('d-m-Y'); ?>
-    </div>
-</div>
+                <div class="header-title">
+                    <h3 class="text-primary">View of Feeding Data for Case Study ID:
+                        <?php echo htmlspecialchars($caseStudyId); ?></h3>
+                    <div style="font-size: 1em; color: black; font-weight: bold;" class="date-range">
+                        Start Date: <?php echo $startDate->format('d-m-Y'); ?> ||
+                        End Date: <?php echo $endDate->format('d-m-Y'); ?>
+                    </div>
+                </div>
 
-
-                <!-- Fixed table for Treatment Name and Reps -->
+                <!-- Table Container -->
                 <div class="table-container">
+                    <!-- Fixed Table -->
                     <div class="table-fixed">
                         <table class="table table-bordered">
                             <thead>
-                                <tr class="header-row">
-                                    <th rowspan="2" style="width: 100px;" class="sticky-header">Treatment Name</th>
-                                    <th rowspan="2" style="width: 20px;" class="sticky-header">Reps</th>
-                                    </tr>
+                                <tr>
+                                    <th rowspan="2" class="sticky-header">Treatment Name</th>
+                                    <th rowspan="2" class="sticky-header">Reps</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($treatmentList as $treatment): ?>
-                                    <?php for ($rep = 1; $rep <= $numReps; $rep++): ?>
+                                    <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
                                         <tr>
                                             <?php if ($rep === 1): ?>
-                                                <td rowspan="<?php echo $numReps; ?>" class="centered">
+                                                <td rowspan="<?php echo $treatment['num_reps']; ?>" class="centered">
                                                     <?php echo htmlspecialchars($treatment['name']); ?>
                                                 </td>
                                             <?php endif; ?>
@@ -138,12 +115,13 @@ function formatDate($date)
                         </table>
                     </div>
 
+                    <!-- Scrollable Table -->
                     <div class="table-scrollable">
                         <table class="table table-bordered">
                             <thead>
-                                <tr class="header-row phase-header">
+                                <tr class="phase-header">
                                     <?php
-                                    $colors = ['green', 'blue', 'red', 'green'];
+                                    $colors = ['green', 'blue', 'red', 'orange'];
                                     $colorIndex = 0;
                                     $currentPhase = '';
                                     $startPhaseDate = '';
@@ -152,7 +130,7 @@ function formatDate($date)
                                         if ($dateInfo['phase'] !== $currentPhase):
                                             if ($currentPhase !== ''):
                                                 $duration = (strtotime($prevDate) - strtotime($startPhaseDate)) / (60 * 60 * 24) + 1;
-                                                echo "<th colspan=\"$phaseCount\" class=\"centered\" style=\"background-color: {$colors[$colorIndex]}; color: white;\">$currentPhase<br>($duration days)</th>";
+                                                echo "<th colspan=\"$phaseCount\" style=\"background-color: {$colors[$colorIndex]}; color: white;\">$currentPhase<br>($duration days)</th>";
                                                 $colorIndex = ($colorIndex + 1) % count($colors);
                                             endif;
                                             $currentPhase = $dateInfo['phase'];
@@ -165,32 +143,33 @@ function formatDate($date)
                                     endforeach;
 
                                     $duration = (strtotime($prevDate) - strtotime($startPhaseDate)) / (60 * 60 * 24) + 1;
-                                    echo "<th colspan=\"$phaseCount\" class=\"centered\" style=\"background-color: {$colors[$colorIndex]}; color: white;\">$currentPhase<br>($duration days)</th>";
+                                    echo "<th colspan=\"$phaseCount\" style=\"background-color: {$colors[$colorIndex]}; color: white;\">$currentPhase<br>($duration days)</th>";
                                     ?>
                                 </tr>
+                                <tr class="date-header">
+                                    <?php foreach ($dates as $dateInfo): ?>
+                                        <th><?php echo formatDate($dateInfo['date']); ?></th>
+                                    <?php endforeach; ?>
+                                </tr>
                             </thead>
-                            <tr class="header-row date-header">
-                                <?php foreach ($dates as $dateInfo): ?>
-                                    <th><?php echo formatDate($dateInfo['date']); ?></th>
-                                <?php endforeach; ?>
-                            </tr>
                             <tbody>
-                                <?php foreach ($entryData as $treatment => $daysData): ?>
-                                    <?php for ($rep = 0; $rep < $numReps; $rep++): ?>
+                                <?php foreach ($treatmentList as $treatment): ?>
+                                    <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
                                         <tr>
                                             <?php foreach ($dates as $dateInfo): ?>
-                                                <td>
-                                                    <?php
-                                                    $currentDate = $dateInfo['date'];
-
-                                                    if (isset($daysData[$currentDate][$rep])) {
-                                                        $sampleData = $daysData[$currentDate][$rep];
-                                                        echo htmlspecialchars($sampleData['feeding_weight']);
-                                                    } else {
-                                                        echo '-';
+                                                <?php
+                                                $currentDate = $dateInfo['date'];
+                                                $feedingWeight = '-';
+                                                if (isset($entryData[$treatment['name']][$currentDate])) {
+                                                    foreach ($entryData[$treatment['name']][$currentDate] as $data) {
+                                                        if ($data['rep'] == $rep) {
+                                                            $feedingWeight = htmlspecialchars($data['feeding_weight']);
+                                                            break;
+                                                        }
                                                     }
-                                                    ?>
-                                                </td>
+                                                }
+                                                ?>
+                                                <td><?php echo $feedingWeight; ?></td>
                                             <?php endforeach; ?>
                                         </tr>
                                     <?php endfor; ?>
@@ -228,22 +207,26 @@ function formatDate($date)
         border-right: 1px solid #000;
         /* Gạch dọc đậm hơn */
         text-align: center;
-        padding-bottom: 16px; /* Giữ cố định cùng chiều cao */
+        padding-bottom: 16px;
+        /* Giữ cố định cùng chiều cao */
     }
 
     /* Bảng cuộn */
-   /* Bảng cuộn */
-.table-scrollable {
-    flex: 1 1 auto;
-    overflow-x: auto; /* Hiển thị thanh cuộn ngang */
-    overflow-y: auto; /* Duy trì cuộn dọc */
-}
+    /* Bảng cuộn */
+    .table-scrollable {
+        flex: 1 1 auto;
+        overflow-x: auto;
+        /* Hiển thị thanh cuộn ngang */
+        overflow-y: auto;
+        /* Duy trì cuộn dọc */
+    }
 
     /* Đồng bộ hóa bảng */
     .table-fixed table,
     .table-scrollable table {
         border-collapse: collapse;
     }
+
     .table-fixed th,
     .table-fixed td,
     .table-scrollable th,
@@ -316,8 +299,7 @@ function formatDate($date)
     }
 
     /* Nội dung bảng */
-    .table-fixed td 
-    .table-scrollable td{
+    .table-fixed td .table-scrollable td {
         background: white;
         z-index: 1;
         /* Thấp hơn tiêu đề */
@@ -347,24 +329,24 @@ function formatDate($date)
     thead tr th:last-child {
         text-align: center;
     }
+
     .header-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ddd;
-}
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+    }
 
-.header-title .text-primary {
-    margin: 0;
-}
+    .header-title .text-primary {
+        margin: 0;
+    }
 
-.header-title .year-header {
-    font-size: 16px;
-    color: #555;
-    font-weight: normal;
-}
-
+    .header-title .year-header {
+        font-size: 16px;
+        color: #555;
+        font-weight: normal;
+    }
 </style>
 
 <!-- Đồng bộ cuộn -->

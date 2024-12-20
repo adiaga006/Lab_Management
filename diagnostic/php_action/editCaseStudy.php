@@ -12,34 +12,35 @@ try {
         $categoryId = $_POST['editCategoryName'];
         $startDate = date('Y-m-d', strtotime($_POST['editStartDate'])); // Định dạng YYYY-MM-DD
         $status = $_POST['editCaseStudyStatus'];
-        $numReps = isset($_POST['editNumReps']) ? intval($_POST['editNumReps']) : 1; // Lấy num_reps từ form, mặc định là 1
 
         // Lưu thông tin treatments từ form
         $treatments = [];
-        if (isset($_POST['treatment_name']) && isset($_POST['product_application'])) {
+        if (isset($_POST['treatment_name']) && isset($_POST['num_reps']) && isset($_POST['product_application'])) {
             for ($i = 0; $i < count($_POST['treatment_name']); $i++) {
                 $treatmentName = $_POST['treatment_name'][$i];
                 $productApplication = $_POST['product_application'][$i];
+                $numReps = isset($_POST['num_reps'][$i]) ? intval($_POST['num_reps'][$i]) : 1;
 
-                if (isset($treatmentName) && isset($productApplication)) {
+                if (!empty($treatmentName)) {
                     $treatments[] = [
                         'name' => $treatmentName,
-                        'product_application' => $productApplication
+                        'product_application' => $productApplication,
+                        'num_reps' => $numReps
                     ];
                 }
-
             }
         }
 
         // Chuyển treatments thành JSON
         $treatmentsJson = json_encode($treatments);
+
         // Lưu thông tin phases từ form
         $phases = [];
         if (isset($_POST['phases']) && is_array($_POST['phases'])) {
             foreach ($_POST['phases'] as $phaseName => $phaseDuration) {
                 $phases[] = [
                     'name' => $phaseName,
-                    'duration' => (int) $phaseDuration
+                    'duration' => (int)$phaseDuration
                 ];
             }
         }
@@ -55,8 +56,7 @@ try {
                     categories_id = ?, 
                     status = ?, 
                     phases = ?, 
-                    treatment = ?, 
-                    num_reps = ?
+                    treatment = ? 
                 WHERE case_study_id = ?";
 
         $stmt = $connect->prepare($sql);
@@ -66,7 +66,7 @@ try {
 
         // Bind các tham số với kiểu dữ liệu chính xác
         $stmt->bind_param(
-            "sssisssis",
+            "sssissss",
             $caseName,
             $location,
             $startDate,
@@ -74,9 +74,9 @@ try {
             $status,
             $phasesJson,
             $treatmentsJson,
-            $numReps,
             $caseStudyId
         );
+
         if ($stmt->execute()) {
             $valid['success'] = true;
             $valid['messages'] = "Successfully Updated";

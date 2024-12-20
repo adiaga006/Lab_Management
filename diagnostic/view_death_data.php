@@ -4,14 +4,14 @@ include('./constant/layout/header.php');
 include('./constant/layout/sidebar.php');
 include('./constant/connect.php');
 
-// Fetch the case_study_id from the URL
+// Fetch the `case_study_id` from the URL
 $caseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : 0;
 if (!$caseStudyId) {
     die("Error: Missing case_study_id in URL");
 }
 
-// Fetch case study details
-$sql = "SELECT start_date, num_reps FROM case_study WHERE case_study_id = ?";
+// Fetch case study details, including treatment JSON
+$sql = "SELECT start_date, treatment FROM case_study WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -24,31 +24,34 @@ if (!$caseStudy) {
 }
 
 $startDate = new DateTime($caseStudy['start_date']);
-$numReps = $caseStudy['num_reps']; // Số lần đo trong mỗi ngày
+$treatmentList = json_decode($caseStudy['treatment'], true); // Decode treatment JSON
+
+if (!$treatmentList) {
+    die("Error: Invalid or missing treatment data.");
+}
 
 // Fetch shrimp_death_data
 $sql = "SELECT treatment_name, rep, product_application, test_time, death_sample
-FROM shrimp_death_data
-WHERE case_study_id = ?
-ORDER BY treatment_name, test_time, rep";
+        FROM shrimp_death_data
+        WHERE case_study_id = ?
+        ORDER BY treatment_name, test_time, rep";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
 $result = $stmt->get_result();
 
 $deathData = [];
-$productApplication = [];
 while ($row = $result->fetch_assoc()) {
     $testDate = date('Y-m-d', strtotime($row['test_time']));
     $testHour = date('H:i', strtotime($row['test_time']));
     $deathData[$row['treatment_name']][$testDate][$row['rep']][$testHour] = $row['death_sample'];
-    $productApplication[$row['treatment_name']] = $row['product_application'];
 }
 $stmt->close();
 
 // Define the 6 specific time slots
 $timeSlots = ['03:00', '07:00', '11:00', '15:00', '19:00', '23:00'];
-// Lấy ngày nhỏ nhất trong database
+
+// Get the earliest test date
 $sql = "SELECT MIN(DATE(test_time)) AS earliest_date FROM shrimp_death_data WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
@@ -61,9 +64,8 @@ if (!$row || !$row['earliest_date']) {
     die("Error: Unable to fetch the earliest date from the database.");
 }
 
-// Xác định ngày gốc
-$baseDate = $row['earliest_date']; // Ngày nhỏ nhất
-$baseTime = new DateTime($baseDate . ' 15:00'); // Thêm giờ gốc 15:00
+$baseDate = $row['earliest_date'];
+$baseTime = new DateTime($baseDate . ' 15:00'); // Base time for hour difference calculations
 
 // Helper function to format date
 function formatDate($date)
@@ -83,7 +85,7 @@ function formatDate($date)
                 </div>
 
                 <div class="table-container">
-                    <!-- Bảng cố định (Treatment Name và Reps) -->
+                    <!-- Fixed Table (Treatment Name and Reps) -->
                     <div class="table-fixed">
                         <table class="table table-bordered">
                             <thead>
@@ -93,15 +95,14 @@ function formatDate($date)
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($deathData as $treatmentName => $dates): ?>
+                                <?php foreach ($treatmentList as $treatment): ?>
                                     <tr>
-                                        <td rowspan="<?php echo $numReps; ?>" class="centered">
-                                            <?php echo htmlspecialchars($treatmentName); ?>
+                                        <td rowspan="<?php echo $treatment['num_reps']; ?>" class="centered">
+                                            <?php echo htmlspecialchars($treatment['name']); ?>
                                         </td>
-                                        <?php for ($rep = 1; $rep <= $numReps; $rep++): ?>
+                                        <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
                                             <?php if ($rep > 1): ?>
-                                            <tr>
-                                            <?php endif; ?>
+                                            <tr><?php endif; ?>
                                             <td class="centered"><?php echo $rep; ?></td>
                                         </tr>
                                     <?php endfor; ?>
@@ -110,11 +111,11 @@ function formatDate($date)
                         </table>
                     </div>
 
-                    <!-- Bảng cuộn (Dữ liệu theo ngày và khung giờ) -->
+                    <!-- Scrollable Table (Dates and Time Slots) -->
                     <div class="table-scrollable">
                         <table class="table table-bordered">
                             <thead>
-                                <!-- Hàng tiêu đề ngày -->
+                                <!-- Date Header -->
                                 <tr class="date-header">
                                     <?php $dayIndex = 0; ?>
                                     <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
@@ -125,7 +126,7 @@ function formatDate($date)
                                         <?php $dayIndex++; ?>
                                     <?php endforeach; ?>
                                 </tr>
-                                <!-- Hàng tiêu đề khung giờ -->
+                                <!-- Time Slot Header -->
                                 <tr class="time-header">
                                     <?php $dayIndex = 0; ?>
                                     <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
@@ -138,8 +139,8 @@ function formatDate($date)
                                     <?php endforeach; ?>
                                 </tr>
                             </thead>
-                            <!-- Hàng tiêu đề độ lệch giờ -->
-                            <tr class="offset-header">
+                             <!-- Hàng tiêu đề độ lệch giờ -->
+                             <tr class="offset-header">
                                 <?php $dayIndex = 0; ?>
                                 <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
                                     <?php foreach ($timeSlots as $slot): ?>
@@ -159,20 +160,20 @@ function formatDate($date)
                                 <?php endforeach; ?>
                             </tr>
                             <tbody>
-                                <?php foreach ($deathData as $treatmentName => $dates): ?>
-                                    <?php for ($rep = 1; $rep <= $numReps; $rep++): ?>
+                                <?php foreach ($treatmentList as $treatment): ?>
+                                    <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
                                         <tr>
                                             <?php $dayIndex = 0; ?>
-                                            <?php foreach ($dates as $date => $reps): ?>
+                                            <?php foreach ($deathData[$treatment['name']] as $date => $reps): ?>
                                                 <?php $dayColor = $dayIndex % 2 === 0 ? 'bg-pink' : 'bg-green'; ?>
                                                 <?php foreach ($timeSlots as $slot): ?>
                                                     <td class="<?php echo $dayColor; ?>">
                                                         <?php
-                                                        // Kiểm tra dữ liệu có tồn tại cho rep và time slot
+                                                        // Display data if exists for rep and time slot
                                                         if (isset($reps[$rep][$slot])) {
                                                             echo htmlspecialchars($reps[$rep][$slot]);
                                                         } else {
-                                                            echo '-'; // Hiển thị trống nếu không có dữ liệu
+                                                            echo '-';
                                                         }
                                                         ?>
                                                     </td>
@@ -185,227 +186,229 @@ function formatDate($date)
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add CSS for sticky columns -->
+<style>
+    /* Container tổng */
+    /* Đảm bảo container có đủ khoảng trống bên dưới cho thanh cuộn */
+    .table-container {
+        display: flex;
+        max-height: calc(100vh - 170px);
+        overflow: hidden;
+        position: relative;
+        padding-bottom: 16px;
+        /* Tạo khoảng trống cho thanh cuộn ngang */
+    }
+
+    /* Bảng cố định Treatment Name và Reps */
+    .table-fixed {
+        flex: 0 0 auto;
+        /* Không co giãn */
+        /* Chiều rộng cố định */
+        overflow: hidden;
+        /* Ngăn tràn */
+        border-right: 1px solid #000;
+        /* Gạch dọc đậm hơn */
+        text-align: center;
+        padding-bottom: 16px;
+        /* Giữ cố định cùng chiều cao */
+    }
+
+    /* Bảng cuộn */
+    /* Bảng cuộn */
+    .table-scrollable {
+        flex: 1 1 auto;
+        overflow-x: auto;
+        /* Hiển thị thanh cuộn ngang */
+        overflow-y: auto;
+        /* Duy trì cuộn dọc */
+    }
+
+    /* Đồng bộ hóa bảng */
+    .table-fixed table,
+    .table-scrollable table {
+        border-collapse: collapse;
+    }
+
+    .table-fixed th,
+    .table-fixed td,
+    .table-scrollable th,
+    .table-scrollable td {
+        white-space: nowrap;
+        text-align: center;
+        border: 0.1px solid #000;
+        /* Gạch ngang và dọc đậm */
+        color: #333;
+        /* Màu chữ đậm */
+        font-weight: bold;
+        /* Chữ in đậm */
+        background-clip: padding-box;
+        /* Giữ gạch khi cố định */
+        box-shadow: inset 0 0 0 1px #000;
+        /* Tạo viền bên trong */
+    }
+
+    /* Phase header (cố định khi cuộn xuống) */
+    .phase-header th {
+        position: sticky;
+        top: 0;
+        /* Cố định ở đỉnh */
+        z-index: 3;
+        /* Cao hơn nội dung */
+        background: #e9ecef;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border: 0.1px solid #000;
+        /* Gạch dọc và ngang đậm */
+        box-shadow: inset 0 0 0 1px #000;
+        /* Tạo viền khi cố định */
+    }
+
+    /* Header cố định */
+    .date-header th {
+        position: sticky;
+        top: 0;
+        /* Vị trí cố định khi cuộn */
+        z-index: 4;
+        /* Cao hơn nội dung khác */
+        background-color: #e9ecef;
+        /* Màu nền cho tiêu đề */
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border: 0.1px solid #000;
+        box-shadow: inset 0 0 0 1px #000;
+        /* Tạo viền bên trong */
+    }
+
+    /* Hàng khung giờ cố định ngay dưới header ngày */
+    .offset-header th {
+        position: sticky;
+        top: 96.4px;
+        /* Ngay bên dưới hàng date-header */
+        z-index: 3;
+        /* Thấp hơn date-header nhưng cao hơn nội dung */
+        background-color: #f8f9fa;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border: 0.1px solid #000;
+        box-shadow: inset 0 0 0 1px #000;
+    }
+
+    /* Tiêu đề Treatment Name và Reps */
+    .sticky-header {
+        position: sticky;
+        top: 0;
+        /* Đảm bảo cố định */
+        left: 0;
+        /* Cố định bên trái */
+        z-index: 5;
+        /* Cao hơn tiêu đề phase và date */
+        background: #f8f9fa;
+        border: 0.1px solid #000;
+        /* Gạch ngang và dọc đậm */
+        text-align: center;
+        font-weight: bold;
+        height: 145px;
+        box-shadow: inset 0 0 0 1px #000;
+        /* Tạo viền bên trong */
+    }
+
+    /* Nội dung bảng */
+    .table-fixed td .table-scrollable td {
+        background: white;
+        z-index: 1;
+        /* Thấp hơn tiêu đề */
+        border: 0.1px solid #000;
+        /* Gạch ngang và dọc đậm */
+        box-shadow: inset 0 0 0 1px #000;
+        /* Tạo viền bên trong */
+    }
+
+    /* Cố định hàng tiêu đề */
+
+    .time-header th {
+        position: sticky;
+        top: 48.2px;
+        /* Ngay bên dưới hàng date-header */
+        z-index: 3;
+        /* Thấp hơn date-header nhưng cao hơn nội dung */
+        background-color: #f8f9fa;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border: 0.1px solid #000;
+        box-shadow: inset 0 0 0 1px #000;
+    }
+
+    /* Gộp các ô với căn giữa */
+    .centered {
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        vertical-align: middle;
+        font-weight: bold;
+        /* Chữ in đậm */
+        border: 0.1px solid #000;
+        /* Gạch ngang và dọc đậm */
+    }
 
 
+    tbody tr td:last-child {
+        text-align: center;
+    }
+
+    thead tr th:last-child {
+        text-align: center;
+    }
+
+    .header-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .header-title .text-primary {
+        margin: 0;
+    }
+
+    .header-title .year-header {
+        font-size: 16px;
+        color: #555;
+        font-weight: normal;
+    }
+
+    /* Màu hồng nhạt cho các ngày */
+    .bg-pink {
+        background-color: #f8d7da !important;
+    }
+
+    /* Màu xanh lá nhạt cho các ngày */
+    .bg-green {
+        background-color: #d4edda !important;
+    }
+</style>
+
+<!-- Đồng bộ cuộn -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const fixedTable = document.querySelector('.table-fixed');
+        const scrollableTable = document.querySelector('.table-scrollable');
+
+        scrollableTable.addEventListener('scroll', function () {
+            fixedTable.scrollTop = scrollableTable.scrollTop;
+        });
+    });
+</script>
 
 
-                    <!-- Add CSS for sticky columns -->
-                    <style>
-                        /* Container tổng */
-                        /* Đảm bảo container có đủ khoảng trống bên dưới cho thanh cuộn */
-                        .table-container {
-                            display: flex;
-                            max-height: calc(100vh - 170px);
-                            overflow: hidden;
-                            position: relative;
-                            padding-bottom: 16px;
-                            /* Tạo khoảng trống cho thanh cuộn ngang */
-                        }
-
-                        /* Bảng cố định Treatment Name và Reps */
-                        .table-fixed {
-                            flex: 0 0 auto;
-                            /* Không co giãn */
-                            /* Chiều rộng cố định */
-                            overflow: hidden;
-                            /* Ngăn tràn */
-                            border-right: 1px solid #000;
-                            /* Gạch dọc đậm hơn */
-                            text-align: center;
-                            padding-bottom: 16px;
-                            /* Giữ cố định cùng chiều cao */
-                        }
-
-                        /* Bảng cuộn */
-                        /* Bảng cuộn */
-                        .table-scrollable {
-                            flex: 1 1 auto;
-                            overflow-x: auto;
-                            /* Hiển thị thanh cuộn ngang */
-                            overflow-y: auto;
-                            /* Duy trì cuộn dọc */
-                        }
-
-                        /* Đồng bộ hóa bảng */
-                        .table-fixed table,
-                        .table-scrollable table {
-                            border-collapse: collapse;
-                        }
-
-                        .table-fixed th,
-                        .table-fixed td,
-                        .table-scrollable th,
-                        .table-scrollable td {
-                            white-space: nowrap;
-                            text-align: center;
-                            border: 0.1px solid #000;
-                            /* Gạch ngang và dọc đậm */
-                            color: #333;
-                            /* Màu chữ đậm */
-                            font-weight: bold;
-                            /* Chữ in đậm */
-                            background-clip: padding-box;
-                            /* Giữ gạch khi cố định */
-                            box-shadow: inset 0 0 0 1px #000;
-                            /* Tạo viền bên trong */
-                        }
-
-                        /* Phase header (cố định khi cuộn xuống) */
-                        .phase-header th {
-                            position: sticky;
-                            top: 0;
-                            /* Cố định ở đỉnh */
-                            z-index: 3;
-                            /* Cao hơn nội dung */
-                            background: #e9ecef;
-                            font-weight: bold;
-                            text-align: center;
-                            vertical-align: middle;
-                            border: 0.1px solid #000;
-                            /* Gạch dọc và ngang đậm */
-                            box-shadow: inset 0 0 0 1px #000;
-                            /* Tạo viền khi cố định */
-                        }
-
-                        /* Header cố định */
-                        .date-header th {
-                            position: sticky;
-                            top: 0;
-                            /* Vị trí cố định khi cuộn */
-                            z-index: 4;
-                            /* Cao hơn nội dung khác */
-                            background-color: #e9ecef;
-                            /* Màu nền cho tiêu đề */
-                            font-weight: bold;
-                            text-align: center;
-                            vertical-align: middle;
-                            border: 0.1px solid #000;
-                            box-shadow: inset 0 0 0 1px #000;
-                            /* Tạo viền bên trong */
-                        }
-
-                        /* Hàng khung giờ cố định ngay dưới header ngày */
-                        .offset-header th {
-                            position: sticky;
-                            top: 96.4px;
-                            /* Ngay bên dưới hàng date-header */
-                            z-index: 3;
-                            /* Thấp hơn date-header nhưng cao hơn nội dung */
-                            background-color: #f8f9fa;
-                            font-weight: bold;
-                            text-align: center;
-                            vertical-align: middle;
-                            border: 0.1px solid #000;
-                            box-shadow: inset 0 0 0 1px #000;
-                        }
-
-                        /* Tiêu đề Treatment Name và Reps */
-                        .sticky-header {
-                            position: sticky;
-                            top: 0;
-                            /* Đảm bảo cố định */
-                            left: 0;
-                            /* Cố định bên trái */
-                            z-index: 5;
-                            /* Cao hơn tiêu đề phase và date */
-                            background: #f8f9fa;
-                            border: 0.1px solid #000;
-                            /* Gạch ngang và dọc đậm */
-                            text-align: center;
-                            font-weight: bold;
-                            height: 145px;
-                            box-shadow: inset 0 0 0 1px #000;
-                            /* Tạo viền bên trong */
-                        }
-
-                        /* Nội dung bảng */
-                        .table-fixed td .table-scrollable td {
-                            background: white;
-                            z-index: 1;
-                            /* Thấp hơn tiêu đề */
-                            border: 0.1px solid #000;
-                            /* Gạch ngang và dọc đậm */
-                            box-shadow: inset 0 0 0 1px #000;
-                            /* Tạo viền bên trong */
-                        }
-
-                        /* Cố định hàng tiêu đề */
-
-                        .time-header th {
-                            position: sticky;
-                            top: 48.2px;
-                            /* Ngay bên dưới hàng date-header */
-                            z-index: 3;
-                            /* Thấp hơn date-header nhưng cao hơn nội dung */
-                            background-color: #f8f9fa;
-                            font-weight: bold;
-                            text-align: center;
-                            vertical-align: middle;
-                            border: 0.1px solid #000;
-                            box-shadow: inset 0 0 0 1px #000;
-                        }
-
-                        /* Gộp các ô với căn giữa */
-                        .centered {
-                            align-items: center;
-                            justify-content: center;
-                            text-align: center;
-                            vertical-align: middle;
-                            font-weight: bold;
-                            /* Chữ in đậm */
-                            border: 0.1px solid #000;
-                            /* Gạch ngang và dọc đậm */
-                        }
-
-
-                        tbody tr td:last-child {
-                            text-align: center;
-                        }
-
-                        thead tr th:last-child {
-                            text-align: center;
-                        }
-
-                        .header-title {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            padding-bottom: 10px;
-                            border-bottom: 1px solid #ddd;
-                        }
-
-                        .header-title .text-primary {
-                            margin: 0;
-                        }
-
-                        .header-title .year-header {
-                            font-size: 16px;
-                            color: #555;
-                            font-weight: normal;
-                        }
-
-                        /* Màu hồng nhạt cho các ngày */
-                        .bg-pink {
-                            background-color: #f8d7da !important;
-                        }
-
-                        /* Màu xanh lá nhạt cho các ngày */
-                        .bg-green {
-                            background-color: #d4edda !important;
-                        }
-                    </style>
-
-                    <!-- Đồng bộ cuộn -->
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function () {
-                            const fixedTable = document.querySelector('.table-fixed');
-                            const scrollableTable = document.querySelector('.table-scrollable');
-
-                            scrollableTable.addEventListener('scroll', function () {
-                                fixedTable.scrollTop = scrollableTable.scrollTop;
-                            });
-                        });
-                    </script>
-
-
-                    <?php include('./constant/layout/footer.php'); ?>
+<?php include('./constant/layout/footer.php'); ?>
