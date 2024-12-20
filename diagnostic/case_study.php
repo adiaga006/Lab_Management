@@ -1,7 +1,7 @@
 <?php include('./constant/layout/head.php'); ?>
 <?php include('./constant/layout/header.php'); ?>
-<?php include('./constant/layout/sidebar.php'); ?>   
-<?php include('./constant/connect.php'); 
+<?php include('./constant/layout/sidebar.php'); ?>
+<?php include('./constant/connect.php');
 
 $sql = "SELECT case_study_id, case_name, location, start_date, categories_id, status FROM case_study";
 $result = $connect->query($sql);
@@ -9,7 +9,7 @@ $result = $connect->query($sql);
 <div class="page-wrapper">
     <div class="row page-titles">
         <div class="col-md-5 align-self-center">
-            <h3 class="text-primary"> View Case Studies</h3> 
+            <h3 class="text-primary"> View Case Studies</h3>
         </div>
         <div class="col-md-7 align-self-center">
             <ol class="breadcrumb">
@@ -23,19 +23,19 @@ $result = $connect->query($sql);
         <div class="card">
             <div class="card-body">
                 <a href="add-case_study.php"><button class="btn btn-primary">Add Case Study</button></a>
-                
+
                 <div class="table-responsive m-t-40">
-                    <table id="myTable" class="table table-bordered table-striped">
+                    <table id="myTable" class="table table-bordered table-striped table-custom">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Case Study ID</th>
-                                <th>Case Study Name</th>
-                                <th>Location</th>
-                                <th>Start Date</th>
-                                <th>Category</th>
-                                <th>Status</th>
-                                <th>Action</th>
+                                <th style="width: 5%;">#</th>
+                                <th style="width: 15%;">Case Study ID</th>
+                                <th style="width: 20%;">Case Study Name</th>
+                                <th style="width: 22%;">Location</th>
+                                <th style="width: 10%;">Start Date</th>
+                                <th style="width: 10%;">Category</th>
+                                <th style="width: 10%;">Status</th>
+                                <th style="width: 8%;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -61,32 +61,35 @@ $result = $connect->query($sql);
                                     $caseStudyColor = "color: #28a745;"; // Success color
                                     $statusLabel = "<label class='label label-success'><h4>Complete</h4></label>";
                                 }
-                            ?>
-                            <tr>
-                                <td><?php echo $i; ?></td>
-                                <td>
-                                    <a href="group.php?case_study_id=<?php echo $row['case_study_id']; ?>" style="<?php echo $caseStudyColor; ?> text-decoration: none;">
-                                        <?php echo $row['case_study_id']; ?>
-                                    </a>
-                                </td>
-                                <td><?php echo $row['case_name']; ?></td>
-                                <td><?php echo $row['location']; ?></td>
-                                <td><?php echo date('d-m-Y', strtotime($row['start_date'])); ?></td>
-                                <td><?php echo $row2['categories_name']; ?></td>
-                                <td><?php echo $statusLabel; ?></td>
-                                <td>
-                                    <a href="edit-case_study.php?id=<?php echo $row['case_study_id']; ?>">
-                                        <button type="button" class="btn btn-xs btn-primary"><i class="fa fa-pencil"></i></button>
-                                    </a>
-                                    <a href="php_action/removeCaseStudy.php?id=<?php echo $row['case_study_id']; ?>" >
-                                        <button type="button" class="btn btn-xs btn-danger" onclick="return confirm('Are you sure to delete this record?')">
-                                            <i class="fa fa-trash"></i>
-                                        </button>
-                                    </a>
-                                </td>
-                            </tr>
-                            <?php 
-                                $i++;   
+                                ?>
+                                <tr>
+                                    <td><?php echo $i; ?></td>
+                                    <td>
+                                        <a href="group.php?case_study_id=<?php echo $row['case_study_id']; ?>"
+                                            style="<?php echo $caseStudyColor; ?> text-decoration: none;">
+                                            <?php echo $row['case_study_id']; ?>
+                                        </a>
+                                    </td>
+                                    <td><?php echo $row['case_name']; ?></td>
+                                    <td><?php echo $row['location']; ?></td>
+                                    <td><?php echo date('d-m-Y', strtotime($row['start_date'])); ?></td>
+                                    <td><?php echo $row2['categories_name']; ?></td>
+                                    <td><?php echo $statusLabel; ?></td>
+                                    <td>
+                                        <a href="edit-case_study.php?id=<?php echo $row['case_study_id']; ?>">
+                                            <button type="button" class="btn btn-xs btn-primary"><i
+                                                    class="fa fa-pencil"></i></button>
+                                        </a>
+                                        <a href="php_action/removeCaseStudy.php?id=<?php echo $row['case_study_id']; ?>">
+                                            <button type="button" class="btn btn-xs btn-danger"
+                                                onclick="return confirm('Are you sure to delete this record?')">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <?php
+                                $i++;
                             }
                             ?>
                         </tbody>
@@ -96,11 +99,19 @@ $result = $connect->query($sql);
         </div>
     </div>
 
-<?php include('./constant/layout/footer.php'); ?>
+    <?php include('./constant/layout/footer.php'); ?>
 
-<style>
-    /* Add underline on hover for Case Study ID */
-    a:hover {
-        text-decoration: underline !important;
-    }
-</style>
+    <style>
+        /* Add underline on hover for Case Study ID */
+        a:hover {
+            text-decoration: underline !important;
+        }
+
+        .table-custom th,
+        .table-custom td {
+            text-align: center;
+            /* Căn giữa các cột */
+            vertical-align: middle;
+            /* Căn giữa nội dung theo chiều dọc */
+        }
+    </style>
