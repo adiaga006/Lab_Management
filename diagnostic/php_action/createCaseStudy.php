@@ -18,16 +18,17 @@ try {
             for ($i = 0; $i < count($_POST['phase_name']); $i++) {
                 $phaseName = $_POST['phase_name'][$i];
                 $phaseDuration = $_POST['phase_duration'][$i];
-
-                if (isset($treatmentName) && isset($productApplication)) {
-                    $treatments[] = [
-                        'name' => $treatmentName,
-                        'product_application' => $productApplication
+        
+                // Chỉ thêm vào nếu các giá trị không trống
+                if (!empty($phaseName) && !empty($phaseDuration)) {
+                    $phases[] = [
+                        'name' => $phaseName,
+                        'duration' => $phaseDuration
                     ];
                 }
-
             }
         }
+        
 
         // Chuyển phases thành JSON
         $phasesJson = json_encode($phases);
@@ -68,23 +69,24 @@ try {
             $valid['messages'] = "Case Study ID is available. Please choose another ID.";
         } else {
             // Chèn case study mới
-            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, pond_id, status, treatment) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, pond_id, status, treatment, phases) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $connect->prepare($sql);
             if (!$stmt)
                 throw new Exception("Prepare failed: " . $connect->error);
 
-            $stmt->bind_param(
-                "sssisiss",
-                $caseStudyId,
-                $caseName,
-                $location,
-                $categoryId,
-                $startDate,
-                $pondId,
-                $status,
-                $treatmentsJson
-            );
+                $stmt->bind_param(
+                    "sssisisss",
+                    $caseStudyId,
+                    $caseName,
+                    $location,
+                    $categoryId,
+                    $startDate,
+                    $pondId,
+                    $status,
+                    $treatmentsJson,
+                    $phasesJson
+                );
 
             if ($stmt->execute()) {
                 $valid['success'] = true;

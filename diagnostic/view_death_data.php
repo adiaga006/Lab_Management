@@ -9,9 +9,8 @@ $caseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : 0;
 if (!$caseStudyId) {
     die("Error: Missing case_study_id in URL");
 }
-
 // Fetch case study details, including treatment JSON
-$sql = "SELECT start_date, treatment FROM case_study WHERE case_study_id = ?";
+$sql = "SELECT start_date, treatment,no_of_survival_shrimp_after_immunology_sampling FROM case_study WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -22,7 +21,11 @@ $stmt->close();
 if (!$caseStudy) {
     die("Error: Case study not found.");
 }
-
+// Fetch survival shrimp count
+$noOfSurvivalShrimp = $caseStudy['no_of_survival_shrimp_after_immunology_sampling'];
+if (!$noOfSurvivalShrimp) {
+    die("Error: Missing no_of_survival_shrimp_after_immunology_sampling in case study.");
+}
 $startDate = new DateTime($caseStudy['start_date']);
 $treatmentList = json_decode($caseStudy['treatment'], true); // Decode treatment JSON
 
@@ -73,7 +76,91 @@ function formatDate($date)
     $dateObj = DateTime::createFromFormat('Y-m-d', $date);
     return $dateObj ? $dateObj->format('d-m-Y') : $date;
 }
+// Initialize cumulative sums and results for averages and std deviations
+$averageStdResults = [];
+
+foreach ($treatmentList as $treatment) {
+    foreach ($deathData[$treatment['name']] as $date => $reps) {
+        foreach ($timeSlots as $slot) {
+            $currentKey = "$date $slot";
+            $currentTime = new DateTime($currentKey);
+
+            // Nếu trước baseTime, bỏ qua
+            if ($currentTime < $baseTime) {
+                $averageStdResults[$treatment['name']][$currentKey] = [
+                    'average' => 0.00,
+                    'std_dev' => 0.00,
+                ];
+                continue;
+            }
+
+            $deathRates = [];
+
+            // Tính death_rate cho từng rep
+            for ($rep = 1; $rep <= $treatment['num_reps']; $rep++) {
+                $cumulativeDeath = 0;
+
+                // Cộng dồn death_data từ baseTime đến currentTime
+                foreach ($deathData[$treatment['name']] as $pastDate => $pastReps) {
+                    foreach ($timeSlots as $pastSlot) {
+                        $pastKey = "$pastDate $pastSlot";
+                        $pastTime = new DateTime($pastKey);
+
+                        if ($pastTime >= $baseTime && $pastTime <= $currentTime) {
+                            $cumulativeDeath += $pastReps[$rep][$pastSlot] ?? 0;
+                        }
+                    }
+                }
+
+                // Tính death_rate (nhân với 100 để biểu diễn phần trăm)
+                $deathRate = $noOfSurvivalShrimp > 0 ? ($cumulativeDeath / $noOfSurvivalShrimp) * 100 : 0.00;
+                $deathRates[] = $deathRate; // Lưu giá trị death_rate cho rep
+            }
+
+            // Tính mean của death_rate
+            $mean = !empty($deathRates) ? round(array_sum($deathRates) / count($deathRates), 2) : 0.00;
+
+            // Tính độ lệch chuẩn của death_rate
+            if (!empty($deathRates) && count($deathRates) > 1) {
+                $variance = array_sum(array_map(function ($x) use ($mean) {
+                    return pow($x - $mean, 2);
+                }, $deathRates)) / (count($deathRates) - 1); // SD công thức mẫu
+                $sd = round(sqrt($variance), 2);
+            } else {
+                $sd = 0.00;
+            }
+
+            // Lưu kết quả
+            $averageStdResults[$treatment['name']][$currentKey] = [
+                'average' => $mean,
+                'std_dev' => $sd,
+            ];
+        }
+    }
+}
+
+
+
+
+// Function to calculate standard deviation
+function calculateStandardDeviation($values)
+{
+    $count = count($values);
+    if ($count <= 1) {
+        return 0;
+    }
+
+    $mean = array_sum($values) / $count;
+    $sumOfSquares = 0;
+
+    foreach ($values as $value) {
+        $sumOfSquares += pow($value - $mean, 2);
+    }
+
+    return round(sqrt($sumOfSquares / ($count - 1)), 2);
+}
 ?>
+
 
 <div class="page-wrapper">
     <div class="container-fluid">
@@ -96,20 +183,32 @@ function formatDate($date)
                             </thead>
                             <tbody>
                                 <?php foreach ($treatmentList as $treatment): ?>
-                                    <tr>
-                                        <td rowspan="<?php echo $treatment['num_reps']; ?>" class="centered">
-                                            <?php echo htmlspecialchars($treatment['name']); ?>
-                                        </td>
-                                        <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
-                                            <?php if ($rep > 1): ?>
-                                            <tr><?php endif; ?>
+                                    <!-- Hiển thị các reps -->
+                                    <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
+                                        <tr>
+                                            <?php if ($rep === 1): ?>
+                                                <td rowspan="<?php echo $treatment['num_reps'] + 2; ?>" class="centered">
+                                                    <?php echo htmlspecialchars($treatment['name']); ?>
+                                                </td>
+                                            <?php endif; ?>
                                             <td class="centered"><?php echo $rep; ?></td>
                                         </tr>
                                     <?php endfor; ?>
+
+                                    <!-- Thêm hàng Mean -->
+                                    <tr>
+                                        <td class="centered" style="background-color: white !important; color: red"><strong>Mean</strong></td>
+                                    </tr>
+
+                                    <!-- Thêm hàng SD -->
+                                    <tr>
+                                        <td class="centered" style="background-color:white !important;color: red"><strong>SD</strong></td>
+                                    </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
+
 
                     <!-- Scrollable Table (Dates and Time Slots) -->
                     <div class="table-scrollable">
@@ -126,6 +225,7 @@ function formatDate($date)
                                         <?php $dayIndex++; ?>
                                     <?php endforeach; ?>
                                 </tr>
+
                                 <!-- Time Slot Header -->
                                 <tr class="time-header">
                                     <?php $dayIndex = 0; ?>
@@ -139,8 +239,8 @@ function formatDate($date)
                                     <?php endforeach; ?>
                                 </tr>
                             </thead>
-                             <!-- Hàng tiêu đề độ lệch giờ -->
-                             <tr class="offset-header">
+                            <!-- Hàng tiêu đề độ lệch giờ -->
+                            <tr class="offset-header">
                                 <?php $dayIndex = 0; ?>
                                 <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
                                     <?php foreach ($timeSlots as $slot): ?>
@@ -161,6 +261,7 @@ function formatDate($date)
                             </tr>
                             <tbody>
                                 <?php foreach ($treatmentList as $treatment): ?>
+                                    <!-- Hiển thị các reps -->
                                     <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
                                         <tr>
                                             <?php $dayIndex = 0; ?>
@@ -168,247 +269,283 @@ function formatDate($date)
                                                 <?php $dayColor = $dayIndex % 2 === 0 ? 'bg-pink' : 'bg-green'; ?>
                                                 <?php foreach ($timeSlots as $slot): ?>
                                                     <td class="<?php echo $dayColor; ?>">
-                                                        <?php
-                                                        // Display data if exists for rep and time slot
-                                                        if (isset($reps[$rep][$slot])) {
-                                                            echo htmlspecialchars($reps[$rep][$slot]);
-                                                        } else {
-                                                            echo '-';
-                                                        }
-                                                        ?>
+                                                        <?php echo $reps[$rep][$slot] ?? '-'; ?>
                                                     </td>
                                                 <?php endforeach; ?>
                                                 <?php $dayIndex++; ?>
                                             <?php endforeach; ?>
                                         </tr>
                                     <?php endfor; ?>
+
+                                    <!-- Hàng Mean -->
+                                    <tr class="row-mean">
+                                        <?php foreach ($deathData[$treatment['name']] as $date => $reps): ?>
+                                            <?php foreach ($timeSlots as $slot): ?>
+                                                <td>
+                                                    <?php
+                                                    $currentKey = "$date $slot";
+                                                    echo $averageStdResults[$treatment['name']][$currentKey]['average'] ?? '0.00';
+                                                    ?>
+                                                </td>
+                                            <?php endforeach; ?>
+                                        <?php endforeach; ?>
+                                    </tr>
+
+                                    <!-- Hàng SD -->
+                                    <tr class="row-sd">
+                                        <?php foreach ($deathData[$treatment['name']] as $date => $reps): ?>
+                                            <?php foreach ($timeSlots as $slot): ?>
+                                                <td>
+                                                    <?php
+                                                    $currentKey = "$date $slot";
+                                                    echo $averageStdResults[$treatment['name']][$currentKey]['std_dev'] ?? '0.00';
+                                                    ?>
+                                                </td>
+                                            <?php endforeach; ?>
+                                        <?php endforeach; ?>
+                                    </tr>
                                 <?php endforeach; ?>
                             </tbody>
+
                         </table>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add CSS for sticky columns -->
-<style>
-    /* Container tổng */
-    /* Đảm bảo container có đủ khoảng trống bên dưới cho thanh cuộn */
-    .table-container {
-        display: flex;
-        max-height: calc(100vh - 170px);
-        overflow: hidden;
-        position: relative;
-        padding-bottom: 16px;
-        /* Tạo khoảng trống cho thanh cuộn ngang */
-    }
-
-    /* Bảng cố định Treatment Name và Reps */
-    .table-fixed {
-        flex: 0 0 auto;
-        /* Không co giãn */
-        /* Chiều rộng cố định */
-        overflow: hidden;
-        /* Ngăn tràn */
-        border-right: 1px solid #000;
-        /* Gạch dọc đậm hơn */
-        text-align: center;
-        padding-bottom: 16px;
-        /* Giữ cố định cùng chiều cao */
-    }
-
-    /* Bảng cuộn */
-    /* Bảng cuộn */
-    .table-scrollable {
-        flex: 1 1 auto;
-        overflow-x: auto;
-        /* Hiển thị thanh cuộn ngang */
-        overflow-y: auto;
-        /* Duy trì cuộn dọc */
-    }
-
-    /* Đồng bộ hóa bảng */
-    .table-fixed table,
-    .table-scrollable table {
-        border-collapse: collapse;
-    }
-
-    .table-fixed th,
-    .table-fixed td,
-    .table-scrollable th,
-    .table-scrollable td {
-        white-space: nowrap;
-        text-align: center;
-        border: 0.1px solid #000;
-        /* Gạch ngang và dọc đậm */
-        color: #333;
-        /* Màu chữ đậm */
-        font-weight: bold;
-        /* Chữ in đậm */
-        background-clip: padding-box;
-        /* Giữ gạch khi cố định */
-        box-shadow: inset 0 0 0 1px #000;
-        /* Tạo viền bên trong */
-    }
-
-    /* Phase header (cố định khi cuộn xuống) */
-    .phase-header th {
-        position: sticky;
-        top: 0;
-        /* Cố định ở đỉnh */
-        z-index: 3;
-        /* Cao hơn nội dung */
-        background: #e9ecef;
-        font-weight: bold;
-        text-align: center;
-        vertical-align: middle;
-        border: 0.1px solid #000;
-        /* Gạch dọc và ngang đậm */
-        box-shadow: inset 0 0 0 1px #000;
-        /* Tạo viền khi cố định */
-    }
-
-    /* Header cố định */
-    .date-header th {
-        position: sticky;
-        top: 0;
-        /* Vị trí cố định khi cuộn */
-        z-index: 4;
-        /* Cao hơn nội dung khác */
-        background-color: #e9ecef;
-        /* Màu nền cho tiêu đề */
-        font-weight: bold;
-        text-align: center;
-        vertical-align: middle;
-        border: 0.1px solid #000;
-        box-shadow: inset 0 0 0 1px #000;
-        /* Tạo viền bên trong */
-    }
-
-    /* Hàng khung giờ cố định ngay dưới header ngày */
-    .offset-header th {
-        position: sticky;
-        top: 96.4px;
-        /* Ngay bên dưới hàng date-header */
-        z-index: 3;
-        /* Thấp hơn date-header nhưng cao hơn nội dung */
-        background-color: #f8f9fa;
-        font-weight: bold;
-        text-align: center;
-        vertical-align: middle;
-        border: 0.1px solid #000;
-        box-shadow: inset 0 0 0 1px #000;
-    }
-
-    /* Tiêu đề Treatment Name và Reps */
-    .sticky-header {
-        position: sticky;
-        top: 0;
-        /* Đảm bảo cố định */
-        left: 0;
-        /* Cố định bên trái */
-        z-index: 5;
-        /* Cao hơn tiêu đề phase và date */
-        background: #f8f9fa;
-        border: 0.1px solid #000;
-        /* Gạch ngang và dọc đậm */
-        text-align: center;
-        font-weight: bold;
-        height: 145px;
-        box-shadow: inset 0 0 0 1px #000;
-        /* Tạo viền bên trong */
-    }
-
-    /* Nội dung bảng */
-    .table-fixed td .table-scrollable td {
-        background: white;
-        z-index: 1;
-        /* Thấp hơn tiêu đề */
-        border: 0.1px solid #000;
-        /* Gạch ngang và dọc đậm */
-        box-shadow: inset 0 0 0 1px #000;
-        /* Tạo viền bên trong */
-    }
-
-    /* Cố định hàng tiêu đề */
-
-    .time-header th {
-        position: sticky;
-        top: 48.2px;
-        /* Ngay bên dưới hàng date-header */
-        z-index: 3;
-        /* Thấp hơn date-header nhưng cao hơn nội dung */
-        background-color: #f8f9fa;
-        font-weight: bold;
-        text-align: center;
-        vertical-align: middle;
-        border: 0.1px solid #000;
-        box-shadow: inset 0 0 0 1px #000;
-    }
-
-    /* Gộp các ô với căn giữa */
-    .centered {
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        vertical-align: middle;
-        font-weight: bold;
-        /* Chữ in đậm */
-        border: 0.1px solid #000;
-        /* Gạch ngang và dọc đậm */
-    }
 
 
-    tbody tr td:last-child {
-        text-align: center;
-    }
+                    <!-- Add CSS for sticky columns -->
+                    <style>
+                        /* Container tổng */
+                        /* Đảm bảo container có đủ khoảng trống bên dưới cho thanh cuộn */
+                        .table-container {
+                            display: flex;
+                            max-height: calc(100vh - 170px);
+                            overflow: hidden;
+                            position: relative;
+                            padding-bottom: 16px;
+                            /* Tạo khoảng trống cho thanh cuộn ngang */
+                        }
 
-    thead tr th:last-child {
-        text-align: center;
-    }
+                        /* Bảng cố định Treatment Name và Reps */
+                        .table-fixed {
+                            flex: 0 0 auto;
+                            /* Không co giãn */
+                            /* Chiều rộng cố định */
+                            overflow: hidden;
+                            /* Ngăn tràn */
+                            border-right: 1px solid #000;
+                            /* Gạch dọc đậm hơn */
+                            text-align: center;
+                            padding-bottom: 16px;
+                            /* Giữ cố định cùng chiều cao */
+                        }
 
-    .header-title {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #ddd;
-    }
+                        /* Bảng cuộn */
+                        /* Bảng cuộn */
+                        .table-scrollable {
+                            flex: 1 1 auto;
+                            overflow-x: auto;
+                            /* Hiển thị thanh cuộn ngang */
+                            overflow-y: auto;
+                            /* Duy trì cuộn dọc */
+                        }
 
-    .header-title .text-primary {
-        margin: 0;
-    }
+                        /* Đồng bộ hóa bảng */
+                        .table-fixed table,
+                        .table-scrollable table {
+                            border-collapse: collapse;
+                        }
 
-    .header-title .year-header {
-        font-size: 16px;
-        color: #555;
-        font-weight: normal;
-    }
+                        .table-fixed th,
+                        .table-fixed td,
+                        .table-scrollable th,
+                        .table-scrollable td {
+                            white-space: nowrap;
+                            text-align: center;
+                            border: 0.1px solid #000;
+                            /* Gạch ngang và dọc đậm */
+                            color: #333;
+                            /* Màu chữ đậm */
+                            font-weight: bold;
+                            /* Chữ in đậm */
+                            background-clip: padding-box;
+                            /* Giữ gạch khi cố định */
+                            box-shadow: inset 0 0 0 1px #000;
+                            /* Tạo viền bên trong */
+                        }
 
-    /* Màu hồng nhạt cho các ngày */
-    .bg-pink {
-        background-color: #f8d7da !important;
-    }
+                        /* Phase header (cố định khi cuộn xuống) */
+                        .phase-header th {
+                            position: sticky;
+                            top: 0;
+                            /* Cố định ở đỉnh */
+                            z-index: 3;
+                            /* Cao hơn nội dung */
+                            background: #e9ecef;
+                            font-weight: bold;
+                            text-align: center;
+                            vertical-align: middle;
+                            border: 0.1px solid #000;
+                            /* Gạch dọc và ngang đậm */
+                            box-shadow: inset 0 0 0 1px #000;
+                            /* Tạo viền khi cố định */
+                        }
 
-    /* Màu xanh lá nhạt cho các ngày */
-    .bg-green {
-        background-color: #d4edda !important;
-    }
-</style>
+                        /* Header cố định */
+                        .date-header th {
+                            position: sticky;
+                            top: 0;
+                            /* Vị trí cố định khi cuộn */
+                            z-index: 4;
+                            /* Cao hơn nội dung khác */
+                            background-color: #e9ecef;
+                            /* Màu nền cho tiêu đề */
+                            font-weight: bold;
+                            text-align: center;
+                            vertical-align: middle;
+                            border: 0.1px solid #000;
+                            box-shadow: inset 0 0 0 1px #000;
+                            /* Tạo viền bên trong */
+                        }
 
-<!-- Đồng bộ cuộn -->
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const fixedTable = document.querySelector('.table-fixed');
-        const scrollableTable = document.querySelector('.table-scrollable');
+                        /* Hàng khung giờ cố định ngay dưới header ngày */
+                        .offset-header th {
+                            position: sticky;
+                            top: 96.4px;
+                            /* Ngay bên dưới hàng date-header */
+                            z-index: 3;
+                            /* Thấp hơn date-header nhưng cao hơn nội dung */
+                            background-color: #f8f9fa;
+                            font-weight: bold;
+                            text-align: center;
+                            vertical-align: middle;
+                            border: 0.1px solid #000;
+                            box-shadow: inset 0 0 0 1px #000;
+                        }
 
-        scrollableTable.addEventListener('scroll', function () {
-            fixedTable.scrollTop = scrollableTable.scrollTop;
-        });
-    });
-</script>
+                        /* Tiêu đề Treatment Name và Reps */
+                        .sticky-header {
+                            position: sticky;
+                            top: 0;
+                            /* Đảm bảo cố định */
+                            left: 0;
+                            /* Cố định bên trái */
+                            z-index: 5;
+                            /* Cao hơn tiêu đề phase và date */
+                            background: #f8f9fa;
+                            border: 0.1px solid #000;
+                            /* Gạch ngang và dọc đậm */
+                            text-align: center;
+                            font-weight: bold;
+                            height: 145px;
+                            box-shadow: inset 0 0 0 1px #000;
+                            /* Tạo viền bên trong */
+                        }
+
+                        /* Nội dung bảng */
+                        .table-fixed td .table-scrollable td {
+                            background: white;
+                            z-index: 1;
+                            /* Thấp hơn tiêu đề */
+                            border: 0.1px solid #000;
+                            /* Gạch ngang và dọc đậm */
+                            box-shadow: inset 0 0 0 1px #000;
+                            /* Tạo viền bên trong */
+                        }
+
+                        /* Cố định hàng tiêu đề */
+
+                        .time-header th {
+                            position: sticky;
+                            top: 48.2px;
+                            /* Ngay bên dưới hàng date-header */
+                            z-index: 3;
+                            /* Thấp hơn date-header nhưng cao hơn nội dung */
+                            background-color: #f8f9fa;
+                            font-weight: bold;
+                            text-align: center;
+                            vertical-align: middle;
+                            border: 0.1px solid #000;
+                            box-shadow: inset 0 0 0 1px #000;
+                        }
+
+                        /* Gộp các ô với căn giữa */
+                        .centered {
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                            vertical-align: middle;
+                            font-weight: bold;
+                            /* Chữ in đậm */
+                            border: 0.1px solid #000;
+                            /* Gạch ngang và dọc đậm */
+                        }
 
 
-<?php include('./constant/layout/footer.php'); ?>
+                        tbody tr td:last-child {
+                            text-align: center;
+                        }
+
+                        thead tr th:last-child {
+                            text-align: center;
+                        }
+
+                        .header-title {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            padding-bottom: 10px;
+                            border-bottom: 1px solid #ddd;
+                        }
+
+                        .header-title .text-primary {
+                            margin: 0;
+                        }
+
+                        .header-title .year-header {
+                            font-size: 16px;
+                            color: #555;
+                            font-weight: normal;
+                        }
+
+                        /* Màu hồng nhạt cho các ngày */
+                        .bg-pink {
+                            background-color: #f8d7da !important;
+                        }
+
+                        /* Màu xanh lá nhạt cho các ngày */
+                        .bg-green {
+                            background-color: #d4edda !important;
+                        }
+
+                        /* Định dạng hàng Mean */
+                        .row-mean td {
+                            background-color: #ffffff;
+                            /* Nền trắng */
+                            color: red;
+                            /* Chữ đỏ */
+                            font-weight: bold;
+                        }
+
+                        /* Định dạng hàng SD */
+                        .row-sd td {
+                            background-color: #ffffff;
+                            /* Nền trắng */
+                            color: red;
+                            /* Chữ đỏ */
+                            font-weight: bold;
+                        }
+                    </style>
+
+                    <!-- Đồng bộ cuộn -->
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            const fixedTable = document.querySelector('.table-fixed');
+                            const scrollableTable = document.querySelector('.table-scrollable');
+
+                            scrollableTable.addEventListener('scroll', function () {
+                                fixedTable.scrollTop = scrollableTable.scrollTop;
+                            });
+                        });
+                    </script>
+
+
+                    <?php include('./constant/layout/footer.php'); ?>

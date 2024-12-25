@@ -11,7 +11,7 @@ if (!$caseStudyId) {
 }
 
 // Query case study details
-$sql = "SELECT start_date, phases FROM case_study WHERE case_study_id = ?";
+$sql = "SELECT start_date, phases, treatment, no_of_survival_shrimp_after_immunology_sampling FROM case_study WHERE case_study_id = ?";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
@@ -22,10 +22,16 @@ $stmt->close();
 if (!$caseStudy) {
     die("Error: Case study not found.");
 }
+$noOfSurvivalShrimp = $caseStudy['no_of_survival_shrimp_after_immunology_sampling'];
+if ($noOfSurvivalShrimp === null || $noOfSurvivalShrimp == 0) {
+    echo "<p style='color: red; text-align: center;'>Error: No valid survival shrimp data available.</p>";
+    return; // Dừng script tại đây
+}
 
 
-if (!$caseStudy) {
-    die("Error: Case study not found.");
+$treatmentList = json_decode($caseStudy['treatment'], true);
+if (!$treatmentList) {
+    die("Error: Invalid treatment data.");
 }
 $phasesJson = $caseStudy['phases'];
 $phases = json_decode($phasesJson, true);
@@ -81,6 +87,18 @@ foreach ($entries as $entry) {
     }
 
     $treatmentData[$treatmentName][$labDay][] = $entry['survival_sample'];
+}
+$sql = "SELECT DATE(MIN(test_time)) as base_date FROM shrimp_death_data WHERE case_study_id = ?";
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$stmt->bind_result($baseDate); // Lấy ngày sớm nhất
+$stmt->fetch();
+$stmt->close();
+
+// Thêm giờ 15:00 vào ngày sớm nhất
+if (is_string($baseDate) && !empty($baseDate)) {
+    $baseTime = new DateTime("{$baseDate} 15:00:00"); // Sử dụng string interpolation
 }
 
 // Helper function to calculate survival rate
@@ -151,9 +169,110 @@ foreach ($phases as $phase) {
         }
     }
 }
+// Chuẩn bị dữ liệu cho biểu đồ đường
+// Fetch shrimp death data
+$sql = "SELECT treatment_name, rep, test_time, death_sample
+        FROM shrimp_death_data
+        WHERE case_study_id = ?
+        ORDER BY test_time, treatment_name, rep";
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$result = $stmt->get_result();
 
+$deathData = [];
+$timeLabels = []; // Lưu tất cả các thời gian để hiển thị trên trục X
+
+while ($row = $result->fetch_assoc()) {
+    $testTime = new DateTime($row['test_time']);
+    $deathData[$row['treatment_name']][] = [
+        'time' => $testTime,
+        'rep' => $row['rep'],
+        'death_sample' => $row['death_sample'],
+    ];
+    $timeLabels[] = $testTime->getTimestamp(); // Lưu dấu thời gian (timestamp) thay vì DateTime
+}
+$stmt->close();
+
+// Loại bỏ trùng lặp và sắp xếp các nhãn thời gian
+$timeLabels = array_unique($timeLabels);
+sort($timeLabels);
+
+// Tính độ lệch giờ (có thể âm) so với baseTime
+$hourOffsets = array_map(fn($timestamp) => round(($timestamp - $baseTime->getTimestamp()) / 3600, 2), $timeLabels);
+// Chuẩn bị dữ liệu biểu đồ
+$chartData = [
+    'labels' => $hourOffsets ?: [], // Đảm bảo nhãn không rỗng
+    'datasets' => !empty($chartData['datasets']) ? $chartData['datasets'] : [], // Đảm bảo có cấu trúc hợp lệ
+];
+// Đảm bảo xử lý dữ liệu rỗng trước khi tính toán
+if (empty($deathData) || empty($treatmentList)) {
+    $chartData['datasets'] = [];
+    $chartDataSurvival['datasets'] = [];
+} else {
+    foreach ($treatmentList as $treatment) {
+        $cumulativeDeaths = [];
+        $dataset = [
+            'label' => $treatment['name'],
+            'data' => array_fill(0, count($hourOffsets), 0), // Khởi tạo dữ liệu với giá trị 0
+            'fill' => false,
+        ];
+
+        if (!isset($deathData[$treatment['name']])) {
+            continue;
+        }
+
+        foreach ($deathData[$treatment['name']] as $data) {
+            $currentTime = $data['time']->getTimestamp();
+            $hoursDiff = round(($currentTime - $baseTime->getTimestamp()) / 3600, 2);
+
+            // Tìm vị trí của độ lệch giờ trong nhãn trục X
+            $index = array_search($hoursDiff, $hourOffsets);
+            if ($index === false) {
+                continue;
+            }
+
+            // Cộng dồn số lượng death_sample cho từng rep
+            $cumulativeDeaths[$data['rep']] = ($cumulativeDeaths[$data['rep']] ?? 0) + $data['death_sample'];
+
+            // Tính death rate cho từng rep
+            $deathRate = ($cumulativeDeaths[$data['rep']] / $noOfSurvivalShrimp) * 100;
+
+            // Tích lũy death rate vào dataset
+            $dataset['data'][$index] += $deathRate;
+        }
+
+        // Trung bình hóa death rate theo số rep
+        foreach ($dataset['data'] as &$value) {
+            $value = round($value / $treatment['num_reps'], 2);
+        }
+
+        $chartData['datasets'][] = $dataset;
+    }
+}
+$hasDeathData = !empty($chartData['datasets']);
+
+// Chuẩn bị dữ liệu biểu đồ cho tỷ lệ sống
+$chartDataSurvival = [
+    'labels' => $hourOffsets ?: [], // Đảm bảo nhãn không rỗng
+    'datasets' => !empty($chartDataSurvival['datasets']) ? $chartDataSurvival['datasets'] : [], // Đảm bảo có cấu trúc hợp lệ
+];
+if (empty($deathData) || empty($treatmentList)) {
+    $chartData['datasets'] = [];
+    $chartDataSurvival['datasets'] = [];
+} else {
+    foreach ($chartData['datasets'] as $dataset) {
+        $survivalDataset = [
+            'label' => $dataset['label'],
+            'data' => array_map(fn($value) => 100 - $value, $dataset['data']), // Tỷ lệ sống = 100 - tỷ lệ tử vong
+            'borderColor' => $dataset['borderColor'], // Sử dụng cùng màu đường
+            'fill' => false,
+        ];
+        $chartDataSurvival['datasets'][] = $survivalDataset;
+    }
+}
+$hasSurvivalData = !empty($chartDataSurvival['datasets']);
 ?>
-
 <div class="page-wrapper">
     <div class="container-fluid">
         <!-- Pre-challenge Chart -->
@@ -166,7 +285,6 @@ foreach ($phases as $phase) {
                 <?php endif; ?>
             </div>
         </div>
-
         <!-- Post-challenge Chart -->
         <div class="card">
             <div class="card-body">
@@ -178,9 +296,28 @@ foreach ($phases as $phase) {
                 <?php endif; ?>
             </div>
         </div>
+        <!-- Biểu đồ đường cho tỷ lệ chết -->
+        <div class="card">
+            <div class="card-body">
+                <?php if ($hasDeathData): ?>
+                    <canvas id="mortalityChart" width="1000" height="600" style="margin: auto; display: block;"></canvas>
+                <?php else: ?>
+                    <p style="color: gray; text-align: center;">No data available for Death Rate.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+        <!-- Biểu đồ đường cho tỷ lệ sống -->
+        <div class="card">
+            <div class="card-body">
+                <?php if ($hasSurvivalData): ?>
+                    <canvas id="survivalChart" width="1000" height="600" style="margin: auto; display: block;"></canvas>
+                <?php else: ?>
+                    <p style="color: gray; text-align: center;">No data available for Survival Rate.</p>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <script>
@@ -208,7 +345,6 @@ foreach ($phases as $phase) {
     }
 
     // Tùy chỉnh cấu hình biểu đồ
-    // Cấu hình chung cho biểu đồ
     const chartOptions = {
         responsive: false,
         plugins: {
@@ -327,8 +463,7 @@ foreach ($phases as $phase) {
     }
 
     // Render biểu đồ Pre-challenge
-       // Render biểu đồ Pre-challenge
-       if (Object.keys(preChallengeData).length > 0) {
+    if (Object.keys(preChallengeData).length > 0) {
         const preChallengeCtx = document.getElementById('preChallengeChart').getContext('2d');
         const preChallengeChart = new Chart(preChallengeCtx, {
             type: 'bar',
@@ -362,6 +497,219 @@ foreach ($phases as $phase) {
             ],
         });
     }
+    //bieu do duong
+    const chartData = <?php echo json_encode($chartData); ?>;
+    // Màu mới
+    const newColorPalette = [
+        '#FF7F50', // Coral
+        '#87CEEB', // Sky Blue
+        '#32CD32', // Lime Green
+        '#FFD700', // Gold
+        '#FF69B4', // Hot Pink
+        '#9370DB', // Medium Purple
+        '#20B2AA', // Light Sea Green
+        '#FF6347', // Tomato
+        '#4682B4', // Steel Blue
+        '#EE82EE', // Violet
+    ];
+    // Gán màu mới cho datasets
+    chartData.datasets.forEach((dataset, index) => {
+        dataset.borderColor = newColorPalette[index % newColorPalette.length];
+        dataset.backgroundColor = newColorPalette[index % newColorPalette.length];
+    });
+    const ctx = document.getElementById('mortalityChart').getContext('2d');
+
+    // Parse base time from PHP
+    const baseTime = new Date(<?php echo json_encode($baseTime->format('Y-m-d H:i:s')); ?>); // Base time from PHP
+    const xLabels = chartData.labels; // Sử dụng độ lệch giờ trực tiếp làm nhã
+    function formatTooltipLabel(tooltipItem, dataset) {
+        const hoursDiff = chartData.labels[tooltipItem.dataIndex]; // Lấy độ lệch giờ
+        const actualTime = new Date(baseTime.getTime() + hoursDiff * 60 * 60 * 1000); // Tính thời gian thực tế
+
+        // Format thời gian chi tiết cho tooltip
+        const formattedDate = actualTime.toLocaleString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        });
+
+        // Lấy tên treatment
+        const treatmentName = dataset.label;
+
+        return `Treatment: ${treatmentName}\n || Time: ${formattedDate}\n || Value: ${tooltipItem.raw.toFixed(2)}%`;
+    }
+    if (!chartData.labels.length || !chartData.datasets.length) {
+        console.warn("No data available for Mortality Chart.");
+    } else {
+        // Render the line chart with corrected labels and tooltips
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: xLabels, // Sử dụng thời gian thực tế làm nhãn trục X
+                datasets: chartData.datasets.map(dataset => ({
+                    ...dataset,
+                    data: Object.values(dataset.data),
+                    pointRadius: 4, // Tăng kích thước chấm dữ liệu
+                    pointHoverRadius: 6, // Kích thước chấm khi hover
+                })),
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 10,
+                            boxHeight: 10,
+                        },
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (tooltipItem) {
+                                const dataset = chartData.datasets[tooltipItem.datasetIndex];
+                                return formatTooltipLabel(tooltipItem, dataset); // Sử dụng hàm định dạng tooltip
+                            },
+                        },
+                    },
+                    title: {
+                        display: true,
+                        text: `Cumulative Mortality Curves on day 10 of post-challenge`,
+                        font: {
+                            size: 24,
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time of post-challenge(hr)', // Chỉ hiển thị độ lệch giờ
+                        },
+                        ticks: {
+                            align: 'center', // Đặt các nhãn thẳng
+                            maxRotation: 0,  // Không cho phép xoay
+                            minRotation: 0,  // Đảm bảo luôn thẳng
+                            font: {
+                                size: 12, // Điều chỉnh kích thước font nếu cần
+                            },
+                        },
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Mortality Rate (%)',
+                        },
+                        beginAtZero: true,
+                        max: 100,
+                    },
+                },
+            },
+        })
+    };
+    // Biểu đồ đường cho tỷ lệ sống
+    const survivalChartData = <?php echo json_encode($chartDataSurvival); ?>;
+    survivalChartData.datasets.forEach((dataset, index) => {
+        dataset.borderColor = newColorPalette[index % newColorPalette.length];
+        dataset.backgroundColor = newColorPalette[index % newColorPalette.length];
+    });
+    const survivalCtx = document.createElement('canvas');
+    document.querySelector('.container-fluid').appendChild(survivalCtx); // Thêm canvas mới vào trang
+    if (!survivalChartData.labels.length || !survivalChartData.datasets.length) {
+        console.warn("No data available for Survival Chart.");
+    } else {
+        // Biểu đồ đường cho tỷ lệ sống
+        const survivalCtx = document.getElementById('survivalChart').getContext('2d');
+        new Chart(survivalCtx, {
+            type: 'line',
+            data: {
+                labels: survivalChartData.labels, // Sử dụng cùng nhãn trục X
+                datasets: survivalChartData.datasets.map(dataset => ({
+                    ...dataset,
+                    data: dataset.data,
+                    pointRadius: 4, // Tăng kích thước chấm dữ liệu
+                    pointHoverRadius: 6, // Kích thước chấm khi hover
+                })),
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 10,
+                            boxHeight: 10,
+                        },
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (tooltipItem) {
+                                const dataset = survivalChartData.datasets[tooltipItem.datasetIndex];
+                                return `Treatment: ${dataset.label}, Value: ${tooltipItem.raw.toFixed(2)}%`;
+                            },
+                        },
+                    },
+                    title: {
+                        display: true,
+                        text: `Cumulative Survival Curves on day 10 of post-challenge`,
+                        font: {
+                            size: 24,
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time of post-challenge (hr)',
+                        },
+                        ticks: {
+                            align: 'center',
+                            stepSize: 10, // Khoảng cách giữa các bước
+                            maxRotation: 0,
+                            minRotation: 0,
+                            font: {
+                                size: 12,
+                            },
+                        },
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Survival Rate (%)',
+                        },
+                        beginAtZero: true,
+                        max: 105,
+                        ticks: {
+                            callback: function (value) {
+                                // Ẩn nhãn "105"
+                                if (value === 105) {
+                                    return '';
+                                }
+                                return value;
+                            },
+                            stepSize: 10, // Khoảng cách giữa các bước
+                            font: {
+                                size: 12,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
 </script>
 
 <?php include('./constant/layout/footer.php'); ?>
+
+<style>
+    canvas {
+        background-color: transparent !important;
+        /* Ghi đè màu nền */
+    }
+</style>

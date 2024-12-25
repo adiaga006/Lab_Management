@@ -111,11 +111,12 @@ foreach ($entries as $entry) {
 // Helper function to calculate survival rate
 function calculateSurvivalRate($startSamples, $endSamples)
 {
-    if ($startSamples > 0 && $endSamples > 0) {
-        return round(($endSamples / $startSamples) * 100, 2);
+    if (empty($startSamples) || empty($endSamples) || $startSamples == 0) {
+        return null; // Trả về null nếu không có dữ liệu hợp lệ
     }
-    return null;
+    return round(($endSamples / $startSamples) * 100, 2);
 }
+
 
 // Helper function to calculate standard deviation
 // Function to calculate standard deviation
@@ -208,8 +209,8 @@ foreach ($phases as $phase) {
 $feedingData = [];
 foreach ($entries as $entry) {
     $treatmentName = $entry['treatment_name'];
-    $rep = (int)$entry['rep'];
-    $feedingWeight = (float)$entry['feeding_weight'];
+    $rep = (int) $entry['rep'];
+    $feedingWeight = (float) $entry['feeding_weight'];
 
     if ($feedingWeight !== null) {
         if (!isset($feedingData[$treatmentName][$rep])) {
@@ -317,14 +318,11 @@ header('Content-Type: application/json'); // Set header là JSON
             <div class="card">
                 <div class="card-body">
                     <h4 style="font-size: 1.5em; color: black; font-weight: bold; text-align: center;">
-                        Survival Rate: <?php echo htmlspecialchars($phase['name']); ?>
-                        (<?php echo (new DateTime($phase['start_date']))->format('d-m-Y'); ?> to
-                        <?php echo (new DateTime($phase['end_date']))->format('d-m-Y'); ?>)
-                    </h4>
+                        Survival Rate: <?php echo htmlspecialchars($phase['name']); ?></h4>
                     <div class="table-responsive">
                         <table class="table table-bordered text-center">
                             <thead>
-                                <tr style="font-weight: bold;">
+                                <tr>
                                     <th>Treatment Name</th>
                                     <th>Average Survival Rate (%)</th>
                                     <th>Standard Deviation</th>
@@ -334,16 +332,21 @@ header('Content-Type: application/json'); // Set header là JSON
                             <tbody>
                                 <?php if (!empty($survivalResults[$phase['name']])): ?>
                                     <?php foreach ($survivalResults[$phase['name']] as $result): ?>
-                                        <?php
-                                        $mean = $result['average_survival_rate'];
-                                        $sd = $result['standard_deviation'];
-                                        $meanPlusMinusSD = number_format($mean, 2) . ' ± ' . number_format($sd, 2);
-                                        ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars($result['treatment_name']); ?></td>
-                                            <td><?php echo $mean; ?></td>
-                                            <td><?php echo $sd; ?></td>
-                                            <td><?php echo $meanPlusMinusSD; ?></td>
+                                            <td><?php echo htmlspecialchars($result['average_survival_rate'] ?? 'No data available'); ?>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($result['standard_deviation'] ?? 'No data available'); ?>
+                                            </td>
+                                            <td>
+                                                <?php
+                                                if (isset($result['average_survival_rate']) && isset($result['standard_deviation'])) {
+                                                    echo htmlspecialchars($result['average_survival_rate'] . ' ± ' . $result['standard_deviation']);
+                                                } else {
+                                                    echo "No data available";
+                                                }
+                                                ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>

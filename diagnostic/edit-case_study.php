@@ -142,39 +142,41 @@ $result = $connect->query($sql)->fetch_assoc();
                                         }
                                         ?>
                                     </div>
-
-                                    <label class="col-sm-3 control-label">Treatments</label>
                                     <div class="col-sm-9">
-                                        <div id="treatmentsContainer">
-                                            <?php
-                                            // Parse JSON treatments từ database
-                                            $treatments = json_decode($result['treatment'], true);
-                                            if (!empty($treatments)) {
-                                                foreach ($treatments as $treatment) {
-                                                    ?>
-                                                    <div class="treatmentRow">
-                                                        <input type="text" name="treatment_name[]" class="form-control"
-                                                            value="<?php echo htmlspecialchars($treatment['name']); ?>"
-                                                            placeholder="Treatment Name" required>
-                                                        <input type="text" name="product_application[]" class="form-control"
-                                                            value="<?php echo htmlspecialchars($treatment['product_application']); ?>"
-                                                            placeholder="Product Application" required>
-                                                        <input type="number" name="num_reps[]" class="form-control"
-                                                            value="<?php echo htmlspecialchars($treatment['num_reps']); ?>"
-                                                            placeholder="Num Reps" min="1" required>
-                                                        <button type="button"
-                                                            class="btn btn-danger btn-sm removeTreatmentRow">Remove</button>
-                                                    </div>
-                                                    <?php
+                                        <label class="section-title">Define Treatments</label>
+                                        <div class="col-sm-9">
+                                            <div id="treatmentsContainer">
+                                                <?php
+                                                $treatments = json_decode($result['treatment'], true);
+                                                if (!empty($treatments)) {
+                                                    foreach ($treatments as $treatment) {
+                                                        ?>
+                                                        <div class="treatmentRow">
+                                                            <label class="form-label">Treatment Name</label>
+                                                            <input type="text" name="treatment_name[]" class="form-control"
+                                                                value="<?php echo htmlspecialchars($treatment['name']); ?>"
+                                                                placeholder="Treatment Name" required>
+                                                            <label class="form-label">Product Application</label>
+                                                            <input type="text" name="product_application[]" class="form-control"
+                                                                value="<?php echo htmlspecialchars($treatment['product_application']); ?>"
+                                                                placeholder="Product Application" required>
+                                                            <label class="form-label">Num Reps</label>
+                                                            <input type="number" name="num_reps[]" class="form-control"
+                                                                value="<?php echo htmlspecialchars($treatment['num_reps']); ?>"
+                                                                placeholder="Num Reps" min="1" required>
+                                                            <button type="button"
+                                                                class="btn btn-danger btn-sm removeTreatmentRow">Remove</button>
+                                                        </div>
+                                                        <?php
+                                                    }
                                                 }
-                                            }
-                                            ?>
+                                                ?>
+                                            </div>
+                                            <button type="button" id="addTreatmentRow"
+                                                class="btn btn-secondary btn-sm">Add Treatment</button>
                                         </div>
-                                        <button type="button" id="addTreatmentRow" class="btn btn-secondary btn-sm">Add
-                                            Treatment</button>
-                                    </div>
-                                    <button type="submit" name="update" id="updateCaseStudyBtn"
-                                        class="btn btn-primary btn-flat m-b-30 m-t-30">Update</button>
+                                        <button type="submit" name="update" id="updateCaseStudyBtn"
+                                            class="btn btn-primary btn-flat m-b-30 m-t-30">Update</button>
                                 </fieldset>
                             </form>
                         </div>
@@ -209,13 +211,17 @@ $result = $connect->query($sql)->fetch_assoc();
             const newRow = document.createElement('div');
             newRow.className = 'treatmentRow';
             newRow.innerHTML = `
+        <label class="form-label">Treatment Name</label>
         <input type="text" name="treatment_name[]" class="form-control" placeholder="Treatment Name" required>
+        <label class="form-label">Product Application</label>
         <input type="text" name="product_application[]" class="form-control" placeholder="Product Application" required>
+        <label class="form-label">Num Reps</label>
         <input type="number" name="num_reps[]" class="form-control" placeholder="Num Reps" min="1" required>
         <button type="button" class="btn btn-danger btn-sm removeTreatmentRow">Remove</button>
     `;
             treatmentsContainer.appendChild(newRow);
 
+            // Thêm sự kiện xóa vào nút Remove
             newRow.querySelector('.removeTreatmentRow').addEventListener('click', function () {
                 newRow.remove();
             });
@@ -379,5 +385,55 @@ $result = $connect->query($sql)->fetch_assoc();
 
         .custom-toast.bg-danger {
             background-color: #dc3545;
+        }
+
+        /* Tiêu đề của mỗi phần */
+        .section-title {
+            font-size: 1.5rem;
+            /* Kích thước chữ lớn hơn */
+            font-weight: bold;
+            color: #333;
+            /* Màu chữ đậm */
+            margin-bottom: 20px;
+            /* Tạo khoảng cách giữa tiêu đề và nội dung */
+            text-transform: uppercase;
+            /* Chữ in hoa */
+        }
+
+        /* Căn chỉnh tiêu đề và nhãn */
+        .form-label {
+            font-size: 1rem;
+            /* Cỡ chữ vừa đủ */
+            font-weight: 600;
+            /* Chữ đậm hơn cho dễ nhìn */
+            margin-bottom: 10px;
+            /* Khoảng cách giữa tiêu đề và trường nhập liệu */
+            display: block;
+        }
+
+        /* Định dạng ô nhập liệu */
+        .treatmentRow {
+            margin-bottom: 20px;
+            /* Khoảng cách giữa các dòng trong Define Treatments */
+            padding: 10px;
+            /* Khoảng cách nội bộ */
+            border-bottom: 1px solid #ddd;
+            /* Đường ngăn cách */
+        }
+
+        .treatmentRow:last-child {
+            border-bottom: none;
+            /* Xóa đường ngăn cuối */
+        }
+
+        /* Khoảng cách hợp lý giữa các nút */
+        button {
+            margin-top: 10px;
+        }
+
+        /* Căn chỉnh nút Remove */
+        .removeTreatmentRow {
+            margin-top: 10px;
+            /* Khoảng cách giữa trường nhập liệu và nút */
         }
     </style>
