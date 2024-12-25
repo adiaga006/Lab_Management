@@ -86,7 +86,11 @@ $groupResult = $connect->query($groupSql);
         <div class="col-md-8 align-self-center">
             <h3 class="text-primary">Case Study: <?php echo htmlspecialchars($caseStudyId); ?></h3>
         </div>
-        <div class="col-md-4 text-right">
+        <div class="col-md-4 text-right d-flex justify-content-end align-items-center">
+            <a href="manage_image.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
+                class="btn btn-outline-secondary btn-lg mr-2">
+                <i class="fa fa-image"></i> Show Image
+            </a>
             <a href="chart.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
                 class="btn btn-primary btn-lg mr-2">
                 <i class="fa fa-pie-chart"></i> Show Chart
@@ -96,10 +100,6 @@ $groupResult = $connect->query($groupSql);
                 <i class="fa fa-bar-chart"></i> Show Results
             </a>
         </div>
-
-
-
-
         <div class="container-fluid">
             <div class="card">
                 <div class="card-body">
@@ -916,7 +916,7 @@ $groupResult = $connect->query($groupSql);
         // Xử lý ngày và giờ
         const testDate = $('input[name="test_date"]').val();
         if (!validateDateInput(testDate)) {
-            return; // Dừng submit nếu ngày không hợp lệ
+            return; // D��ng submit nếu ngày không hợp lệ
         }
         const testHour = $('select[name="test_hour"]').val();
         if (!testDate || !testHour) {
@@ -1105,7 +1105,7 @@ $groupResult = $connect->query($groupSql);
         normalizedStartDate.setHours(0, 0, 0, 0); // Loại bỏ giờ, phút, giây
 
         const normalizedEndDate = new Date(endDate);
-        normalizedEndDate.setHours(0, 0, 0, 0); // Loại bỏ giờ, phút, giây
+        normalizedEndDate.setHours(0, 0, 0, 0); // Loại bỏ gi���, phút, giây
 
         // Kiểm tra nếu selectedDate không hợp lệ
         if (isNaN(selectedDate)) {
@@ -1346,5 +1346,26 @@ $groupResult = $connect->query($groupSql);
     a.btn:hover {
         text-decoration: none !important;
         /* Đảm bảo không có gạch chân khi hover */
+    }
+
+    .btn {
+        margin: 5px;
+        transition: transform 0.2s;
+    }
+
+    .btn:hover {
+        transform: scale(1.05);
+    }
+
+    .d-flex {
+        display: flex;
+    }
+
+    .justify-content-end {
+        justify-content: flex-end;
+    }
+
+    .align-items-center {
+        align-items: center;
     }
 </style>
