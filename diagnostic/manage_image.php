@@ -544,22 +544,85 @@ if ($caseStudyId) {
         // Add click event to backdrop to close dialog
         confirmBackdrop.addEventListener('click', closeConfirmDialog);
 
-        // Kiểm tra xem có phần tử nào có thuộc tính data-fancybox không
-        const elements = document.querySelectorAll('[data-fancybox]');
-        if (elements.length > 0) {
-            try {
-                // Khởi tạo với cấu hình đơn giản hơn
-                Fancybox.bind("[data-fancybox]", {
-                    // Tùy chọn cơ bản
-                    loop: true,
-                    buttons: ["zoom", "close"]
-                });
-            } catch (error) {
-                console.error('Fancybox initialization error:', error);
+        let isClosedByUser = false;
+
+        // Khởi tạo Fancybox
+        Fancybox.bind("[data-fancybox]", {
+            on: {
+                init: (fancybox) => {
+                    isClosedByUser = false;
+                },
+                closing: (fancybox) => {
+                    if (!isClosedByUser) {
+                        // Nếu đóng bằng nút back của trình duyệt
+                        return;
+                    }
+                    // Nếu đóng bằng nút close hoặc click outside
+                    window.history.back();
+                },
+                destroy: (fancybox) => {
+                    isClosedByUser = false;
+                }
+            },
+            // Tắt tất cả tính năng liên quan đến history của Fancybox
+            Hash: false,
+            history: false,
+            // Thêm handler cho nút close
+            closeButton: {
+                click: function() {
+                    isClosedByUser = true;
+                    return true;
+                }
+            },
+            // Handler cho click outside
+            click: function() {
+                isClosedByUser = true;
+                return "close";
+            },
+            // Các tùy chọn khác
+            buttons: ['zoom', 'close'],
+            keyboard: true,
+            animated: false,
+            trapFocus: false,
+            placeFocusBack: false
+        });
+
+        // Xử lý khi người dùng nhấn nút back của trình duyệt
+        window.addEventListener('popstate', function(event) {
+            const instance = Fancybox.getInstance();
+            if (instance) {
+                isClosedByUser = false;
+                instance.close();
             }
-        } else {
-            console.warn('No elements with data-fancybox attribute found');
+        });
+
+        // Xử lý click outside
+        document.addEventListener('click', function(event) {
+            const instance = Fancybox.getInstance();
+            if (instance && !event.target.closest('.fancybox__container')) {
+                isClosedByUser = true;
+            }
+        }, true);
+
+        // Xử lý phím ESC
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                isClosedByUser = true;
+            }
+        });
+
+        // Các phần tử khác
+        const deleteButton = document.getElementById('deleteSelected');
+        if (deleteButton) {
+            deleteButton.addEventListener('click', showConfirmDialog);
         }
+
+        const toggleDeleteButton = document.getElementById('toggleDelete');
+        if (toggleDeleteButton) {
+            toggleDeleteButton.addEventListener('click', toggleDeleteMode);
+        }
+
+        // Các phần tử khác...
     });
 
     function filterImages() {
