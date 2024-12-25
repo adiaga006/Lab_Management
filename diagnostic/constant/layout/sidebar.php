@@ -59,7 +59,7 @@ $isRelatedPage = isset($_GET['case_study_id']) && in_array($currentPage, $relate
                                 echo '<a href="group.php?case_study_id=' . htmlspecialchars($currentCaseStudyId) . '" ';
                                 echo 'style="color: #ffffff; padding-left: 30px;">';
                                 echo '<i class="fa fa-angle-right"></i> ';
-                                echo 'Case Study: ' . htmlspecialchars($currentCaseStudyId);
+                                echo htmlspecialchars($currentCaseStudyId);
                                 echo '</a>';
                                 echo '</li>';
                             }
@@ -96,8 +96,7 @@ $isRelatedPage = isset($_GET['case_study_id']) && in_array($currentPage, $relate
 <style>
     /* Style cho submenu */
     .sidebar-nav .submenu {
-        position: static !important;
-        /* Đảm bảo submenu không bị đè */
+        position: static !important; /* Đảm bảo submenu không bị đè */
         height: auto !important;
         visibility: visible;
     }
@@ -108,7 +107,7 @@ $isRelatedPage = isset($_GET['case_study_id']) && in_array($currentPage, $relate
     }
 
     /* Style cho mục active */
-    .sidebar-nav ul li.active>a {
+    .sidebar-nav ul li.active > a {
         color: #ffffff !important;
         background-color: #A7D477;
     }
@@ -122,6 +121,7 @@ $isRelatedPage = isset($_GET['case_study_id']) && in_array($currentPage, $relate
     .sidebar-nav ul li a:hover {
         color: #000000;
         background-color: #6BBE45;
+        text-decoration: none !important; /* Loại bỏ gạch dưới khi hover */
     }
 
     /* Đảm bảo các submenu không chồng lên nhau */
@@ -131,7 +131,7 @@ $isRelatedPage = isset($_GET['case_study_id']) && in_array($currentPage, $relate
     }
 
     /* Đảm bảo khoảng cách giữa các menu */
-    .sidebar-nav>ul>li {
+    .sidebar-nav > ul > li {
         margin-bottom: 5px;
     }
 </style>
