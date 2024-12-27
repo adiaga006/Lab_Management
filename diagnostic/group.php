@@ -701,9 +701,9 @@ $groupResult = $connect->query($groupSql);
         const nitrite = $('input[name="nitrite"]').val();
         const systemType = $('select[name="system_type"]').val();
 
-        // Kiểm tra các trường bắt buộc
-        if (!day || !salinity || !temperature || !dissolvedOxygen || !pH || !alkalinity || !tan || !nitrite || !systemType) {
-            showToast('Please fill in all required fields.', 'Error', false);
+        // Kiểm tra chỉ các trường bắt buộc
+        if (!day || !temperature || !dissolvedOxygen || !pH || !systemType) {
+            showToast('Please fill in all required fields (Temperature, Dissolved Oxygen, pH, System Type and Day).', 'Error', false);
             return;
         }
 
@@ -717,13 +717,13 @@ $groupResult = $connect->query($groupSql);
         const formData = {
             case_study_id: caseStudyId,
             day: formattedDate,
-            salinity: salinity,
+            salinity: salinity || null,        // Gửi null nếu không có giá trị
             temperature: temperature,
             dissolved_oxygen: dissolvedOxygen,
             pH: pH,
-            alkalinity: alkalinity,
-            tan: tan,
-            nitrite: nitrite,
+            alkalinity: alkalinity || null,    // Gửi null nếu không có giá trị
+            tan: tan || null,                  // Gửi null nếu không có giá trị
+            nitrite: nitrite || null,          // Gửi null nếu không có giá trị
             system_type: systemType,
         };
 
@@ -1330,7 +1330,7 @@ $groupResult = $connect->query($groupSql);
         justify-content: center;
         /* Căn giữa theo chiều ngang */
         align-items: center;
-        /* Căn giữa theo chi��u dọc */
+        /* Căn giữa theo chiều dọc */
         height: 100%;
         /* Chiều cao bao quanh nút */
     }
