@@ -221,7 +221,7 @@ $groupResult = $connect->query($groupSql);
                         <input type="number" name="survival_sample" class="form-control" required>
                     </div>
                     <div class="form-group">
-                        <label>Feeding Weight</label>
+                        <label>Feeding Intake</label>
                         <input type="number" step="0.01" name="feeding_weight" class="form-control" required>
                     </div>
                 </div>
@@ -235,7 +235,7 @@ $groupResult = $connect->query($groupSql);
                                     <th>Day</th>
                                     <th>Rep</th> <!-- Thêm cột Rep -->
                                     <th>Survival Sample</th>
-                                    <th>Feeding Weight</th>
+                                    <th>Feeding Intake</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -639,7 +639,7 @@ $groupResult = $connect->query($groupSql);
                                 <th>Day</th>
                                 <th>Rep</th>
                                 <th>Survival Sample</th>
-                                <th>Feeding Weight</th>
+                                <th>Feeding Intake</th>
                             </tr>
                         </thead>
                         <tbody>

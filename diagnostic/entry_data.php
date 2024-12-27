@@ -182,7 +182,7 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                                             <th style="width: 105px;" width: 50px>Day</th>
                                             <th style="width: 50px;">Reps</th>
                                             <th style="text-align: center;width: 150px;">Survival Sample</th>
-                                            <th style="text-align: center;width: 150px;">Feeding Weight</th>
+                                            <th style="text-align: center;width: 150px;">Feed Intake</th>
                                             <th style=" text-align: center">Action</th>
                                         </tr>
                                     </thead>
@@ -297,7 +297,7 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                             required>
                     </div>
                     <div class="form-group">
-                        <label>Feeding Weight</label>
+                        <label>Feeding Intake</label>
                         <input type="number" name="feeding_weight" class="form-control" id="editFeedingWeight"
                             step="0.01" required>
                     </div>
@@ -592,7 +592,7 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                                 <th style="width: 200px;">Product Application</th>
                                 <th style="width: 50px;">Reps</th>
                                 <th style="text-align: center">Survival Sample</th>
-                                <th style="text-align: center">Feeding Weight</th>
+                                <th style="text-align: center">Feeding Intake</th>
                                 <th style="text-align: center">Action</th>
                             </tr>
                         </thead>

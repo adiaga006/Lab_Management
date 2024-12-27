@@ -265,7 +265,7 @@ header('Content-Type: application/json'); // Set header là JSON
                         <thead>
                             <tr style="font-weight: bold;">
                                 <th>Treatment Name</th>
-                                <th>Average Feeding Weight (g)</th>
+                                <th>Average Feed Intake (g)</th>
                                 <th>Standard Deviation</th>
                                 <th>Average Feed ± SD</th>
                             </tr>
