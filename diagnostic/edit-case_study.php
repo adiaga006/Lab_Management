@@ -198,9 +198,6 @@ $result = $connect->query($sql)->fetch_assoc();
             </div>
         </div>
     </div>
-
-    <?php include('./constant/layout/footer.php'); ?>
-
     <!-- Thêm Flatpickr CSS và JS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

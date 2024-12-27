@@ -6,8 +6,11 @@ if (!isset($connect)) {
 
 // Kiểm tra xem có đang ở trang liên quan đến case study không
 $currentPage = basename($_SERVER['PHP_SELF']);
-$relatedPages = ['group.php', 'manage_image.php', 'chart.php', 'results.php','entry_data.php','death_data.php','water_quality.php','view_death_data.php','entry_data_survival.php','entry_data_feeding.php'];
-$isRelatedPage = isset($_GET['case_study_id']) && in_array($currentPage, $relatedPages);
+$relatedPages = ['group.php', 'manage_image.php', 'chart.php', 'results.php', 'entry_data.php', 'death_data.php', 'water_quality.php', 'view_death_data.php', 'entry_data_survival.php', 'entry_data_feeding.php', 'edit-case_study.php'];
+$isRelatedPage = (isset($_GET['case_study_id']) || isset($_GET['id'])) && in_array($currentPage, $relatedPages);
+
+// Lấy case study ID từ URL (xử lý cả hai trường hợp)
+$currentCaseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : (isset($_GET['id']) ? $_GET['id'] : null);
 ?>
 
 <div class="left-sidebar">
@@ -53,11 +56,9 @@ $isRelatedPage = isset($_GET['case_study_id']) && in_array($currentPage, $relate
                                 <a href="case_study.php">Manage Case Study</a>
                             </li>
                             <?php
-                            if (isset($_GET['case_study_id'])) {
-                                $currentCaseStudyId = $_GET['case_study_id'];
+                            if ($currentCaseStudyId) {
                                 echo '<li class="active" style="background-color: #A7D477;">';
-                                echo '<a href="group.php?case_study_id=' . htmlspecialchars($currentCaseStudyId) . '" ';
-                                echo 'style="color: #ffffff; padding-left: 30px;">';
+                                echo '<a href="#" style="color: #ffffff; padding-left: 30px;">';
                                 echo '<i class="fa fa-angle-right"></i> ';
                                 echo htmlspecialchars($currentCaseStudyId);
                                 echo '</a>';
