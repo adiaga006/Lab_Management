@@ -60,7 +60,7 @@ $phase1Data = array_filter($waterQualityData, function ($data) use ($preChalleng
 
 $phase2DataRAS = array_filter($waterQualityData, function ($data) use ($preChallengeEnd) {
     $dataDate = new DateTime($data['day']);
-    return $dataDate > $preChallengeEnd && $data['system_type'] == 'RAS System (Positive Control, T1, T2, T3 & T4)';
+    return $dataDate > $preChallengeEnd && $data['system_type'] == 'RAS System (Positive Control & Treatments)';
 });
 
 $phase2DataStatic = array_filter($waterQualityData, function ($data) use ($preChallengeEnd) {
@@ -181,7 +181,7 @@ $phase2StaticStats = calculateStats($phase2DataStatic);
                 <h3 class="text-primary">Water Quality during Challenge & Post-challenge Period</h3>
 
                 <!-- RAS System Section -->
-                <h4 class="text-secondary">RAS System (Positive Control, T1, T2, T3 & T4)</h4>
+                <h4 class="text-secondary">RAS System (Positive Control & Treatments)</h4>
                 <div class="table-responsive m-t-20">
                     <table class="table table-bordered table-striped">
                         <thead>

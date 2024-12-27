@@ -50,6 +50,7 @@ $stmt->close();
 // Giải mã phases JSON và tính tổng duration
 $phases = json_decode($phasesJson, true);
 $totalDuration = 0;
+$preChallengeDuration = (int) $phases[0]['duration'] + (int) $phases[1]['duration'];
 
 if (is_array($phases)) {
     foreach ($phases as $phase) {
@@ -67,7 +68,7 @@ $endDate = (new DateTime($startDate))
 // Encode end_date thành JSON để sử dụng trong JavaScript
 $endDateJs = json_encode($endDate);
 
-// Lấy thông tin case study và category ID
+// L�����y thông tin case study và category ID
 $sql = "SELECT case_name, categories_id FROM case_study WHERE case_study_id = '$caseStudyId'";
 $caseStudyResult = $connect->query($sql);
 $caseStudy = $caseStudyResult->fetch_assoc();
@@ -387,8 +388,8 @@ $groupResult = $connect->query($groupSql);
                                 </option>
                                 <option value="Static System (Negative Control)">Static System (Negative Control)
                                 </option>
-                                <option value="RAS System (Positive Control, T1, T2, T3 & T4)">RAS System (Positive
-                                    Control, T1, T2, T3 & T4)</option>
+                                <option value="RAS System (Positive Control & Treatments)">RAS System (Positive
+                                    Control & Treatments)</option>
                             </select>
                         </div>
                     </div>
@@ -479,35 +480,41 @@ $groupResult = $connect->query($groupSql);
 
     // Chuyển đổi start_date từ PHP sang biến JavaScript
     const startDate = new Date(<?php echo $startDateJs; ?>);
-    const twentyThirdDayAfterStart = new Date(startDate);
-    twentyThirdDayAfterStart.setDate(twentyThirdDayAfterStart.getDate() + 22);
-
-    // Khởi tạo Datepicker cho trường ngày
-    $('.datepicker').datepicker({
-        format: 'dd/mm/yyyy',
-        autoclose: true,
-        todayHighlight: true
-    }).on('changeDate', function (e) {
-        checkAndSetSystemType(e.date);
-    });
-
+    const lastDayOfPreChallenge = new Date(startDate);
+    lastDayOfPreChallenge.setDate(lastDayOfPreChallenge.getDate() + (<?php echo $preChallengeDuration; ?> - 1));
     // Kiểm tra ngày đã chọn và đặt giá trị cho system_type
     function checkAndSetSystemType(selectedDate) {
         const systemTypeSelect = $('select[name="system_type"]');
 
-        if (selectedDate >= startDate && selectedDate <= twentyThirdDayAfterStart) {
-            // Ngày trong khoảng 23 ngày sau startDate
+        // Đảm bảo selectedDate là đối tượng Date hợp lệ
+        const selectedDateTime = selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
+        // Kiểm tra tính hợp lệ của ngày
+        if (isNaN(selectedDateTime.getTime())) {
+            console.error('Invalid date provided to checkAndSetSystemType');
+            return;
+        }
+
+        if (selectedDateTime >= startDate && selectedDateTime <= lastDayOfPreChallenge) {
             systemTypeSelect.html('<option value="RAS System (NC, PC & Treatments)">RAS System (NC, PC & Treatments)</option>');
-            systemTypeSelect.val("RAS System (NC, PC & Treatments)").prop('readonly', true); // Làm readonly
+            systemTypeSelect.val("RAS System (NC, PC & Treatments)");
+            systemTypeSelect.prop('disabled', true);
         } else {
-            // Ngày sau 23 ngày, cho phép người dùng chọn từ 2 lựa chọn và mở khóa readonly
             systemTypeSelect.html(`
+                <option value="" disabled selected>Select System Type</option>
                 <option value="Static System (Negative Control)">Static System (Negative Control)</option>
-                <option value="RAS System (Positive Control, T1, T2, T3 & T4)">RAS System (Positive Control, T1, T2, T3 & T4)</option>
+                <option value="RAS System (Positive Control & Treatments)">RAS System (Positive Control & Treatments)</option>
             `);
-            systemTypeSelect.prop('disabled', false).val(""); // Mở khóa và đặt giá trị trống để người dùng chọn
+            systemTypeSelect.prop('disabled', false);
         }
     }
+
+    // Thêm event listener cho input ngày
+    $('input[name="day"]').on('change', function () {
+        const selectedDate = flatpickr.parseDate(this.value, "d-m-Y");
+        if (selectedDate) {
+            checkAndSetSystemType(selectedDate);
+        }
+    });
     // Mở form thêm Entry Data và điền case_study_id vào form
     function openAddDataModal(caseStudyId, groupName) {
         $('#modalCaseStudyId').val(caseStudyId);
@@ -598,7 +605,6 @@ $groupResult = $connect->query($groupSql);
             data: formData,
             dataType: 'json',
             success: function (response) {
-                console.log('API Response:', response); // Logging để kiểm tra
                 if (response.success) {
                     showToast('Data added successfully!', 'Success', true);
 
@@ -728,7 +734,6 @@ $groupResult = $connect->query($groupSql);
             data: formData,
             dataType: 'json',
             success: function (response) {
-                console.log('API Response:', response); // Logging để kiểm tra
                 if (response.success) {
                     showToast('Water Quality data added successfully!', 'Success', true);
 
@@ -754,7 +759,6 @@ $groupResult = $connect->query($groupSql);
         if (parts.length === 3) {
             const formattedDate = `${parts[0]}-${parts[1]}-${parts[2]}`; // Chuyển sang Y-M-d
             sessionStorage.setItem('lab_day', formattedDate); // Lưu Y-M-d
-            console.log('Saved to sessionStorage as Y-M-d:', formattedDate);
         }
     });
     // Tạo timeout để tự động xóa session sau 3 tiếng (10800000 ms)
@@ -841,19 +845,15 @@ $groupResult = $connect->query($groupSql);
 
         if (savedTreatmentName) {
             $('select[name="treatmentNameGroup2"]').val(savedTreatmentName);
-            console.log('Loaded treatmentNameGroup2:', savedTreatmentName);
         }
         if (savedTestDate) {
             $('input[name="test_date"]').val(savedTestDate);
-            console.log('Loaded test_date_group2:', savedTestDate);
         }
         if (savedTestHour) {
             $('select[name="test_hour"]').val(savedTestHour);
-            console.log('Loaded test_hour_group2:', savedTestHour);
         }
         if (savedProductApplication) {
             $('#productApplicationGroup2').val(savedProductApplication);
-            console.log('Loaded product_application_group2:', savedProductApplication);
         }
         $('input[name="test_date"]').on('change', function () {
             sessionStorage.setItem('test_date_group2', $(this).val());
@@ -916,7 +916,7 @@ $groupResult = $connect->query($groupSql);
         // Xử lý ngày và giờ
         const testDate = $('input[name="test_date"]').val();
         if (!validateDateInput(testDate)) {
-            return; // D��ng submit nếu ngày không hợp lệ
+            return; // Dừng submit nếu ngày không hợp lệ
         }
         const testHour = $('select[name="test_hour"]').val();
         if (!testDate || !testHour) {
@@ -943,7 +943,6 @@ $groupResult = $connect->query($groupSql);
             data: formData,
             dataType: 'json',
             success: function (response) {
-                console.log('API Response:', response); // Logging để kiểm tra
                 if (response.success) {
                     showToast('Shrimp Death Data added successfully!', 'Success', true);
 
@@ -1010,8 +1009,6 @@ $groupResult = $connect->query($groupSql);
             data: { case_study_id: caseStudyId },
             dataType: 'json',
             success: function (response) {
-                console.log('Recent Entries Response:', response);
-
                 if (response.success) {
                     let tableHtml = `
                     <table class="table table-bordered table-striped">
@@ -1105,7 +1102,7 @@ $groupResult = $connect->query($groupSql);
         normalizedStartDate.setHours(0, 0, 0, 0); // Loại bỏ giờ, phút, giây
 
         const normalizedEndDate = new Date(endDate);
-        normalizedEndDate.setHours(0, 0, 0, 0); // Loại bỏ gi���, phút, giây
+        normalizedEndDate.setHours(0, 0, 0, 0); // Loại bỏ giờ, phút, giây
 
         // Kiểm tra nếu selectedDate không hợp lệ
         if (isNaN(selectedDate)) {
@@ -1333,7 +1330,7 @@ $groupResult = $connect->query($groupSql);
         justify-content: center;
         /* Căn giữa theo chiều ngang */
         align-items: center;
-        /* Căn giữa theo chiều dọc */
+        /* Căn giữa theo chi��u dọc */
         height: 100%;
         /* Chiều cao bao quanh nút */
     }
@@ -1345,7 +1342,7 @@ $groupResult = $connect->query($groupSql);
 
     a.btn:hover {
         text-decoration: none !important;
-        /* Đảm bảo không có gạch chân khi hover */
+        /* Đảm bảo không c gạch chân khi hover */
     }
 
     .btn {
@@ -1368,4 +1365,5 @@ $groupResult = $connect->query($groupSql);
     .align-items-center {
         align-items: center;
     }
+</style>
 </style>
