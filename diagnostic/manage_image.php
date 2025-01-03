@@ -64,36 +64,72 @@ if (isset($_SESSION['error_message'])) {
     unset($_SESSION['error_message']);
 }
 
-// Organize images by date
-$imagesByDate = [];
+// Organize media by date
+$mediaByDate = [];
+
+// Get images
 if ($caseStudyId) {
-    $baseDir = __DIR__ . "/../assets/uploadImage/Shrimp_image/$caseStudyId";
-    if (file_exists($baseDir)) {
-        $dates = array_diff(scandir($baseDir), ['.', '..']);
+    $imageBaseDir = __DIR__ . "/../assets/uploadImage/Shrimp_image/$caseStudyId";
+    if (file_exists($imageBaseDir)) {
+        $dates = array_diff(scandir($imageBaseDir), ['.', '..']);
         foreach ($dates as $date) {
-            $dateDir = "$baseDir/$date";
+            $dateDir = "$imageBaseDir/$date";
             if (is_dir($dateDir)) {
                 $files = array_diff(scandir($dateDir), ['.', '..']);
-                $imagesByDate[$date] = [];
+                if (!isset($mediaByDate[$date])) {
+                    $mediaByDate[$date] = [];
+                }
                 foreach ($files as $file) {
-                    $imagesByDate[$date][] = "../assets/uploadImage/Shrimp_image/$caseStudyId/$date/$file";
+                    $mediaByDate[$date][] = [
+                        'path' => "../assets/uploadImage/Shrimp_image/$caseStudyId/$date/$file",
+                        'type' => 'image'
+                    ];
                 }
             }
         }
-        krsort($imagesByDate);
+    }
+
+    // Get videos - cùng cấu trúc với images
+    $videoBaseDir = __DIR__ . "/../assets/uploadVideo/$caseStudyId";
+    if (file_exists($videoBaseDir)) {
+        $dates = array_diff(scandir($videoBaseDir), ['.', '..']);
+        foreach ($dates as $date) {
+            $dateDir = "$videoBaseDir/$date";
+            if (is_dir($dateDir)) {
+                $files = array_diff(scandir($dateDir), ['.', '..']);
+                if (!isset($mediaByDate[$date])) {
+                    $mediaByDate[$date] = [];
+                }
+                foreach ($files as $file) {
+                    $mediaByDate[$date][] = [
+                        'path' => "../assets/uploadVideo/$caseStudyId/$date/$file",
+                        'type' => 'video'
+                    ];
+                }
+            }
+        }
     }
 }
+
+// Trước phần hiển thị, thêm code sắp xếp
+function compareDates($date1, $date2)
+{
+    // Chuyển đổi từ dd-mm-yyyy sang timestamp
+    $d1 = DateTime::createFromFormat('d-m-Y', $date1);
+    $d2 = DateTime::createFromFormat('d-m-Y', $date2);
+
+    if ($d1 && $d2) {
+        // Đổi dấu để sắp xếp giảm dần (mới nhất lên đầu)
+        return $d2->getTimestamp() - $d1->getTimestamp();
+    }
+    return 0;
+}
+// Sắp xếp mảng theo key (ngày) giảm dần
+uksort($mediaByDate, 'compareDates');
 ?>
 
 <!-- CSS -->
 <style>
-    .image-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 15px;
-        padding: 15px;
-    }
-
     .image-item {
         aspect-ratio: 1;
         overflow: hidden;
@@ -286,10 +322,6 @@ if ($caseStudyId) {
         padding: 15px;
     }
 
-    .image-item {
-        position: relative;
-    }
-
     .checkbox-wrapper {
         position: absolute;
         top: 5px;
@@ -338,19 +370,339 @@ if ($caseStudyId) {
         justify-content: center;
         gap: 10px;
     }
+
+    /* CSS for video display */
+    .video-item {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        overflow: hidden;
+    }
+
+    .video-thumbnail {
+        width: 100%;
+        height: 100%;
+        display: block;
+        position: relative;
+        background: #000;
+    }
+
+    .video-thumbnail video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .video-play-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 40px;
+        text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        z-index: 2;
+        pointer-events: none;
+    }
+
+    .video-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .fancybox__container video {
+        max-width: 100%;
+        max-height: 80vh;
+    }
+
+    /* Tùy chỉnh nút download */
+    .fancybox__toolbar__items--right .carousel__button.is-download {
+        display: block;
+    }
+
+    .fancybox__download {
+        position: absolute;
+        bottom: 1rem;
+        right: 1rem;
+        z-index: 20;
+    }
+
+    /* Tùy chỉnh video thumbnail */
+    .video-item {
+        position: relative;
+        aspect-ratio: 16/9;
+        overflow: hidden;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .video-thumbnail {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        background: #000;
+    }
+
+    .video-thumbnail video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .video-item:hover .video-play-icon {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    /* Tùy chỉnh Fancybox */
+    .fancybox__container {
+        --fancybox-bg: rgba(0, 0, 0, 0.95);
+    }
+
+    .fancybox__toolbar {
+        --fancybox-accent-color: #007bff;
+    }
+
+    /* Nút download trong Fancybox */
+    .fancybox__toolbar__items .carousel__button.is-download {
+        color: white;
+        background: #007bff;
+        border-radius: 4px;
+        padding: 8px 12px;
+        margin-right: 8px;
+    }
+
+    .fancybox__toolbar__items .carousel__button.is-download:hover {
+        background: #0056b3;
+    }
+
+    /* Icon cho nút download */
+    .fancybox__toolbar__items .carousel__button.is-download::before {
+        content: '\f019';
+        /* Font Awesome download icon */
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        margin-right: 5px;
+    }
+
+    /* Tùy chỉnh controls video */
+    .fancybox__container video {
+        border-radius: 8px;
+    }
+
+    .fancybox__container .fancybox__content {
+        padding: 0;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    /* Download button trong video player */
+    .video-download-btn {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: #007bff;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 3;
+        transition: all 0.3s ease;
+    }
+
+    .video-download-btn:hover {
+        background: #0056b3;
+        transform: translateY(-2px);
+    }
+
+    .video-download-btn i {
+        font-size: 1.2em;
+    }
+
+    /* Style cho tiêu đề chính */
+    .page-title {
+        font-size: 2.5rem;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 3px solid #2ecc71;
+        animation: fadeIn 0.5s ease;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .page-title i {
+        color: #2ecc71;
+        font-size: 2.2rem;
+    }
+
+    .page-title h3 {
+        color: #222;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .page-title span {
+        color: #2ecc71;
+        font-weight: 700;
+    }
+
+    /* Style cho filter date */
+    .date-filter {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .date-filter input[type="text"] {
+        padding-left: 30px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .date-filter::before {
+        content: '\f073';
+        font-family: 'Font Awesome 6 Free';
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #666;
+        pointer-events: none;
+    }
+
+    .date-filter i {
+        position: absolute;
+        right: 10px;
+        color: #3498db;
+        font-size: 1.2em;
+    }
+
+    /* Style cho nút Add New */
+    .btn-add-new {
+        background: linear-gradient(45deg, #2ecc71, #27ae60);
+        border: none;
+        padding: 10px 20px;
+        color: white;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+    }
+
+    .btn-add-new:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-add-new i {
+        font-size: 1.2em;
+    }
+
+    /* Style cho Upload Date header */
+    .date-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        padding: 15px 20px;
+        margin: 20px 0;
+        border-radius: 10px;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+        border-left: 4px solid #2ecc71;
+        animation: slideInLeft 0.3s ease;
+    }
+
+    .date-header span {
+        font-size: 1.2rem;
+        color: #2c3e50;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .date-header i {
+        color: #2ecc71;
+        font-size: 1.3rem;
+    }
+
+    /* Style cho confirm dialog */
+    .custom-confirm {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        animation: fadeInUp 0.3s ease;
+        max-width: 400px;
+        width: 90%;
+    }
+
+    .custom-confirm h5 {
+        color: #e74c3c;
+        font-size: 1.4rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .custom-confirm h5 i {
+        font-size: 1.6rem;
+    }
+
+    /* Animations */
+    @keyframes slideInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes fadeOutZoom {
+        to {
+            transform: scale(0.8);
+            opacity: 0;
+        }
+    }
+
+    .removing {
+        animation: fadeOutZoom 0.2s ease forwards;
+    }
 </style>
 
 <div class="page-wrapper">
     <div class="container-fluid">
-        <h3 class="text-primary">Manage Images for Case Study: <?php echo htmlspecialchars($caseStudyId); ?></h3>
-        <button class="btn btn-primary mb-4" data-toggle="modal" data-target="#addImageModal">Add New Image</button>
-
+        <div class="page-title">
+            <i class="fas fa-photo-video"></i>
+            <h3>Manage Images / Videos for Case Study: <span><?php echo htmlspecialchars($caseStudyId); ?></span></h3>
+        </div>
+        <button class="btn-add-new" data-toggle="modal" data-target="#addImageModal">
+            <i class="fas fa-plus-circle"></i>
+            Add New File
+        </button>
         <!-- Modal -->
         <div class="modal" id="addImageModal" tabindex="-1" role="dialog">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Add New Image</h5>
+                        <h5 class="modal-title" style="color: black;">Add New Image / Video</h5>
                         <button type="button" class="close" data-dismiss="modal">&times;</button>
                     </div>
                     <div class="modal-body">
@@ -363,9 +715,9 @@ if ($caseStudyId) {
                                     value="<?php echo htmlspecialchars($caseStudyId); ?>">
                             </div>
                             <div class="form-group">
-                                <label for="images">Select Images:</label>
-                                <input type="file" name="images[]" multiple class="form-control" required
-                                    accept="image/*">
+                                <label for="files">Select Files:</label>
+                                <input type="file" name="files[]" multiple class="form-control" required
+                                    accept="image/*,video/mp4,video/webm,video/ogg,video/quicktime">
                             </div>
                             <button type="submit" class="btn btn-success">Upload</button>
                         </form>
@@ -376,7 +728,9 @@ if ($caseStudyId) {
 
         <!-- Filter Section -->
         <div class="form-inline mb-4">
-            <input type="text" id="filterDate" class="form-control mr-2" placeholder="Filter by date (d-m-Y)">
+            <div class="date-filter">
+                <input type="text" id="filterDate" class="form-control mr-2" placeholder="Filter by date">
+            </div>
             <button class="btn btn-secondary mr-2" onclick="filterImages()">
                 <i class="fas fa-filter"></i> Filter
             </button>
@@ -384,7 +738,7 @@ if ($caseStudyId) {
                 <i class="fas fa-undo"></i> Reset
             </button>
             <button class="btn btn-danger mr-2" id="toggleDelete" onclick="toggleDeleteMode()">
-                <i class="fas fa-trash"></i> Delete Images
+                <i class="fas fa-trash"></i> Delete File(s)
             </button>
         </div>
 
@@ -406,46 +760,59 @@ if ($caseStudyId) {
 
         <!-- Images Display -->
         <div id="imageGallery">
-            <?php foreach ($imagesByDate as $date => $images): ?>
-                <div class="img-container" data-date="<?php echo $date; ?>">
+            <?php foreach ($mediaByDate as $date => $mediaItems): ?>
+                <div class="img-container" data-date="<?php echo htmlspecialchars($date); ?>">
                     <div class="date-header">
                         <div class="d-flex justify-content-between align-items-center">
-                            <span>Upload Date: <?php echo $date; ?></span>
+                            <span>
+                                <i class="far fa-calendar-check"></i>
+                                Upload Date: <?php echo htmlspecialchars($date); ?>
+                            </span>
                             <div class="select-all-container" style="display: none;">
-                                <input type="checkbox" id="selectAll_<?php echo $date; ?>" class="select-all"
-                                    data-date="<?php echo $date; ?>">
-                                <label for="selectAll_<?php echo $date; ?>">Select All</label>
+                                <input type="checkbox" id="selectAll_<?php echo htmlspecialchars($date); ?>"
+                                    class="select-all" data-date="<?php echo htmlspecialchars($date); ?>">
+                                <label for="selectAll_<?php echo htmlspecialchars($date); ?>">Select All</label>
                             </div>
                         </div>
                     </div>
                     <div class="image-grid">
-                        <?php foreach ($images as $image): ?>
-                            <div class="image-item">
+                        <?php foreach ($mediaItems as $item): ?>
+                            <div class="<?php echo $item['type'] === 'video' ? 'video-item' : 'image-item'; ?>">
                                 <div class="checkbox-wrapper" style="display: none;">
-                                    <input type="checkbox" class="image-select" id="<?php echo basename($image); ?>"
-                                        data-date="<?php echo $date; ?>" data-path="<?php echo $image; ?>">
+                                    <input type="checkbox" class="media-select"
+                                        id="<?php echo htmlspecialchars(basename($item['path'])); ?>"
+                                        data-date="<?php echo htmlspecialchars($date); ?>"
+                                        data-path="<?php echo htmlspecialchars($item['path']); ?>">
                                 </div>
-                                <a data-fancybox="gallery" href="<?php echo $image; ?>"
-                                    data-caption="Upload Date: <?php echo $date; ?>">
-                                    <img src="<?php echo $image; ?>" alt="Image" class="img-fluid">
-                                </a>
+                                <?php if ($item['type'] === 'video'): ?>
+                                    <a href="<?php echo htmlspecialchars($item['path']); ?>" data-fancybox="gallery"
+                                        data-type="html5video" data-caption="Upload Date: <?php echo htmlspecialchars($date); ?>">
+                                        <div class="video-thumbnail">
+                                            <video>
+                                                <source src="<?php echo htmlspecialchars($item['path']); ?>" type="video/mp4">
+                                            </video>
+                                            <i class="fas fa-play-circle video-play-icon"></i>
+                                        </div>
+                                    </a>
+                                <?php else: ?>
+                                    <a href="<?php echo htmlspecialchars($item['path']); ?>" data-fancybox="gallery"
+                                        data-caption="Upload Date: <?php echo htmlspecialchars($date); ?>">
+                                        <img src="<?php echo htmlspecialchars($item['path']); ?>" alt="Media" class="img-fluid">
+                                    </a>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
         </div>
+
     </div>
 </div>
 
 <div id="toast" class="toast"></div>
 
 <!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
-<link
-  rel="stylesheet"
-  href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css"
-/>
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -472,56 +839,60 @@ if ($caseStudyId) {
             dateFormat: "d-m-Y"
         });
 
-        // Form submission with AJAX
-        document.getElementById('uploadForm').addEventListener('submit', function (e) {
+        // Hàm upload files
+        async function uploadFiles(formData) {
+            try {
+                const response = await fetch('./php_action/upload_files.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showToast(result.message || 'Upload failed', 'error');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast('Upload failed: ' + error.message, 'error');
+            }
+        }
+
+        // Event listener cho form submit
+        document.getElementById('uploadForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const formData = new FormData(this);
-            const submitButton = this.querySelector('button[type="submit"]');
+            const formData = new FormData();
+            const fileInput = document.querySelector('input[type="file"]');
+            const dateInput = document.querySelector('input[name="upload_date"]');
+            const caseStudyId = document.querySelector('input[name="case_study_id"]').value;
 
-            // Disable submit button
-            submitButton.disabled = true;
-            submitButton.innerHTML = 'Uploading...';
+            // Kiểm tra files
+            if (fileInput.files.length === 0) {
+                showToast('Please select files to upload', 'warning');
+                return;
+            }
 
-            // Show loading message
-            showToast('Uploading images...', 'info');
+            // Thêm từng file vào FormData
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('files[]', fileInput.files[i]);
+            }
 
-            fetch('upload_images.php', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.text().then(text => {
-                        try {
-                            return JSON.parse(text);
-                        } catch (e) {
-                            console.error('Invalid JSON:', text);
-                            throw new Error('Invalid server response');
-                        }
-                    });
-                })
-                .then(data => {
-                    if (data.success) {
-                        showToast('Upload successful!', 'success');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    } else {
-                        showToast(data.message || 'Upload failed', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Upload failed: ' + error.message, 'error');
-                })
-                .finally(() => {
-                    // Re-enable submit button
-                    submitButton.disabled = false;
-                    submitButton.innerHTML = 'Upload';
-                });
+            // Thêm các trường khác
+            formData.append('upload_date', dateInput.value);
+            formData.append('case_study_id', caseStudyId);
+            // Show loading indicator
+            showToast('Uploading files...', 'info');
+
+            await uploadFiles(formData);
         });
 
         // Ensure elements exist before adding event listeners
@@ -648,7 +1019,7 @@ if ($caseStudyId) {
     }
 
     function updateDeleteButton() {
-        const selectedImages = document.querySelectorAll('.image-select:checked');
+        const selectedImages = document.querySelectorAll('.media-select:checked');
         let deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
 
         if (selectedImages.length > 0 && deleteMode) {
@@ -656,9 +1027,12 @@ if ($caseStudyId) {
                 deleteSelectedBtn = document.createElement('button');
                 deleteSelectedBtn.id = 'deleteSelectedBtn';
                 deleteSelectedBtn.className = 'btn btn-danger';
-                deleteSelectedBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete Selected Images';
+                deleteSelectedBtn.innerHTML = `<i class="fas fa-trash-alt"></i> Delete Selected Files (${selectedImages.length})`;
                 deleteSelectedBtn.onclick = showConfirmDialog;
                 document.querySelector('.form-inline').appendChild(deleteSelectedBtn);
+            } else {
+                // Cập nhật số lượng đã chọn trên nút
+                deleteSelectedBtn.innerHTML = `<i class="fas fa-trash-alt"></i> Delete Selected Files (${selectedImages.length})`;
             }
         } else if (deleteSelectedBtn) {
             deleteSelectedBtn.remove();
@@ -687,7 +1061,7 @@ if ($caseStudyId) {
         });
 
         if (!deleteMode) {
-            document.querySelectorAll('.image-select, .select-all').forEach(checkbox => {
+            document.querySelectorAll('.media-select, .select-all').forEach(checkbox => {
                 checkbox.checked = false;
             });
             const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
@@ -703,7 +1077,7 @@ if ($caseStudyId) {
     document.querySelectorAll('.select-all').forEach(checkbox => {
         checkbox.addEventListener('change', function () {
             const date = this.dataset.date;
-            const imageCheckboxes = document.querySelectorAll(`.image-select[data-date="${date}"]`);
+            const imageCheckboxes = document.querySelectorAll(`.media-select[data-date="${date}"]`);
             imageCheckboxes.forEach(box => {
                 box.checked = this.checked;
             });
@@ -712,13 +1086,13 @@ if ($caseStudyId) {
     });
 
     // Handle individual checkbox changes
-    document.querySelectorAll('.image-select').forEach(checkbox => {
+    document.querySelectorAll('.media-select').forEach(checkbox => {
         checkbox.addEventListener('change', function () {
             updateDeleteButton();
 
             const date = this.dataset.date;
             const selectAll = document.querySelector(`#selectAll_${date}`);
-            const imageCheckboxes = document.querySelectorAll(`.image-select[data-date="${date}"]`);
+            const imageCheckboxes = document.querySelectorAll(`.media-select[data-date="${date}"]`);
             const allChecked = Array.from(imageCheckboxes).every(box => box.checked);
             if (selectAll) {
                 selectAll.checked = allChecked;
@@ -735,7 +1109,7 @@ if ($caseStudyId) {
     }
 
     async function confirmDelete() {
-        const selectedImages = Array.from(document.querySelectorAll('.image-select:checked'))
+        const selectedImages = Array.from(document.querySelectorAll('.media-select:checked'))
             .map(checkbox => checkbox.dataset.path);
 
         if (selectedImages.length === 0) {
@@ -744,7 +1118,7 @@ if ($caseStudyId) {
         }
 
         try {
-            const response = await fetch('delete_images.php', {
+            const response = await fetch('./php_action/delete_media.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -773,7 +1147,7 @@ if ($caseStudyId) {
     }
 
     function showConfirmDialog() {
-        const selectedImages = document.querySelectorAll('.image-select:checked');
+        const selectedImages = document.querySelectorAll('.media-select:checked');
         if (selectedImages.length === 0) {
             alert('Please select images to delete');
             return;
@@ -792,107 +1166,130 @@ if ($caseStudyId) {
     }
 
     async function proceedDelete() {
-        const selectedImages = Array.from(document.querySelectorAll('.image-select:checked'))
-            .map(checkbox => checkbox.dataset.path);
-
         try {
-            const response = await fetch('delete_images.php', {
+            const selectedMedia = Array.from(document.querySelectorAll('.media-select:checked'))
+                .map(checkbox => ({
+                    path: checkbox.dataset.path,
+                    type: checkbox.closest('.video-item') ? 'video' : 'image'
+                }));
+
+            const response = await fetch('./php_action/delete_media.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ images: selectedImages })
+                body: JSON.stringify({ media: selectedMedia })
             });
 
             const result = await response.json();
 
             if (result.success) {
-                // Xóa từng ảnh với hiệu ứng
-                const deletePromises = selectedImages.map((imagePath, index) => {
-                    return new Promise(resolve => {
-                        const imageElement = document.querySelector(`[data-path="${imagePath}"]`)
-                            .closest('.image-item');
-
-                        if (imageElement) {
-                            // Thêm class removing để kích hoạt animation
-                            imageElement.classList.add('removing');
-
-                            // Đợi animation hoàn thành rồi mới xóa element
-                            imageElement.addEventListener('animationend', () => {
-                                imageElement.remove();
-                                resolve();
-                            }, { once: true });
-                        } else {
-                            resolve();
-                        }
-                    });
+                selectedMedia.forEach(media => {
+                    const element = document.querySelector(`[data-path="${media.path}"]`)
+                        .closest(media.type === 'video' ? '.video-item' : '.image-item');
+                    if (element) {
+                        element.classList.add('removing');
+                        setTimeout(() => element.remove(), 200);
+                    }
                 });
-
-                // Đợi tất cả animations hoàn thành
-                await Promise.all(deletePromises);
 
                 closeDialog();
                 toggleDeleteMode();
-                showToast(`Successfully deleted ${selectedImages.length} image(s)!`, 'success');
-
-                // Cập nhật layout sau khi xóa
-                const imageGrid = document.querySelector('.image-grid');
-                if (imageGrid) {
-                    imageGrid.style.display = 'none';
-                    setTimeout(() => {
-                        imageGrid.style.display = 'grid';
-                    }, 50);
-                }
-            } else {
-                showToast('Error deleting images: ' + result.message, 'error');
+                showToast(`Successfully deleted ${selectedMedia.length} media file(s)`, 'success');
             }
         } catch (error) {
-            console.error('Error:', error);
-            showToast('Error deleting images', 'error');
+            console.error('Delete error:', error);
+            showToast(`Error deleting media: ${error.message}`, 'error');
         }
     }
-
     // Update the delete button click handler
     document.getElementById('deleteSelected').addEventListener('click', showConfirmDialog);
 </script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
 
 <script type="module">
     import { Fancybox } from "https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.esm.js";
 
-    // Đợi DOM load xong
     document.addEventListener('DOMContentLoaded', () => {
-        // Khởi tạo options cho Fancybox 5.0
         const options = {
             // Cấu hình chung
             infinite: true,
             compact: false,
             idle: false,
             dragToClose: false,
+            preload: 3, // Preload 3 slides trước và sau slide hiện tại
 
             // Cấu hình Images
             Images: {
                 zoom: true,
+                protected: false, // Cho phép tải xuống ảnh
+                preload: true // Preload ảnh
+            },
+
+            // Cấu hình Video mới cho Fancybox 5.0
+            Video: {
+                autoplay: false,
+                ratio: 16 / 9,
+                controls: true,
+                fit: "contain",
+                preload: true, // Preload video metadata
+                protected: false, // Cho phép tải xuống video
+                controlsList: "" // Bỏ nodownload để cho phép tải xuống
+            },
+
+            // Cấu hình HTML5 video
+            Html: {
+                video: {
+                    autoplay: false,
+                    controls: true,
+                    playsinline: true,
+                    loop: false,
+                    muted: false,
+                    preload: "auto", // Preload toàn bộ video
+                    controlsList: "", // Bỏ nodownload để cho phép tải xuống
+                }
             },
 
             // Cấu hình Toolbar mới cho 5.0
             Toolbar: {
                 absolute: true,
                 display: {
-                    left: [],
-                    middle: ["infobar"],
-                    right: ["iterateZoom", "slideshow", "fullscreen", "thumbs", "close"],
+                    left: ["infobar"],
+                    middle: [],
+                    right: ["download", "iterateZoom", "slideshow", "fullscreen", "thumbs", "close"], // Thêm nút download
                 },
             },
 
-            // Cấu hình Carousel mới cho 5.0
-            Carousel: {
-                transition: "classic",
-                friction: 0.88,
-                Dots: false,
+            // Thêm actions cho download
+            on: {
+                "done": (fancybox) => {
+                    fancybox.carousel.slides.forEach((slide) => {
+                        if (slide.type === "video" || slide.type === "html5video") {
+                            const downloadBtn = document.createElement("a");
+                            downloadBtn.className = "video-download-btn";
+                            downloadBtn.href = slide.src;
+                            downloadBtn.download = "";
+                            downloadBtn.target = "_blank";
+                            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download';
+
+                            // Thêm sự kiện click
+                            downloadBtn.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                const link = document.createElement('a');
+                                link.href = slide.src;
+                                link.download = slide.src.split('/').pop();
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            });
+
+                            slide.el.appendChild(downloadBtn);
+                        }
+                    });
+                }
             },
 
-            // Cấu hình l10n (localization) mới cho 5.0
+            // Cấu hình l10n (localization)
             l10n: {
                 CLOSE: "Close",
                 NEXT: "Next",
@@ -904,6 +1301,11 @@ if ($caseStudyId) {
                 AJAX_NOT_FOUND: "Error Loading AJAX : Not Found",
                 AJAX_FORBIDDEN: "Error Loading AJAX : Forbidden",
                 IFRAME_ERROR: "Error Loading Page",
+                TOGGLE_SLIDESHOW: "Toggle slideshow",
+                TOGGLE_FULLSCREEN: "Toggle fullscreen",
+                TOGGLE_THUMBS: "Toggle thumbnails",
+                TOGGLE_ZOOM: "Toggle zoom",
+                DOWNLOAD: "Download"
             }
         };
 
@@ -911,7 +1313,40 @@ if ($caseStudyId) {
         Fancybox.bind("[data-fancybox]", options);
     });
 </script>
-<?php include('./constant/layout/footer.php'); ?>
+<script>
+    // Hàm so sánh ngày tăng dần theo năm, tháng, ngày
+    function compareDates(date1, date2) {
+        // Tách ngày tháng năm từ chuỗi dd-mm-yyyy
+        var parts1 = date1.split('-');
+        var parts2 = date2.split('-');
 
+        // Chuyển thành số để so sánh
+        var year1 = parseInt(parts1[2], 10);
+        var year2 = parseInt(parts2[2], 10);
+        var month1 = parseInt(parts1[1], 10);
+        var month2 = parseInt(parts2[1], 10);
+        var day1 = parseInt(parts1[0], 10);
+        var day2 = parseInt(parts2[0], 10);
+
+        // So sánh năm trước
+        if (year1 !== year2) {
+            return year1 - year2;
+        }
+
+        // Nếu cùng năm, so sánh tháng
+        if (month1 !== month2) {
+            return month1 - month2;
+        }
+
+        // Nếu cùng tháng, so sánh ngày
+        return day1 - day2;
+    }
+
+    // Sử dụng hàm so sánh
+    var date1 = '3-1-2025';
+    var date2 = '5-12-2024';
+    console.log(compareDates(date1, date2)); // Kết quả: 1
+</script>
+<?php include('./constant/layout/footer.php'); ?>
 <!-- Thêm Font Awesome cho icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">

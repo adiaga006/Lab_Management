@@ -90,7 +90,7 @@ $groupResult = $connect->query($groupSql);
         <div class="col-md-4 text-right d-flex justify-content-end align-items-center">
             <a href="manage_image.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
                 class="btn btn-outline-secondary btn-lg mr-2">
-                <i class="fa fa-image"></i> Show Image
+                <i class="fa fa-image"></i> Show Image / Video
             </a>
             <a href="chart.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
                 class="btn btn-primary btn-lg mr-2">
