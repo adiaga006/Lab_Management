@@ -30,7 +30,7 @@ include('./constant/connect.php');
 
 
                     <b>
-                        <img src="./assets/uploadImage/Logo/shrimvet_logo.png" style="width: 100%; height: 90px;"
+                        <img src="./assets/uploadImage/Logo/shrimvet_logo.png" style="width: 100%; height: 80px;"
                             alt="homepage" class="dark-logo" />
                     </b>
 

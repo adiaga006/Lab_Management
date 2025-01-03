@@ -1184,18 +1184,28 @@ uksort($mediaByDate, 'compareDates');
             const result = await response.json();
 
             if (result.success) {
+                let imageCount = 0;
+                let videoCount = 0;
+
                 selectedMedia.forEach(media => {
                     const element = document.querySelector(`[data-path="${media.path}"]`)
                         .closest(media.type === 'video' ? '.video-item' : '.image-item');
                     if (element) {
                         element.classList.add('removing');
                         setTimeout(() => element.remove(), 200);
+                        
+                        // Đếm số lượng ảnh và video đã xóa
+                        if (media.type === 'video') {
+                            videoCount++;
+                        } else {
+                            imageCount++;
+                        }
                     }
                 });
 
                 closeDialog();
                 toggleDeleteMode();
-                showToast(`Successfully deleted ${selectedMedia.length} media file(s)`, 'success');
+                showToast(`Successfully deleted ${imageCount} image(s) and ${videoCount} video(s)`, 'success');
             }
         } catch (error) {
             console.error('Delete error:', error);
