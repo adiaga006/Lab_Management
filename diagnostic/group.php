@@ -85,26 +85,27 @@ $groupResult = $connect->query($groupSql);
 <div class="page-wrapper">
     <div class="row page-titles">
         <div class="col-md-8 align-self-center">
-            <h3 class="text-primary">Case Study: <?php echo htmlspecialchars($caseStudyId); ?></h3>
+            <h3 class="text-primary">
+                <i class="fas fa-book-open"></i> Case Study: <?php echo htmlspecialchars($caseStudyId); ?>
+            </h3>
         </div>
         <div class="col-md-4 text-right d-flex justify-content-end align-items-center">
-            <a href="manage_image.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
-                class="btn btn-outline-secondary btn-lg mr-2">
+            <a href="manage_image.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" class="btn btn-outline-secondary btn-lg mr-2">
                 <i class="fa fa-image"></i> Show Image / Video
             </a>
-            <a href="chart.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
-                class="btn btn-primary btn-lg mr-2">
+            <a href="chart.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" class="btn btn-primary btn-lg mr-2">
                 <i class="fa fa-pie-chart"></i> Show Chart
             </a>
-            <a href="results.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
-                class="btn btn-success btn-lg">
+            <a href="results.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" class="btn btn-success btn-lg">
                 <i class="fa fa-bar-chart"></i> Show Results
             </a>
         </div>
         <div class="container-fluid">
             <div class="card">
                 <div class="card-body">
-                    <h4>Groups under Category: <?php echo htmlspecialchars($categoryId); ?></h4>
+                    <h4>
+                        <i class="fas fa-users"></i> Groups under Category: <?php echo htmlspecialchars($categoryId); ?>
+                    </h4>
 
                     <?php if ($groupResult->num_rows > 0): ?>
                         <div class="table-responsive m-t-40">

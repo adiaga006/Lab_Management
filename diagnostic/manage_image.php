@@ -133,25 +133,11 @@ uksort($mediaByDate, 'compareDates');
     .image-item {
         aspect-ratio: 1;
         overflow: hidden;
-    }
-
-    .image-item img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.2s;
+        position: relative;
     }
 
     .image-item:hover img {
         transform: scale(1.05);
-    }
-
-    .date-header {
-        background: #f8f9fa;
-        padding: 10px;
-        margin-bottom: 15px;
-        border-radius: 5px;
-        font-weight: bold;
     }
 
     /* Toast CSS */
@@ -210,10 +196,6 @@ uksort($mediaByDate, 'compareDates');
         object-fit: contain;
     }
 
-    .image-item {
-        position: relative;
-    }
-
     .image-checkbox {
         position: absolute;
         top: 10px;
@@ -266,10 +248,6 @@ uksort($mediaByDate, 'compareDates');
         justify-content: flex-end;
         gap: 10px;
         margin-top: 20px;
-    }
-
-    .btn i {
-        margin-right: 5px;
     }
 
     /* Thêm animation cho việc xóa ảnh */
@@ -330,10 +308,11 @@ uksort($mediaByDate, 'compareDates');
     }
 
     .image-item img {
-        width: 150px;
-        height: 150px;
         object-fit: cover;
         border-radius: 4px;
+        transition: transform 0.2s;
+        width: 100%;
+        height: 100%;
     }
 
     /* Button Styles */
@@ -459,11 +438,6 @@ uksort($mediaByDate, 'compareDates');
     .video-item:hover .video-play-icon {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1.1);
-    }
-
-    /* Tùy chỉnh Fancybox */
-    .fancybox__container {
-        --fancybox-bg: rgba(0, 0, 0, 0.95);
     }
 
     .fancybox__toolbar {
@@ -1193,7 +1167,7 @@ uksort($mediaByDate, 'compareDates');
                     if (element) {
                         element.classList.add('removing');
                         setTimeout(() => element.remove(), 200);
-                        
+
                         // Đếm số lượng ảnh và video đã xóa
                         if (media.type === 'video') {
                             videoCount++;
@@ -1322,40 +1296,6 @@ uksort($mediaByDate, 'compareDates');
         // Khởi tạo Fancybox 5.0
         Fancybox.bind("[data-fancybox]", options);
     });
-</script>
-<script>
-    // Hàm so sánh ngày tăng dần theo năm, tháng, ngày
-    function compareDates(date1, date2) {
-        // Tách ngày tháng năm từ chuỗi dd-mm-yyyy
-        var parts1 = date1.split('-');
-        var parts2 = date2.split('-');
-
-        // Chuyển thành số để so sánh
-        var year1 = parseInt(parts1[2], 10);
-        var year2 = parseInt(parts2[2], 10);
-        var month1 = parseInt(parts1[1], 10);
-        var month2 = parseInt(parts2[1], 10);
-        var day1 = parseInt(parts1[0], 10);
-        var day2 = parseInt(parts2[0], 10);
-
-        // So sánh năm trước
-        if (year1 !== year2) {
-            return year1 - year2;
-        }
-
-        // Nếu cùng năm, so sánh tháng
-        if (month1 !== month2) {
-            return month1 - month2;
-        }
-
-        // Nếu cùng tháng, so sánh ngày
-        return day1 - day2;
-    }
-
-    // Sử dụng hàm so sánh
-    var date1 = '3-1-2025';
-    var date2 = '5-12-2024';
-    console.log(compareDates(date1, date2)); // Kết quả: 1
 </script>
 <?php include('./constant/layout/footer.php'); ?>
 <!-- Thêm Font Awesome cho icons -->
