@@ -59,20 +59,6 @@ if ($_POST) {
             echo json_encode($response);
             exit;
         }
-
-        // Kiểm tra số lần `rep` đã tồn tại trong bảng `entry_data`
-        $stmt = $connect->prepare("SELECT COUNT(*) AS currentReps FROM entry_data WHERE case_study_id = ? AND treatment_name = ? AND lab_day = ?");
-        $stmt->bind_param("sss", $caseStudyId, $treatment['name'], $labDayFormatted);
-        $stmt->execute();
-        $stmt->bind_result($currentReps);
-        $stmt->fetch();
-        $stmt->close();
-
-        if ($currentReps >= $treatment['num_reps']) {
-            $response['messages'] = "Error: Data for rep {$currentReps} already exists for treatment '{$treatment['name']}' on $labDayDisplay.";
-            echo json_encode($response);
-            exit;
-        }
     }
     // Kiểm tra nếu `rep` bị trùng
     $stmt = $connect->prepare("SELECT COUNT(*) FROM entry_data WHERE case_study_id = ? AND treatment_name = ? AND lab_day = ? AND rep = ?");

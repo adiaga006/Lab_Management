@@ -5,14 +5,15 @@ $response = ['success' => false, 'messages' => ''];
 
 if ($_POST) {
     $entryId = $_POST['id'];
-    $salinity = $_POST['salinity'];
-    $temperature = $_POST['temperature'];
-    $dissolvedOxygen = $_POST['dissolved_oxygen'];
-    $pH = $_POST['pH'];
-    $alkalinity = $_POST['alkalinity'];
-    $tan = $_POST['tan'];
-    $nitrite = $_POST['nitrite'];
-    $systemType = $_POST['system_type'];
+   // Xử lý tất cả các trường đều có thể null
+   $salinity = $_POST['salinity'] === '' ? null : $_POST['salinity'];
+   $temperature = $_POST['temperature'] === '' ? null : $_POST['temperature'];
+   $dissolvedOxygen = $_POST['dissolved_oxygen'] === '' ? null : $_POST['dissolved_oxygen'];
+   $pH = $_POST['pH'] === '' ? null : $_POST['pH'];
+   $alkalinity = $_POST['alkalinity'] === '' ? null : $_POST['alkalinity'];
+   $tan = $_POST['tan'] === '' ? null : $_POST['tan'];
+   $nitrite = $_POST['nitrite'] === '' ? null : $_POST['nitrite'];
+   $systemType = $_POST['system_type'];
 
     // Fetch the current `day` to avoid unintended changes
     $stmt = $connect->prepare("SELECT day FROM water_quality WHERE id = ?");

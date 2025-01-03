@@ -34,22 +34,106 @@ while ($row = $waterQualityResult->fetch_assoc()) {
 }
 $stmt->close();
 
-// Hàm tính trung bình
-// Function to calculate mean
-function calculateMean($data)
-{
-    return count($data) > 0 ? array_sum($data) / count($data) : 0;
+// Hàm làm tròn số đến 2 chữ số thập phân
+function roundToTwo($number) {
+    return round($number, 2);
 }
 
-// Function to calculate standard deviation
-function calculateSD($data)
-{
-    $mean = calculateMean($data);
-    $sumOfSquares = array_reduce($data, function ($carry, $item) use ($mean) {
-        $carry += pow($item - $mean, 2);
-        return $carry;
-    }, 0);
-    return count($data) > 1 ? sqrt($sumOfSquares / count($data)) : 0;
+// Hàm tính trung bình (bỏ qua giá trị 0 và null)
+function calculateMean($data) {
+    $sum = 0;
+    $count = 0;
+
+    foreach ($data as $value) {
+        $numericValue = floatval($value);
+        
+        if ($value !== null) {
+            $sum += $numericValue;
+            $count++;
+        }
+    }
+
+    if ($count === 0) {
+        return 0;
+    }
+
+    return roundToTwo($sum / $count);
+}
+
+// Hàm tính độ lệch chuẩn (giống STDEV của Excel)
+function calculateSD($data) {
+    $validValues = [];
+    foreach ($data as $value) {
+        $numericValue = floatval($value);
+        if ($value !== null) {
+            $validValues[] = $numericValue;
+        }
+    }
+
+    $n = count($validValues);
+    
+    // Trả về 0 nếu không có đủ giá trị để tính SD
+    if ($n <= 1) {
+        return 0;
+    }
+
+    // Tính mean
+    $mean = array_sum($validValues) / $n;
+
+    // Tính tổng bình phương độ lệch
+    $sumSquaredDiff = 0;
+    foreach ($validValues as $value) {
+        $sumSquaredDiff += pow($value - $mean, 2);
+    }
+
+    // Sử dụng (n-1) thay vì n để khớp với công thuc của Excel STDEV
+    $sd = sqrt($sumSquaredDiff / ($n - 1));
+    
+    // Làm tròn kết quả đến 2 chữ số thập phân
+    return roundToTwo($sd);
+}
+
+// Hàm tính toán thống kê cho từng loại dữ liệu
+function calculateStats($data) {
+    $stats = [
+        'salinity' => ['values' => [], 'mean' => 0, 'sd' => 0],
+        'temperature' => ['values' => [], 'mean' => 0, 'sd' => 0],
+        'dissolved_oxygen' => ['values' => [], 'mean' => 0, 'sd' => 0],
+        'pH' => ['values' => [], 'mean' => 0, 'sd' => 0],
+        'alkalinity' => ['values' => [], 'mean' => 0, 'sd' => 0],
+        'tan' => ['values' => [], 'mean' => 0, 'sd' => 0],
+        'nitrite' => ['values' => [], 'mean' => 0, 'sd' => 0]
+    ];
+
+    foreach ($data as $row) {
+        foreach ($stats as $key => &$stat) {
+            if (isset($row[$key])) {
+                $stat['values'][] = $row[$key];
+            }
+        }
+    }
+
+    foreach ($stats as $key => &$stat) {
+        $stat['mean'] = calculateMean($stat['values']);
+        $stat['sd'] = calculateSD($stat['values']);
+    }
+
+    return [
+        'meanSalinity' => $stats['salinity']['mean'],
+        'sdSalinity' => $stats['salinity']['sd'],
+        'meanTemp' => $stats['temperature']['mean'],
+        'sdTemp' => $stats['temperature']['sd'],
+        'meanDO' => $stats['dissolved_oxygen']['mean'],
+        'sdDO' => $stats['dissolved_oxygen']['sd'],
+        'meanPH' => $stats['pH']['mean'],
+        'sdPH' => $stats['pH']['sd'],
+        'meanAlkalinity' => $stats['alkalinity']['mean'],
+        'sdAlkalinity' => $stats['alkalinity']['sd'],
+        'meanTAN' => $stats['tan']['mean'],
+        'sdTAN' => $stats['tan']['sd'],
+        'meanNitrite' => $stats['nitrite']['mean'],
+        'sdNitrite' => $stats['nitrite']['sd']
+    ];
 }
 
 // Separate data by system type and phase
@@ -67,35 +151,6 @@ $phase2DataStatic = array_filter($waterQualityData, function ($data) use ($preCh
     $dataDate = new DateTime($data['day']);
     return $dataDate > $preChallengeEnd && $data['system_type'] == 'Static System (Negative Control)';
 });
-
-// Calculate stats for each system type
-function calculateStats($data)
-{
-    $salinityValues = array_column($data, 'salinity');
-    $tempValues = array_column($data, 'temperature');
-    $doValues = array_column($data, 'dissolved_oxygen');
-    $phValues = array_column($data, 'pH');
-    $alkalinityValues = array_column($data, 'alkalinity');
-    $tanValues = array_column($data, 'tan');
-    $nitriteValues = array_column($data, 'nitrite');
-
-    return [
-        'meanSalinity' => calculateMean($salinityValues),
-        'sdSalinity' => calculateSD($salinityValues),
-        'meanTemp' => calculateMean($tempValues),
-        'sdTemp' => calculateSD($tempValues),
-        'meanDO' => calculateMean($doValues),
-        'sdDO' => calculateSD($doValues),
-        'meanPH' => calculateMean($phValues),
-        'sdPH' => calculateSD($phValues),
-        'meanAlkalinity' => calculateMean($alkalinityValues),
-        'sdAlkalinity' => calculateSD($alkalinityValues),
-        'meanTAN' => calculateMean($tanValues),
-        'sdTAN' => calculateSD($tanValues),
-        'meanNitrite' => calculateMean($nitriteValues),
-        'sdNitrite' => calculateSD($nitriteValues),
-    ];
-}
 
 // Get statistics for each phase and system type
 $phase1Stats = calculateStats($phase1Data);

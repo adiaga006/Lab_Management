@@ -170,7 +170,20 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                             <?php echo date('d-m-Y', strtotime($group['phase']['end_date'])); ?>)
                         </h5>
 
-                        <?php $phaseEntries = $group['entries']; ?>
+                        <?php 
+                        $phaseEntries = $group['entries'];
+                        
+                        // Sắp xếp dữ liệu theo treatment_name, lab_day, và rep
+                        usort($phaseEntries, function($a, $b) {
+                            $treatmentComp = strcmp($a['treatment_name'], $b['treatment_name']);
+                            if ($treatmentComp !== 0) return $treatmentComp;
+                            
+                            $dateComp = strcmp($a['lab_day'], $b['lab_day']);
+                            if ($dateComp !== 0) return $dateComp;
+                            
+                            return $a['rep'] - $b['rep'];
+                        });
+                        ?>
 
                         <?php if (!empty($phaseEntries)): ?>
                             <div class="table-responsive m-t-20">
@@ -179,51 +192,72 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                                         <tr>
                                             <th style="width: 160px;">Treatment Name</th>
                                             <th style="width: 200px;">Product Application</th>
-                                            <th style="width: 105px;" width: 50px>Day</th>
+                                            <th style="width: 105px;">Day</th>
                                             <th style="width: 50px;">Reps</th>
                                             <th style="text-align: center;width: 150px;">Survival Sample</th>
                                             <th style="text-align: center;width: 150px;">Feed Intake(g)</th>
-                                            <th style=" text-align: center">Action</th>
+                                            <th style="text-align: center">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php
                                         $currentTreatment = '';
                                         $currentDate = '';
-                                        foreach ($phaseEntries as $entry):
+                                        $treatmentStartIndex = 0;
+                                        $dayStartIndex = 0;
+                                        
+                                        foreach ($phaseEntries as $index => $entry):
                                             $isNewTreatment = $currentTreatment !== $entry['treatment_name'];
-                                            $isNewDay = $currentDate !== $entry['lab_day'];
+                                            $isNewDay = $currentDate !== $entry['lab_day'] || $isNewTreatment;
 
                                             if ($isNewTreatment) {
                                                 $currentTreatment = $entry['treatment_name'];
                                                 $currentDate = $entry['lab_day'];
+                                                $treatmentStartIndex = $index;
+                                                $dayStartIndex = $index;
                                             } elseif ($isNewDay) {
                                                 $currentDate = $entry['lab_day'];
+                                                $dayStartIndex = $index;
                                             }
-                                            ?>
+
+                                            // Tính toán rowspan cho treatment
+                                            if ($isNewTreatment) {
+                                                $treatmentRowCount = 0;
+                                                $tempIndex = $index;
+                                                while ($tempIndex < count($phaseEntries) && 
+                                                       $phaseEntries[$tempIndex]['treatment_name'] === $currentTreatment) {
+                                                    $treatmentRowCount++;
+                                                    $tempIndex++;
+                                                }
+                                            }
+
+                                            // Tính toán rowspan cho day
+                                            if ($isNewDay) {
+                                                $dayRowCount = 0;
+                                                $tempIndex = $index;
+                                                while ($tempIndex < count($phaseEntries) && 
+                                                       $phaseEntries[$tempIndex]['treatment_name'] === $currentTreatment &&
+                                                       $phaseEntries[$tempIndex]['lab_day'] === $currentDate) {
+                                                    $dayRowCount++;
+                                                    $tempIndex++;
+                                                }
+                                            }
+                                        ?>
                                             <tr>
                                                 <?php if ($isNewTreatment): ?>
-                                                    <?php
-                                                    $treatmentRowCount = count(array_filter($phaseEntries, function ($e) use ($currentTreatment) {
-                                                        return $e['treatment_name'] === $currentTreatment;
-                                                    }));
-                                                    ?>
-                                                    <td rowspan="<?php echo $treatmentRowCount; ?>"
+                                                    <td rowspan="<?php echo $treatmentRowCount; ?>" 
                                                         style="vertical-align: middle; font-weight: bold;">
                                                         <?php echo htmlspecialchars($entry['treatment_name']); ?>
                                                     </td>
-                                                    <td rowspan="<?php echo $treatmentRowCount; ?>" style="vertical-align: middle;">
+                                                    <td rowspan="<?php echo $treatmentRowCount; ?>" 
+                                                        style="vertical-align: middle;">
                                                         <?php echo htmlspecialchars($entry['product_application']); ?>
                                                     </td>
                                                 <?php endif; ?>
 
-                                                <?php if ($isNewDay || $isNewTreatment): ?>
-                                                    <?php
-                                                    $dayRowCount = count(array_filter($phaseEntries, function ($e) use ($currentDate, $currentTreatment) {
-                                                        return $e['lab_day'] === $currentDate && $e['treatment_name'] === $currentTreatment;
-                                                    }));
-                                                    ?>
-                                                    <td rowspan="<?php echo $dayRowCount; ?>" style="vertical-align: middle;">
+                                                <?php if ($isNewDay): ?>
+                                                    <td rowspan="<?php echo $dayRowCount; ?>" 
+                                                        style="vertical-align: middle;">
                                                         <?php echo date('d-m-Y', strtotime($entry['lab_day'])); ?>
                                                     </td>
                                                 <?php endif; ?>
@@ -233,18 +267,17 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                                                 <td><?php echo htmlspecialchars($entry['feeding_weight']); ?></td>
                                                 <td>
                                                     <div class="action-buttons">
-                                                        <button class="btn btn-warning btn-sm"
-                                                            onclick="editEntryData(<?php echo $entry['entry_data_id']; ?>)">
-                                                            <i class="fa fa-pencil">Edit</i>
+                                                        <button class="btn btn-warning btn-sm" 
+                                                                onclick="editEntryData(<?php echo $entry['entry_data_id']; ?>)">
+                                                            <i class="fa fa-pencil"></i> Edit
                                                         </button>
-                                                        <button class="btn btn-danger btn-sm"
-                                                            onclick="deleteEntryData(<?php echo $entry['entry_data_id']; ?>)">
-                                                            <i class="fa fa-trash">Delete</i>
+                                                        <button class="btn btn-danger btn-sm" 
+                                                                onclick="deleteEntryData(<?php echo $entry['entry_data_id']; ?>)">
+                                                            <i class="fa fa-trash"></i> Delete
                                                         </button>
                                                     </div>
                                                 </td>
                                             </tr>
-                                            <?php ?>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>

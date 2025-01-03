@@ -482,19 +482,25 @@ $groupResult = $connect->query($groupSql);
     const startDate = new Date(<?php echo $startDateJs; ?>);
     const lastDayOfPreChallenge = new Date(startDate);
     lastDayOfPreChallenge.setDate(lastDayOfPreChallenge.getDate() + (<?php echo $preChallengeDuration; ?> - 1));
+
     // Kiểm tra ngày đã chọn và đặt giá trị cho system_type
     function checkAndSetSystemType(selectedDate) {
         const systemTypeSelect = $('select[name="system_type"]');
 
         // Đảm bảo selectedDate là đối tượng Date hợp lệ
         const selectedDateTime = selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
+        
+        // Reset time portions to compare dates only
+        const selectedDateOnly = new Date(selectedDateTime.setHours(0,0,0,0));
+        const startDateOnly = new Date(startDate.setHours(0,0,0,0));
+        const lastDayOnly = new Date(lastDayOfPreChallenge.setHours(0,0,0,0));
+
         // Kiểm tra tính hợp lệ của ngày
         if (isNaN(selectedDateTime.getTime())) {
             console.error('Invalid date provided to checkAndSetSystemType');
             return;
         }
-
-        if (selectedDateTime >= startDate && selectedDateTime <= lastDayOfPreChallenge) {
+        if (selectedDateOnly >= startDateOnly && selectedDateOnly <= lastDayOnly) {
             systemTypeSelect.html('<option value="RAS System (NC, PC & Treatments)">RAS System (NC, PC & Treatments)</option>');
             systemTypeSelect.val("RAS System (NC, PC & Treatments)");
             systemTypeSelect.prop('disabled', true);
