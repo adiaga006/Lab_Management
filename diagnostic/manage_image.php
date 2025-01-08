@@ -518,17 +518,22 @@ uksort($mediaByDate, 'compareDates');
     .page-title i {
         color: #2ecc71;
         font-size: 2.2rem;
+        margin-top: 10px; /* Giảm khoảng cách giữa nút trên và nút dưới */
+
     }
 
     .page-title h3 {
         color: #222;
         font-weight: 700;
-        margin: 0;
+        margin-top: 5px; /* Giảm khoảng cách giữa nút trên và nút dưới */
+
     }
 
     .page-title span {
         color: #2ecc71;
         font-weight: 700;
+        margin-top: 5px; /* Giảm khoảng cách giữa nút trên và nút dưới */
+
     }
 
     /* Style cho filter date */

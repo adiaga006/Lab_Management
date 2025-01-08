@@ -5,13 +5,17 @@ $valid = array('success' => false, 'messages' => '');
 
 try {
     if ($_POST) {
+        // Lấy user_id từ session
+        $userId = $_SESSION['userId'];
+        
         $caseStudyId = $_POST['case_study_id'];
         $caseName = $_POST['case_name'];
         $location = $_POST['location'];
         $categoryId = $_POST['categories_id'];
         $startDate = $_POST['start_date'];
-        $pondId = isset($_POST['pond_id']) ? $_POST['pond_id'] : NULL; // Xử lý nếu pond_id không có giá trị
+        $pondId = isset($_POST['pond_id']) ? $_POST['pond_id'] : NULL;
         $status = $_POST['status'];
+        
         // Xử lý dữ liệu phases
         $phases = [];
         if (isset($_POST['phase_name']) && isset($_POST['phase_duration'])) {
@@ -54,7 +58,7 @@ try {
         // Chuyển treatments thành JSON
         $treatmentsJson = json_encode($treatments);
 
-        // Kiểm tra xem case_study_id đã tồn tại chưa
+        // Kiểm tra case_study_id đã tồn tại
         $checkSql = "SELECT * FROM case_study WHERE case_study_id = ?";
         $stmt = $connect->prepare($checkSql);
         if (!$stmt)
@@ -68,25 +72,27 @@ try {
             $valid['success'] = false;
             $valid['messages'] = "Case Study ID is available. Please choose another ID.";
         } else {
-            // Chèn case study mới
-            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, pond_id, status, treatment, phases) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            // Thêm user_id vào câu query INSERT
+            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, pond_id, status, treatment, phases, user_id) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            
             $stmt = $connect->prepare($sql);
             if (!$stmt)
                 throw new Exception("Prepare failed: " . $connect->error);
 
-                $stmt->bind_param(
-                    "sssisisss",
-                    $caseStudyId,
-                    $caseName,
-                    $location,
-                    $categoryId,
-                    $startDate,
-                    $pondId,
-                    $status,
-                    $treatmentsJson,
-                    $phasesJson
-                );
+            $stmt->bind_param(
+                "sssisisssi", // Thêm j cho user_id (integer)
+                $caseStudyId,
+                $caseName,
+                $location,
+                $categoryId,
+                $startDate,
+                $pondId,
+                $status,
+                $treatmentsJson,
+                $phasesJson,
+                $userId // Thêm user_id vào bind_param
+            );
 
             if ($stmt->execute()) {
                 $valid['success'] = true;

@@ -36,6 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Định dạng lại testDate và testTime
+    $formattedTestDate = date('d-m-Y', strtotime($testDate)); // Định dạng ngày
+    $formattedTestTime = date('H:i', strtotime($testTime)); // Định dạng giờ
+
     // Lấy thông tin `treatment` từ bảng `case_study`
     $stmt = $connect->prepare("SELECT treatment FROM case_study WHERE case_study_id = ?");
     $stmt->bind_param("s", $caseStudyId);
@@ -85,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->close();
 
     if ($isDuplicateRep > 0) {
-        $response['messages'] = "Error: Data already exists for $treatmentName on $testDate at the same hour.";
+        $response['messages'] = "Error: Data already exists for rep '$rep' of treatment '$treatmentName' on $formattedTestDate at the same hour ($formattedTestTime).";
         echo json_encode($response);
         exit;
     }

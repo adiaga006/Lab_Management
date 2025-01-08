@@ -84,99 +84,102 @@ $groupResult = $connect->query($groupSql);
 ?>
 <div class="page-wrapper">
     <div class="row page-titles">
-        <div class="col-md-8 align-self-center">
-            <h3 class="text-primary">
-                <i class="fas fa-book-open"></i> Case Study: <?php echo htmlspecialchars($caseStudyId); ?>
+        <div class="col-md-12 d-flex justify-content-between align-items-start">
+            <h3 class="page-title">
+                <i class="fa fa-flask"></i> Case Study: <?php echo htmlspecialchars($caseStudyId); ?>
             </h3>
-        </div>
-        <div class="col-md-4 text-right d-flex justify-content-end align-items-center">
-            <a href="manage_image.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" class="btn btn-outline-secondary btn-lg mr-2">
-                <i class="fa fa-image"></i> Show Image / Video
-            </a>
-            <a href="chart.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" class="btn btn-primary btn-lg mr-2">
-                <i class="fa fa-pie-chart"></i> Show Chart
-            </a>
-            <a href="results.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" class="btn btn-success btn-lg">
-                <i class="fa fa-bar-chart"></i> Show Results
-            </a>
+            <div class="button-container d-flex flex-column align-items-end">
+                <div class="top-buttons">
+                    <a href="chart.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
+                        class="btn btn-chart btn-lg">
+                        <i class="fa fa-pie-chart"></i> Show Chart
+                    </a>
+                    <a href="results.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
+                        class="btn btn-results btn-lg">
+                        <i class="fa fa-bar-chart"></i> Show Results
+                    </a>
+                </div>
+                <a href="manage_image.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
+                    class="btn btn-media btn-lg mt-2">
+                    <i class="fa fa-image"></i> Show Image / Video
+                </a>
+            </div>
         </div>
         <div class="container-fluid">
             <div class="card">
                 <div class="card-body">
-                    <h4>
-                        <i class="fas fa-users"></i> Groups under Category: <?php echo htmlspecialchars($categoryId); ?>
-                    </h4>
-
                     <?php if ($groupResult->num_rows > 0): ?>
-                        <div class="table-responsive m-t-40">
-                            <table class="table table-bordered table-striped table-custom">
-                                <thead>
+                        <table class="table table-bordered table-striped table-custom">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <i class="fa fa-database"></i> Raw Data
+                                    </th>
+                                    <th style="text-align: center; vertical-align: middle;">
+                                        <i class="fa fa-cogs"></i> Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php while ($group = $groupResult->fetch_assoc()): ?>
                                     <tr>
-                                        <th>Raw Data</th>
-                                        <th style=" text-align: center;vertical-align: middle;">Actions</th>
+                                        <td>
+                                            <?php
+                                            // Determine URL based on group_id and include group_id in the URL
+                                            if ($group['group_id'] == 1) {
+                                                $url = "entry_data.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
+                                            } elseif ($group['group_id'] == 3) {
+                                                $url = "water_quality.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
+                                            } elseif ($group['group_id'] == 2) {
+                                                $url = "death_data.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
+                                            } else {
+                                                $url = "#";
+                                            }
+
+                                            ?>
+                                            <a href="<?php echo $url; ?>">
+                                                <?php echo htmlspecialchars($group['group_name']); ?>
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <!-- Add Data button triggers modal for each group -->
+                                            <?php if ($group['group_id'] == 1): ?>
+                                                <div class="button-container">
+                                                    <button class="btn btn-primary" data-toggle="modal"
+                                                        data-target="#addDataModalGroup1"
+                                                        onclick="openAddDataModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
+                                                        Add Data
+                                                    </button>
+                                                </div>
+
+                                            <?php elseif ($group['group_id'] == 2): ?>
+                                                <div class="button-container">
+                                                    <button class="btn btn-primary" data-toggle="modal"
+                                                        data-target="#addDataModalGroup2"
+                                                        onclick="openShrimpDeathModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
+                                                        Add Data
+                                                    </button>
+                                                </div>
+                                            <?php elseif ($group['group_id'] == 3): ?>
+                                                <div class="button-container">
+                                                    <button class="btn btn-primary" data-toggle="modal"
+                                                        data-target="#addDataModalGroup3"
+                                                        onclick="openWaterQualityModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
+                                                        Add Data
+                                                    </button>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="button-container">
+                                                    <button class="btn btn-primary"
+                                                        onclick="alert('Add Data feature is not available for this group.');">
+                                                        Add Data
+                                                    </button>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    <?php while ($group = $groupResult->fetch_assoc()): ?>
-                                        <tr>
-                                            <td>
-                                                <?php
-                                                // Determine URL based on group_id and include group_id in the URL
-                                                if ($group['group_id'] == 1) {
-                                                    $url = "entry_data.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
-                                                } elseif ($group['group_id'] == 3) {
-                                                    $url = "water_quality.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
-                                                } elseif ($group['group_id'] == 2) {
-                                                    $url = "death_data.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
-                                                } else {
-                                                    $url = "#";
-                                                }
-
-                                                ?>
-                                                <a href="<?php echo $url; ?>">
-                                                    <?php echo htmlspecialchars($group['group_name']); ?>
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <!-- Add Data button triggers modal for each group -->
-                                                <?php if ($group['group_id'] == 1): ?>
-                                                    <div class="button-container">
-                                                        <button class="btn btn-primary" data-toggle="modal"
-                                                            data-target="#addDataModalGroup1"
-                                                            onclick="openAddDataModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
-                                                            Add Data
-                                                        </button>
-                                                    </div>
-
-                                                <?php elseif ($group['group_id'] == 2): ?>
-                                                    <div class="button-container">
-                                                        <button class="btn btn-primary" data-toggle="modal"
-                                                            data-target="#addDataModalGroup2"
-                                                            onclick="openShrimpDeathModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
-                                                            Add Data
-                                                        </button>
-                                                    </div>
-                                                <?php elseif ($group['group_id'] == 3): ?>
-                                                    <div class="button-container">
-                                                        <button class="btn btn-primary" data-toggle="modal"
-                                                            data-target="#addDataModalGroup3"
-                                                            onclick="openWaterQualityModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
-                                                            Add Data
-                                                        </button>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <div class="button-container">
-                                                        <button class="btn btn-primary"
-                                                            onclick="alert('Add Data feature is not available for this group.');">
-                                                            Add Data
-                                                        </button>
-                                                    </div>
-                                </div>
-                            <?php endif; ?>
-                            </td>
-                            </tr>
-                        <?php endwhile; ?>
-                        </tbody>
+                                <?php endwhile; ?>
+                            </tbody>
                         </table>
                     </div>
                 <?php else: ?>
@@ -490,11 +493,11 @@ $groupResult = $connect->query($groupSql);
 
         // Đảm bảo selectedDate là đối tượng Date hợp lệ
         const selectedDateTime = selectedDate instanceof Date ? selectedDate : new Date(selectedDate);
-        
+
         // Reset time portions to compare dates only
-        const selectedDateOnly = new Date(selectedDateTime.setHours(0,0,0,0));
-        const startDateOnly = new Date(startDate.setHours(0,0,0,0));
-        const lastDayOnly = new Date(lastDayOfPreChallenge.setHours(0,0,0,0));
+        const selectedDateOnly = new Date(selectedDateTime.setHours(0, 0, 0, 0));
+        const startDateOnly = new Date(startDate.setHours(0, 0, 0, 0));
+        const lastDayOnly = new Date(lastDayOfPreChallenge.setHours(0, 0, 0, 0));
 
         // Kiểm tra tính hợp lệ của ngày
         if (isNaN(selectedDateTime.getTime())) {
@@ -1030,10 +1033,15 @@ $groupResult = $connect->query($groupSql);
                         <tbody>
                 `;
                     response.data.forEach(entry => {
+                        // Định dạng lại test_time
+                        const testTime = new Date(entry.test_time);
+                        const options = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
+                        const formattedTestTime = testTime.toLocaleString('en-GB', options).replace(',', ''); // Định dạng theo d-M-Y H:i
+
                         tableHtml += `
                         <tr>
                             <td>${entry.treatment_name}</td>
-                            <td>${entry.test_time}</td>
+                            <td>${formattedTestTime}</td>
                             <td>${entry.rep}</td>
                             <td>${entry.death_sample}</td>
                         </tr>
@@ -1372,5 +1380,262 @@ $groupResult = $connect->query($groupSql);
     .align-items-center {
         align-items: center;
     }
+
+    .btn-secondary {
+        background-color: #81BFDA !important;
+        /* Màu nền cho nút */
+        color: white;
+        /* Màu chữ */
+        border: none;
+        /* Bỏ viền */
+    }
+
+    .btn-secondary.text {
+        align-items: center !important;
+
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        /* Màu nền khi hover */
+        transform: translateY(-2px);
+        /* Hiệu ứng nâng lên khi hover */
+    }
+
+    /* Điều chỉnh khoảng cách cho container chính */
+    .page-wrapper {
+        padding-top: 10px;
+        /* Giảm padding phía trên */
+    }
+
+    /* Điều chỉnh khoảng cách cho phần tiêu đề */
+    .page-titles {
+        margin-bottom: 5px;
+        /* Giảm margin dưới của phần chứa nút */
+        padding: 10px 20px;
+    }
+
+    /* Điều chỉnh khoảng cách cho bảng */
+    .table-responsive {
+        margin-top: 15px;
+        /* Giảm margin trên của bảng */
+    }
+
+    /* Điều chỉnh khoảng cách cho container chứa nút */
+    .button-container {
+        margin-bottom: 0;
+        /* Loại bỏ margin dưới của container chứa nút */
+    }
+
+    /* Điều chỉnh khoảng cách cho nút Show Image/Video */
+    .button-container .btn-secondary {
+        margin-top: 5px;
+        /* Giảm khoảng cách giữa nút trên và nút dưới */
+    }
+
+    /* Điều chỉnh khoảng cách cho card */
+    .card {
+        margin-top: 10px;
+        /* Giảm margin trên của card */
+    }
+
+    /* Đảm bảo card-body không có margin trên thừa */
+    .card-body {
+        padding-top: 10px;
+    }
+
+    /* Thiết kế hiện đại cho bảng */
+    .table-custom {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-custom th {
+        background: #f8f9fa;
+        color: #2c3e50;
+        font-weight: 600;
+        padding: 15px;
+        font-size: 1.1em;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .table-custom td {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    /* Style cho nút Add Data */
+    .btn-primary {
+        background: linear-gradient(45deg, #4e73df, #6f42c1);
+        border: none;
+        padding: 8px 20px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Icon trong nút Add Data */
+    .btn-primary i {
+        margin-right: 8px;
+    }
+
+    /* Style cho links trong Raw Data */
+    .table-custom a {
+        color: #3498db;
+        text-decoration: none;
+        transition: color 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .table-custom a i {
+        margin-right: 8px;
+        font-size: 1.1em;
+    }
+
+    .table-custom a:hover {
+        color: #2980b9;
+    }
+
+    /* Cập nhật nút Add Data */
+    .button-container .btn-primary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .button-container .btn-primary::before {
+        content: '\f067';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        margin-right: 8px;
+    }
+
+    .button-container {
+        margin-bottom: 0;
+    }
+
+    .top-buttons {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        border: none;
+        color: white !important;
+    }
+
+    .btn-primary {
+        background: #6f42c1;
+        border: none;
+    }
+
+    .btn-success {
+        background: #28a745;
+        border: none;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        border: none;
+        width: 100%;
+        /* Đảm bảo nút dưới cùng có độ rộng bằng tổng 2 nút trên */
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Style cho icon */
+    .btn i {
+        font-size: 1.1em;
+    }
+
+    /* Nút Show Chart */
+    .btn-chart {
+        background: linear-gradient(45deg, #6f42c1, #8250df);
+    }
+
+    .btn-chart:hover {
+        background: linear-gradient(45deg, #8250df, #6f42c1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
+    }
+
+    /* Nút Show Results */
+    .btn-results {
+        background: linear-gradient(45deg, #2ecc71, #27ae60);
+    }
+
+    .btn-results:hover {
+        background: linear-gradient(45deg, #27ae60, #2ecc71);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+    }
+
+    /* Nút Show Image/Video */
+    .btn-media {
+        background: linear-gradient(45deg, #34495e, #2c3e50);
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .btn-media:hover {
+        background: linear-gradient(45deg, #2c3e50, #34495e);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(52, 73, 94, 0.3);
+    }
+
+    .page-title {
+        font-size: 24px;
+        /* Kích thước chữ lớn hơn */
+        font-weight: bold;
+        /* Chữ in đậm */
+        color: #5CB338;
+        /* Màu chữ tối */
+        margin-bottom: 15px;
+        /* Khoảng cách dưới tiêu đề */
+        display: flex;
+        /* Sử dụng flexbox để căn chỉnh icon và text */
+        align-items: center;
+        /* Căn giữa theo chiều dọc */
+        padding: 10px 15px;
+        /* Thêm padding cho tiêu đề */
+        background-color: #f8f9fa;
+        /* Màu nền nhẹ cho tiêu đề */
+        border-radius: 8px;
+        /* Bo góc cho tiêu đề */
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        /* Thêm bóng nhẹ */
+    }
+
+    .page-title i {
+        margin-right: 10px;
+        /* Khoảng cách giữa icon và text */
+        font-size: 1.5em;
+        /* Kích thước icon lớn hơn */
+        color: #6f42c1;
+        /* Màu icon */
+    }
 </style>
-</style>
+<!-- Thêm Font Awesome cho icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">

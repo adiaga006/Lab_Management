@@ -3,8 +3,17 @@
 <?php include('./constant/layout/sidebar.php'); ?>
 <?php include('./constant/connect.php');
 
-$sql = "SELECT case_study_id, case_name, location, start_date, categories_id, status FROM case_study";
-$result = $connect->query($sql);
+$userId = $_SESSION['userId'];
+
+$sql = "SELECT cs.*, c.categories_name 
+        FROM case_study cs 
+        LEFT JOIN categories c ON cs.categories_id = c.categories_id 
+        WHERE cs.user_id = ?";
+
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
 <div class="page-wrapper">
     <div class="row page-titles">
@@ -41,7 +50,7 @@ $result = $connect->query($sql);
                         <tbody>
                             <?php
                             $i = 1;
-                            foreach ($result as $row) {
+                            while ($row = $result->fetch_assoc()) {
                                 // Fetch category name from categories table
                                 $sql = "SELECT categories_name FROM categories WHERE categories_id='" . $row['categories_id'] . "'";
                                 $result2 = $connect->query($sql);

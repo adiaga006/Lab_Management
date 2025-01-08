@@ -18,10 +18,6 @@ if (!$startDate) {
 }
 $groupId = $_GET['group_id'];
 
-// Calculate phases based on `start_date`
-$startDateObj = new DateTime($startDate);
-$preChallengeEnd = clone $startDateObj;
-$preChallengeEnd->modify('+22 days'); // Phase 1: Pre-challenge period (23 days)
 // Lấy dữ liệu `water_quality` theo `case_study_id` và sắp xếp theo ngày
 $waterQualitySql = "SELECT * FROM water_quality WHERE case_study_id = ? ORDER BY day ASC";
 $stmt = $connect->prepare($waterQualitySql);
@@ -136,20 +132,17 @@ function calculateStats($data) {
     ];
 }
 
-// Separate data by system type and phase
-$phase1Data = array_filter($waterQualityData, function ($data) use ($preChallengeEnd) {
-    $dataDate = new DateTime($data['day']);
-    return $dataDate <= $preChallengeEnd && $data['system_type'] == 'RAS System (NC, PC & Treatments)';
+// Separate data by system type
+$phase1Data = array_filter($waterQualityData, function ($data) {
+    return $data['system_type'] == 'RAS System (NC, PC & Treatments)';
 });
 
-$phase2DataRAS = array_filter($waterQualityData, function ($data) use ($preChallengeEnd) {
-    $dataDate = new DateTime($data['day']);
-    return $dataDate > $preChallengeEnd && $data['system_type'] == 'RAS System (Positive Control & Treatments)';
+$phase2DataRAS = array_filter($waterQualityData, function ($data) {
+    return $data['system_type'] == 'RAS System (Positive Control & Treatments)';
 });
 
-$phase2DataStatic = array_filter($waterQualityData, function ($data) use ($preChallengeEnd) {
-    $dataDate = new DateTime($data['day']);
-    return $dataDate > $preChallengeEnd && $data['system_type'] == 'Static System (Negative Control)';
+$phase2DataStatic = array_filter($waterQualityData, function ($data) {
+    return $data['system_type'] == 'Static System (Negative Control)';
 });
 
 // Get statistics for each phase and system type
