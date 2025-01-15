@@ -90,17 +90,21 @@ $groupResult = $connect->query($groupSql);
             </h3>
             <div class="button-container d-flex flex-column align-items-end">
                 <div class="top-buttons">
-                    <a href="chart.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
-                        class="btn btn-chart btn-lg">
+                    <a href="schedule.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" 
+                       class="btn btn-schedule btn-lg">
+                        <i class="fa fa-calendar"></i> Schedule
+                    </a>
+                    <a href="chart.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" 
+                       class="btn btn-chart btn-lg">
                         <i class="fa fa-pie-chart"></i> Show Chart
                     </a>
-                    <a href="results.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
-                        class="btn btn-results btn-lg">
+                    <a href="results.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" 
+                       class="btn btn-results btn-lg">
                         <i class="fa fa-bar-chart"></i> Show Results
                     </a>
                 </div>
-                <a href="manage_image.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
-                    class="btn btn-media btn-lg mt-2">
+                <a href="manage_image.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" 
+                   class="btn btn-media btn-lg mt-2">
                     <i class="fa fa-image"></i> Show Image / Video
                 </a>
             </div>
@@ -1528,6 +1532,7 @@ $groupResult = $connect->query($groupSql);
         display: flex;
         gap: 12px;
         margin-bottom: 8px;
+        flex-wrap: wrap;
     }
 
     .btn {
@@ -1635,6 +1640,17 @@ $groupResult = $connect->query($groupSql);
         /* Kích thước icon lớn hơn */
         color: #6f42c1;
         /* Màu icon */
+    }
+
+    .btn-schedule {
+        background: #20c997;
+        border: none;
+    }
+
+    .btn-schedule:hover {
+        background: #1ba97e;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 </style>
 <!-- Thêm Font Awesome cho icons -->
