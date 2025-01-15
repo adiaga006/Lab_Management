@@ -6,7 +6,7 @@ if (!isset($connect)) {
 
 // Kiểm tra xem có đang ở trang liên quan đến case study không
 $currentPage = basename($_SERVER['PHP_SELF']);
-$relatedPages = ['group.php', 'manage_image.php', 'chart.php', 'results.php', 'entry_data.php', 'death_data.php', 'water_quality.php', 'view_death_data.php', 'entry_data_survival.php', 'entry_data_feeding.php', 'edit-case_study.php'];
+$relatedPages = ['group.php', 'manage_image.php', 'chart.php', 'results.php', 'entry_data.php', 'death_data.php', 'water_quality.php', 'view_death_data.php', 'entry_data_survival.php', 'entry_data_feeding.php', 'edit-case_study.php','schedule.php'];
 $isRelatedPage = (isset($_GET['case_study_id']) || isset($_GET['id'])) && in_array($currentPage, $relatedPages);
 
 // Lấy case study ID từ URL (xử lý cả hai trường hợp)
@@ -58,7 +58,7 @@ $currentCaseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : (
                             <?php
                             if ($currentCaseStudyId) {
                                 echo '<li class="active" style="background-color: #A7D477;">';
-                                echo '<a href="#" style="color: #ffffff; padding-left: 30px;">';
+                                echo '<a href="group.php?case_study_id=' . htmlspecialchars($currentCaseStudyId) . '" style="color: #ffffff; padding-left: 30px;">';
                                 echo '<i class="fa fa-angle-right"></i> ';
                                 echo htmlspecialchars($currentCaseStudyId);
                                 echo '</a>';

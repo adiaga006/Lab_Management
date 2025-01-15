@@ -14,6 +14,13 @@ $result = $stmt->get_result();
 $treatmentData = $result->fetch_assoc();
 $treatments = json_decode($treatmentData['treatment'], true);
 $stmt->close();
+// Lấy tất cả work_name từ cơ sở dữ liệu
+$sql = "SELECT id, work_name FROM work_criteria ORDER BY work_name";
+$result = $connect->query($sql);
+$workNames = [];
+while ($row = $result->fetch_assoc()) {
+    $workNames[] = $row;
+}
 ?>
 
 <style>
@@ -186,12 +193,23 @@ $stmt->close();
 
     .task-done {
         text-align: left !important;
-        /* Căn lề bên trái cho nội dung */
     }
 
     .task-done th {
-        text-align: center !important;
-        /* Căn giữa cho tiêu đề */
+        text-align: center;
+    }
+
+    .selected-criteria .criteria-tag {
+        margin-bottom: 5px;
+        display: inline-block;
+    }
+
+    .selected-criteria {
+        min-height: 40px;
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 10px;
     }
 
     .action-column {
@@ -203,6 +221,35 @@ $stmt->close();
     .table th.task-done {
         text-align: center !important;
         /* Căn giữa tiêu đề */
+    }
+
+    .criteria-tag {
+        display: inline-block;
+        padding: 5px 10px;
+        margin: 2px;
+        border-radius: 15px;
+        color: #000;
+        font-size: 0.9em;
+    }
+
+    .criteria-tag i {
+        margin-left: 5px;
+        cursor: pointer;
+    }
+
+    #deleteConfirmModal .modal-content {
+        border-radius: 10px;
+    }
+
+    #deleteConfirmModal .modal-header {
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+    }
+
+    #deleteConfirmModal .modal-body {
+        padding: 20px;
+        text-align: center;
+        font-size: 1.1em;
     }
 </style>
 
@@ -219,7 +266,7 @@ $stmt->close();
             <div class="col-12">
                 <!-- Button to trigger modal -->
                 <button type="button" class="btn btn-primary mb-3" data-toggle="modal" data-target="#scheduleModal">
-                    <i class="fa fa-check-circle"></i> Confirm completion of tasks
+                    <i class="fa fa-check-circle"></i> Confirm completed tasks
                 </button>
 
                 <!-- Schedule Modal -->
@@ -227,8 +274,7 @@ $stmt->close();
                     <div class="modal-dialog" role="document">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5 class="modal-title" style="color:black">Add Schedule Entry</h5>
-                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                <h5 class="modal-title" style="color:black">Add Schedule Data</h5>
                             </div>
                             <div class="modal-body">
                                 <form id="scheduleForm">
@@ -279,7 +325,6 @@ $stmt->close();
                                     <!-- Thay thế phần check_status trong form -->
                                     <div class="form-group">
                                         <label>Task Done</label>
-                                        <div class="selected-criteria mb-2"></div>
                                         <select class="form-control" id="checkStatusSelect">
                                             <option value="">Select Task Done</option>
                                             <?php
@@ -290,10 +335,92 @@ $stmt->close();
                                             }
                                             ?>
                                         </select>
+                                        <div class="selected-criteria mb-2"></div>
                                         <input type="hidden" name="check_status" id="checkStatusInput">
                                     </div>
                                     <button type="submit" class="btn btn-primary">Submit</button>
                                 </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Modal -->
+                <div class="modal" id="editScheduleModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" style="color:black">Edit Schedule Data</h5>
+                            </div>
+                            <div class="modal-body">
+                                <form id="editScheduleForm">
+                                    <input type="hidden" name="id" id="editScheduleId">
+                                    <div class="form-group">
+                                        <label>Date</label>
+                                        <input type="text" class="form-control" id="editDateCheck" name="date_check"
+                                            readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Diets</label>
+                                        <input type="text" class="form-control" id="editDiets" name="diets" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Work Done</label>
+                                        <select class="form-control" name="work_done" id="editWorkDoneSelect" required>
+                                            <option value="">Select Work Done</option>
+                                            <option value="Acclimation" data-color="g">Acclimation</option>
+                                            <option value="Feeding & Observation" data-color="b">Feeding & Observation
+                                            </option>
+                                            <option value="Post -challenge observation" data-color="o">Post -challenge
+                                                observation</option>
+                                            <option value="Immersion ? challenge" data-color="r">Immersion ? challenge
+                                            </option>
+                                        </select>
+                                        <div id="editAdditionalOptions" style="display: none;">
+                                            <label>Choose challenge:</label>
+                                            <select class="form-control" name="immersion_option"
+                                                id="editImmersionOptionSelect">
+                                                <option value="">Select challenge</option>
+                                                <option value="EMS">EMS</option>
+                                                <option value="TSB+">TSB+</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Task Done</label>
+                                        <select class="form-control" id="editCheckStatusSelect">
+                                            <option value="">Select Task Done</option>
+                                            <?php foreach ($workNames as $work): ?>
+                                                <option value="<?php echo $work['id']; ?>">
+                                                    <?php echo htmlspecialchars($work['work_name']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <div class="selected-criteria mb-2" id="editSelectedCriteria"></div>
+                                        <input type="hidden" name="check_status" id="editCheckStatusInput">
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary">Update</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delete Confirmation Modal -->
+                <div class="modal" id="deleteConfirmModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title">Confirm Delete</h5>
+                            </div>
+                            <div class="modal-body">
+                                <p>Are you sure you want to delete this schedule data?</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default btn-close-modal"
+                                    data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
                             </div>
                         </div>
                     </div>
@@ -346,10 +473,10 @@ $stmt->close();
                                         }
                                         echo "<td class='task-done'>" . nl2br(implode("\n", $criteriaNames)) . "</td>";
                                         echo "<td class='action-column'>
-                                                <a href='php_action/edit_schedule.php?id=" . $rows[0]['id'] . "' class='btn btn-warning btn-sm'>
+                                                <a class='btn btn-warning btn-sm' data-toggle='modal' data-target='#editScheduleModal' onclick='editSchedule(" . $rows[0]['id'] . ")'>
                                                     <i class='fa fa-edit'></i> Edit
                                                 </a>
-                                                <a href='php_action/delete_schedule.php?id=" . $rows[0]['id'] . "' class='btn btn-danger btn-sm'>
+                                                <a  class='btn btn-danger btn-sm' onclick='confirmDelete(" . $rows[0]['id'] . ")'>
                                                     <i class='fa fa-trash'></i> Delete
                                                 </a>
                                               </td>";
@@ -374,10 +501,10 @@ $stmt->close();
                                             }
                                             echo "<td class='task-done'>" . nl2br(implode("\n", $criteriaNames)) . "</td>";
                                             echo "<td class='action-column'>
-                                                    <a href='php_action/edit_schedule.php?id=" . $rows[$i]['id'] . "' class='btn btn-warning btn-sm'>
+                                                    <a  class='btn btn-warning btn-sm' data-toggle='modal' data-target='#editScheduleModal' onclick='editSchedule(" . $rows[$i]['id'] . ")'>
                                                         <i class='fa fa-edit'></i> Edit
                                                     </a>
-                                                    <a href='php_action/delete_schedule.php?id=" . $rows[$i]['id'] . "' class='btn btn-danger btn-sm'>
+                                                    <a class='btn btn-danger btn-sm' onclick='confirmDelete(" . $rows[$i]['id'] . ")'>
                                                         <i class='fa fa-trash'></i> Delete
                                                     </a>
                                                   </td>";
@@ -572,5 +699,247 @@ $stmt->close();
     function updateCheckStatusInput() {
         const criteriaIds = selectedCriteria.map(item => item.id);
         $('#checkStatusInput').val(JSON.stringify(criteriaIds));
+    }
+    // Xác nhận xóa
+    function confirmDelete(id) {
+        $('#deleteConfirmModal').modal('show');
+
+        $('#confirmDeleteBtn').off('click').on('click', function () {
+            $.ajax({
+                url: 'php_action/delete_schedule.php',
+                type: 'POST',
+                data: { id: id },
+                success: function (response) {
+                    const data = JSON.parse(response);
+                    if (data.success) {
+                        showToast('Schedule deleted successfully', 'success');
+                        $('#deleteConfirmModal').modal('hide');
+                        updateTableData(); // Cập nhật bảng mà không reload trang
+                    } else {
+                        showToast('Error: ' + data.messages, 'error');
+                    }
+                }
+            });
+        });
+    }
+
+    function editSchedule(id) {
+        editSelectedCriteria = []; // Reset mảng criteria
+
+        $.ajax({
+            url: 'php_action/get_schedule.php',
+            type: 'POST',
+            data: { id: id },
+            success: function (response) {
+                const data = JSON.parse(response);
+                if (data.success) {
+                    const schedule = data.schedule;
+
+                    $('#editScheduleId').val(schedule.id);
+                    // Định dạng lại ngày ở dạng d-m-Y
+                    const dateCheck = new Date(schedule.date_check);
+                    const formattedDate = `${('0' + dateCheck.getDate()).slice(-2)}-${('0' + (dateCheck.getMonth() + 1)).slice(-2)}-${dateCheck.getFullYear()}`;
+                    $('#editDateCheck').val(formattedDate);
+
+                    $('#editDiets').val(schedule.diets);
+
+                    // Set Work Done
+                    const workDoneSelect = $('#editWorkDoneSelect');
+                    workDoneSelect.val(schedule.work_done);
+
+                    // Kiểm tra và thêm giá trị "Immersion EMS challenge" và "Immersion TSB+ challenge" nếu chưa có
+                    const immersionOptions = ["Immersion EMS challenge", "Immersion TSB+ challenge"];
+                    immersionOptions.forEach(option => {
+                        if (schedule.work_done.includes(option) && !workDoneSelect.find(`option[value="${option}"]`).length) {
+                            const newOption = new Option(option, option);
+                            $(newOption).attr('data-color', 'r'); // Gán màu cho option
+                            workDoneSelect.append(newOption); // Thêm option vào select
+                        }
+                    });
+
+                    // Chọn option vừa thêm nếu có
+                    workDoneSelect.val(schedule.work_done);
+
+                    // Set màu cho Work Done
+                    const selectedOption = workDoneSelect.find('option:selected');
+                    const color = selectedOption.data('color');
+                    workDoneSelect.css('background-color', color === 'g' ? '#d4edda' :
+                        color === 'b' ? '#cce5ff' :
+                            color === 'o' ? '#ffeeba' :
+                                color === 'r' ? '#f8d7da' : '');
+
+                    // Load Task Done
+                    const checkStatusIds = JSON.parse(schedule.check_status);
+                    checkStatusIds.forEach((id, index) => {
+                        const option = $(`#editCheckStatusSelect option[value="${id}"]`);
+                        if (option.length) {
+                            editSelectedCriteria.push({
+                                id: id,
+                                name: option.text(),
+                                color: taskColors[index % taskColors.length]
+                            });
+                            option.hide();
+                        }
+                    });
+                    updateEditCriteriaDisplay();
+                    updateEditCheckStatusInput();
+                }
+            }
+        });
+    }
+
+    // Xử lý Work Done selection trong form edit
+    $('#editWorkDoneSelect').on('change', function () {
+        const selectedValue = $(this).val();
+        const selectedOption = $(this).find('option:selected');
+        const color = selectedOption.data('color');
+
+        $(this).css('background-color', '');
+
+        if (selectedValue) {
+            $(this).css('background-color', color === 'g' ? '#d4edda' :
+                color === 'b' ? '#cce5ff' :
+                    color === 'o' ? '#ffeeba' :
+                        color === 'r' ? '#f8d7da' : '');
+
+            $(this).css('color', 'black');
+
+            if (selectedValue === "Immersion ? challenge") {
+                $('#editAdditionalOptions').show();
+            } else {
+                $('#editAdditionalOptions').hide();
+            }
+        } else {
+            $('#editAdditionalOptions').hide();
+        }
+    });
+
+    // Xử lý Immersion Option trong form edit
+    $('#editImmersionOptionSelect').on('change', function () {
+        const selectedImmersionOption = $(this).val();
+        const workDoneSelect = $('#editWorkDoneSelect');
+
+        if (selectedImmersionOption) {
+            const newWorkDone = `Immersion ${selectedImmersionOption} challenge`;
+            const newOption = new Option(newWorkDone, newWorkDone);
+            $(newOption).attr('data-color', 'r');
+
+            workDoneSelect.append(newOption);
+            workDoneSelect.val(newWorkDone);
+            workDoneSelect.trigger('change');
+            $('#editAdditionalOptions').hide();
+        }
+    });
+
+    // Hàm cập nhật bảng mà không reload trang
+    function updateTableData() {
+        $.ajax({
+            url: 'php_action/get_schedule_data.php',
+            type: 'POST',
+            data: { case_study_id: '<?php echo $caseStudyId; ?>' },
+            success: function (response) {
+                $('#scheduleTableBody').html(response);
+            }
+        });
+    }
+
+    // Xử lý form edit submission
+    $('#editScheduleForm').on('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        $.ajax({
+            url: 'php_action/edit_schedule.php',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                const data = JSON.parse(response);
+                if (data.success) {
+                    showToast('Schedule updated successfully', 'success');
+                    $('#editScheduleModal').modal('hide');
+                    updateTableData();
+                } else {
+                    showToast('Error: ' + data.messages, 'error');
+                }
+            }
+        });
+    });
+    // Mảng màu random cho các task
+    const taskColors = [
+        '#FFB6C1', '#98FB98', '#87CEFA', '#DDA0DD', '#F0E68C',
+        '#E6E6FA', '#FFA07A', '#98FF98', '#87CEEB', '#FFB6C1'
+    ];
+
+    // Khởi tạo mảng để lưu các criteria đã chọn trong form edit
+    let editSelectedCriteria = [];
+
+    // Xử lý khi chọn criteria trong form edit
+    $('#editCheckStatusSelect').on('change', function () {
+        const selectedId = $(this).val();
+        if (!selectedId) return;
+
+        const selectedText = $(this).find('option:selected').text();
+        const colorIndex = editSelectedCriteria.length % taskColors.length;
+
+        // Thêm vào mảng editSelectedCriteria
+        if (!editSelectedCriteria.find(item => item.id === selectedId)) {
+            editSelectedCriteria.push({
+                id: selectedId,
+                name: selectedText,
+                color: taskColors[colorIndex]
+            });
+        }
+
+        // Cập nhật hiển thị
+        updateEditCriteriaDisplay();
+
+        // Ẩn option đã chọn
+        $(this).find(`option[value="${selectedId}"]`).hide();
+
+        // Reset select về giá trị mặc định
+        $(this).val('');
+
+        // Cập nhật input hidden
+        updateEditCheckStatusInput();
+    });
+
+    // Hàm cập nhật hiển thị các criteria đã chọn trong form edit
+    function updateEditCriteriaDisplay() {
+        const container = $('#editSelectedCriteria');
+        container.empty();
+
+        editSelectedCriteria.forEach(criteria => {
+            container.append(`
+                <span class="criteria-tag" style="background-color: ${criteria.color}">
+                    ${criteria.name}
+                    <i class="fa fa-times remove-edit-criteria" data-id="${criteria.id}"></i>
+                </span>
+            `);
+        });
+    }
+
+    // Xử lý xóa criteria trong form edit
+    $(document).on('click', '.remove-edit-criteria', function () {
+        const idToRemove = $(this).data('id');
+
+        // Xóa khỏi mảng editSelectedCriteria
+        editSelectedCriteria = editSelectedCriteria.filter(item => item.id !== idToRemove.toString());
+
+        // Hiện lại option trong select
+        $(`#editCheckStatusSelect option[value="${idToRemove}"]`).show();
+
+        // Cập nhật hiển thị
+        updateEditCriteriaDisplay();
+
+        // Cập nhật input hidden
+        updateEditCheckStatusInput();
+    });
+
+    // Hàm cập nhật input hidden trong form edit
+    function updateEditCheckStatusInput() {
+        const criteriaIds = editSelectedCriteria.map(item => item.id);
+        $('#editCheckStatusInput').val(JSON.stringify(criteriaIds));
     }
 </script>
