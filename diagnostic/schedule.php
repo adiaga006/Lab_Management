@@ -21,9 +21,36 @@ $workNames = [];
 while ($row = $result->fetch_assoc()) {
     $workNames[] = $row;
 }
+// Lấy dữ liệu schedule
+$sql = "SELECT date_check, work_done, check_status FROM schedule WHERE case_study_id = ? ORDER BY date_check";
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$result = $stmt->get_result();
+$scheduleData = [];
+
+while ($row = $result->fetch_assoc()) {
+    // Chuyển đổi định dạng ngày từ YYYY-MM-DD sang DD-MM-YYYY cho khớp với format datepicker
+    $date = date('d-m-Y', strtotime($row['date_check']));
+    $scheduleData[$date] = [
+        'work_done' => $row['work_done'],
+        'check_status' => $row['check_status']
+    ];
+}
+$stmt->close();
 ?>
 
 <style>
+    .btn {
+        align-items: center;
+        /* Căn giữa icon và chữ */
+    }
+
+    .btn i {
+        margin-right: 5px;
+        /* Khoảng cách giữa icon và chữ */
+    }
+
     /* Thay đổi màu nền cho ô Work Done */
     #workDoneSelect {
         font-weight: bold;
@@ -251,6 +278,28 @@ while ($row = $result->fetch_assoc()) {
         text-align: center;
         font-size: 1.1em;
     }
+
+    #changeViewBtn {
+        background-color: #007bff;
+        /* Màu nền */
+        color: white;
+        /* Màu chữ */
+        border: none;
+        /* Không có viền */
+        padding: 10px 20px;
+        /* Padding */
+        border-radius: 5px;
+        /* Bo góc */
+        cursor: pointer;
+        /* Con trỏ chuột */
+        transition: background-color 0.3s;
+        /* Hiệu ứng chuyển màu */
+    }
+
+    #changeViewBtn:hover {
+        background-color: #0056b3;
+        /* Màu nền khi hover */
+    }
 </style>
 
 
@@ -264,11 +313,15 @@ while ($row = $result->fetch_assoc()) {
     <div class="container-fluid">
         <div class="row">
             <div class="col-12">
-                <!-- Button to trigger modal -->
-                <button type="button" class="btn btn-primary mb-3" data-toggle="modal" data-target="#scheduleModal">
-                    <i class="fa fa-check-circle"></i> Confirm completed tasks
-                </button>
-
+                <div class="d-flex justify-content-between mb-3">
+                    <!-- Button to trigger modal -->
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#scheduleModal">
+                        <i class="fa fa-check-circle"></i> Confirm completed tasks
+                    </button>
+                    <button id="changeViewBtn" class="btn btn-primary">
+                        <i class="fa fa-eye"></i> Change View
+                    </button>
+                </div>
                 <!-- Schedule Modal -->
                 <div class="modal" id="scheduleModal" tabindex="-1" role="dialog">
                     <div class="modal-dialog" role="document">
@@ -528,6 +581,11 @@ while ($row = $result->fetch_assoc()) {
 <!-- Flatpickr JS -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
+    $(document).ready(function () {
+        $('#changeViewBtn').on('click', function () {
+            window.location.href = 'change_view_schedule.php?case_study_id=<?php echo $caseStudyId; ?>';
+        });
+    });
     // Initialize Flatpickr
     flatpickr("#dateCheck", {
         dateFormat: "d-m-Y",
@@ -669,12 +727,24 @@ while ($row = $result->fetch_assoc()) {
         container.empty();
 
         selectedCriteria.forEach(criteria => {
-            container.append(`
-                <span class="criteria-tag">
-                    ${criteria.name}
-                    <i class="fa fa-times remove-criteria" data-id="${criteria.id}"></i>
-                </span>
-            `);
+            const criteriaElement = $('<div>', {
+                class: 'badge badge-primary mr-2 mb-2 p-2',
+                html: criteria.name
+            });
+
+            // Chỉ thêm nút xóa nếu không bị khóa
+            if (!isTaskDoneLocked) {
+                const removeButton = $('<span>', {
+                    class: 'ml-2 cursor-pointer',
+                    html: '×',
+                    click: function () {
+                        removeCriteria(criteria.id);
+                    }
+                });
+                criteriaElement.append(removeButton);
+            }
+
+            container.append(criteriaElement);
         });
     }
 
@@ -709,8 +779,8 @@ while ($row = $result->fetch_assoc()) {
                 url: 'php_action/delete_schedule.php',
                 type: 'POST',
                 data: { id: id },
-                success: function (response) {
-                    const data = JSON.parse(response);
+                dataType: 'json', // jQuery sẽ tự động parse JSON
+                success: function (data) { // data đã là đối tượng JavaScript
                     if (data.success) {
                         showToast('Schedule deleted successfully', 'success');
                         $('#deleteConfirmModal').modal('hide');
@@ -718,13 +788,20 @@ while ($row = $result->fetch_assoc()) {
                     } else {
                         showToast('Error: ' + data.messages, 'error');
                     }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Ajax Error:', error);
+                    showToast('Error occurred while deleting schedule', 'error');
                 }
             });
         });
     }
 
     function editSchedule(id) {
-        editSelectedCriteria = []; // Reset mảng criteria
+        // Reset form và dữ liệu
+        editSelectedCriteria = [];
+        $('#editCheckStatusSelect option').show();
+        $('#editSelectedCriteria').empty();
 
         $.ajax({
             url: 'php_action/get_schedule.php',
@@ -735,59 +812,54 @@ while ($row = $result->fetch_assoc()) {
                 if (data.success) {
                     const schedule = data.schedule;
 
+                    // Set các giá trị cơ bản
                     $('#editScheduleId').val(schedule.id);
-                    // Định dạng lại ngày ở dạng d-m-Y
+                    $('#editDiets').val(schedule.diets);
+
+                    // Định dạng và set ngày
                     const dateCheck = new Date(schedule.date_check);
                     const formattedDate = `${('0' + dateCheck.getDate()).slice(-2)}-${('0' + (dateCheck.getMonth() + 1)).slice(-2)}-${dateCheck.getFullYear()}`;
                     $('#editDateCheck').val(formattedDate);
 
-                    $('#editDiets').val(schedule.diets);
+                    // Set và update màu cho Work Done ngay lập tức
+                    $('#editWorkDoneSelect')
+                        .val(schedule.work_done)
+                        .trigger('change');
 
-                    // Set Work Done
-                    const workDoneSelect = $('#editWorkDoneSelect');
-                    workDoneSelect.val(schedule.work_done);
+                    // Xử lý Task Done
+                    if (schedule.check_status) {
+                        try {
+                            const checkStatus = JSON.parse(schedule.check_status);
+                            editSelectedCriteria = []; // Reset lại mảng
 
-                    // Kiểm tra và thêm giá trị "Immersion EMS challenge" và "Immersion TSB+ challenge" nếu chưa có
-                    const immersionOptions = ["Immersion EMS challenge", "Immersion TSB+ challenge"];
-                    immersionOptions.forEach(option => {
-                        if (schedule.work_done.includes(option) && !workDoneSelect.find(`option[value="${option}"]`).length) {
-                            const newOption = new Option(option, option);
-                            $(newOption).attr('data-color', 'r'); // Gán màu cho option
-                            workDoneSelect.append(newOption); // Thêm option vào select
-                        }
-                    });
-
-                    // Chọn option vừa thêm nếu có
-                    workDoneSelect.val(schedule.work_done);
-
-                    // Set màu cho Work Done
-                    const selectedOption = workDoneSelect.find('option:selected');
-                    const color = selectedOption.data('color');
-                    workDoneSelect.css('background-color', color === 'g' ? '#d4edda' :
-                        color === 'b' ? '#cce5ff' :
-                            color === 'o' ? '#ffeeba' :
-                                color === 'r' ? '#f8d7da' : '');
-
-                    // Load Task Done
-                    const checkStatusIds = JSON.parse(schedule.check_status);
-                    checkStatusIds.forEach((id, index) => {
-                        const option = $(`#editCheckStatusSelect option[value="${id}"]`);
-                        if (option.length) {
-                            editSelectedCriteria.push({
-                                id: id,
-                                name: option.text(),
-                                color: taskColors[index % taskColors.length]
+                            // Thêm từng task vào mảng selectedCriteria
+                            checkStatus.forEach((id, index) => {
+                                const option = $(`#editCheckStatusSelect option[value="${id}"]`);
+                                if (option.length) {
+                                    editSelectedCriteria.push({
+                                        id: id,
+                                        name: option.text(),
+                                        color: taskColors[index % taskColors.length]
+                                    });
+                                    option.hide(); // Ẩn option đã chọn
+                                }
                             });
-                            option.hide();
+
+                            // Cập nhật UI
+                            updateEditCriteriaDisplay();
+                            updateEditCheckStatusInput();
+                        } catch (e) {
+                            console.error('Error parsing check_status:', e);
+                            showToast('Error loading task done data', 'error');
                         }
-                    });
-                    updateEditCriteriaDisplay();
-                    updateEditCheckStatusInput();
+                    }
                 }
+            },
+            error: function () {
+                showToast('Error loading schedule data', 'error');
             }
         });
     }
-
     // Xử lý Work Done selection trong form edit
     $('#editWorkDoneSelect').on('change', function () {
         const selectedValue = $(this).val();
@@ -843,21 +915,31 @@ while ($row = $result->fetch_assoc()) {
         });
     }
 
-    // Xử lý form edit submission
+    // Cập nhật tất cả schedule trong cùng ngày khi submit edit form
     $('#editScheduleForm').on('submit', function (e) {
         e.preventDefault();
-        const formData = new FormData(this);
 
+        const dateCheck = $('#editDateCheck').val();
+        const [day, month, year] = dateCheck.split('-');
+        const formattedDate = `${year}-${month}-${day}`;
+        const checkStatus = $('#editCheckStatusInput').val();
+
+        // Gọi API để cập nhật tất cả schedule trong cùng ngày
         $.ajax({
             url: 'php_action/edit_schedule.php',
             type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
+            data: {
+                id: $('#editScheduleId').val(),
+                date_check: formattedDate,
+                diets: $('#editDiets').val(),
+                work_done: $('#editWorkDoneSelect').val(),
+                check_status: checkStatus,
+                update_all_in_date: true
+            },
             success: function (response) {
                 const data = JSON.parse(response);
                 if (data.success) {
-                    showToast('Schedule updated successfully', 'success');
+                    showToast('All schedules for this date updated successfully', 'success');
                     $('#editScheduleModal').modal('hide');
                     updateTableData();
                 } else {
@@ -865,8 +947,7 @@ while ($row = $result->fetch_assoc()) {
                 }
             }
         });
-    });
-    // Mảng màu random cho các task
+    })
     const taskColors = [
         '#FFB6C1', '#98FB98', '#87CEFA', '#DDA0DD', '#F0E68C',
         '#E6E6FA', '#FFA07A', '#98FF98', '#87CEEB', '#FFB6C1'
@@ -890,19 +971,17 @@ while ($row = $result->fetch_assoc()) {
                 name: selectedText,
                 color: taskColors[colorIndex]
             });
+
+            // Ẩn option đã chọn
+            $(this).find(`option[value="${selectedId}"]`).hide();
+
+            // Cập nhật UI
+            updateEditCriteriaDisplay();
+            updateEditCheckStatusInput();
         }
-
-        // Cập nhật hiển thị
-        updateEditCriteriaDisplay();
-
-        // Ẩn option đã chọn
-        $(this).find(`option[value="${selectedId}"]`).hide();
 
         // Reset select về giá trị mặc định
         $(this).val('');
-
-        // Cập nhật input hidden
-        updateEditCheckStatusInput();
     });
 
     // Hàm cập nhật hiển thị các criteria đã chọn trong form edit
@@ -912,11 +991,11 @@ while ($row = $result->fetch_assoc()) {
 
         editSelectedCriteria.forEach(criteria => {
             container.append(`
-                <span class="criteria-tag" style="background-color: ${criteria.color}">
-                    ${criteria.name}
-                    <i class="fa fa-times remove-edit-criteria" data-id="${criteria.id}"></i>
-                </span>
-            `);
+            <span class="criteria-tag" style="background-color: ${criteria.color}">
+                ${criteria.name}
+                <i class="fa fa-times remove-edit-criteria" data-id="${criteria.id}"></i>
+            </span>
+        `);
         });
     }
 
@@ -930,16 +1009,88 @@ while ($row = $result->fetch_assoc()) {
         // Hiện lại option trong select
         $(`#editCheckStatusSelect option[value="${idToRemove}"]`).show();
 
-        // Cập nhật hiển thị
+        // Cập nhật UI
         updateEditCriteriaDisplay();
-
-        // Cập nhật input hidden
         updateEditCheckStatusInput();
     });
 
+    // Cập nhật màu cho Work Done khi thay đổi
+    $('#editWorkDoneSelect').on('change', function () {
+        const selectedOption = $(this).find('option:selected');
+        const color = selectedOption.data('color') || '#ffffff';
+        $(this).css('background-color', color);
+    });
     // Hàm cập nhật input hidden trong form edit
     function updateEditCheckStatusInput() {
         const criteriaIds = editSelectedCriteria.map(item => item.id);
         $('#editCheckStatusInput').val(JSON.stringify(criteriaIds));
     }
+
+    // Lưu trữ dữ liệu schedule dưới dạng JavaScript object
+    const scheduleData = <?php echo json_encode($scheduleData); ?>;
+
+    // Thêm biến để theo dõi trạng thái khóa
+    let isTaskDoneLocked = false;
+
+    // Thêm event handler cho input ngày trong modal add schedule
+    $('#dateCheck').on('change', function () {
+        const dateCheck = $(this).val();
+
+        // Reset Work Done (luôn cho phép chỉnh sửa)
+        $('#workDoneSelect').val('');
+        $('#workDoneSelect').prop('readonly', false);
+
+        // Kiểm tra xem ngày đã chọn có dữ liệu không
+        if (scheduleData[dateCheck]) {
+            const data = scheduleData[dateCheck];
+
+            // Chỉ điền và khóa Task Done
+            if (data.check_status) {
+                isTaskDoneLocked = true; // Đánh dấu là đã khóa
+                const checkStatus = JSON.parse(data.check_status);
+                selectedCriteria = []; // Reset mảng criteria hiện tại
+
+                // Ẩn tất cả options trước
+                $('#checkStatusSelect option').show();
+
+                // Thêm từng criteria đã chọn
+                checkStatus.forEach(id => {
+                    const option = $(`#checkStatusSelect option[value="${id}"]`);
+                    if (option.length) {
+                        selectedCriteria.push({
+                            id: id,
+                            name: option.text()
+                        });
+                        option.hide(); // Ẩn option đã chọn
+                    }
+                });
+
+                // Cập nhật hiển thị và input hidden
+                updateCriteriaDisplay();
+                updateCheckStatusInput();
+
+                // Khóa không cho chọn thêm Task Done
+                $('#checkStatusSelect').prop('disabled', true);
+            }
+        } else {
+            // Reset Task Done và mở khóa
+            isTaskDoneLocked = false; // Đánh dấu là đã mở khóa
+            selectedCriteria = [];
+            updateCriteriaDisplay();
+            updateCheckStatusInput();
+            $('#checkStatusSelect option').show();
+            $('#checkStatusSelect').prop('disabled', false);
+        }
+    });
+
+    // Reset form khi mở modal
+    $('#addScheduleModal').on('show.bs.modal', function () {
+        isTaskDoneLocked = false; // Reset trạng thái khóa
+        $('#addScheduleForm')[0].reset();
+        selectedCriteria = [];
+        updateCriteriaDisplay();
+        updateCheckStatusInput();
+        $('#checkStatusSelect option').show();
+        $('#checkStatusSelect').prop('disabled', false);
+    });
 </script>

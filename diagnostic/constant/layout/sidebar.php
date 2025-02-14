@@ -6,7 +6,7 @@ if (!isset($connect)) {
 
 // Kiểm tra xem có đang ở trang liên quan đến case study không
 $currentPage = basename($_SERVER['PHP_SELF']);
-$relatedPages = ['group.php', 'manage_image.php', 'chart.php', 'results.php', 'entry_data.php', 'death_data.php', 'water_quality.php', 'view_death_data.php', 'entry_data_survival.php', 'entry_data_feeding.php', 'edit-case_study.php','schedule.php'];
+$relatedPages = ['group.php', 'manage_image.php', 'chart.php', 'results.php', 'entry_data.php', 'death_data.php', 'water_quality.php', 'view_death_data.php', 'entry_data_survival.php', 'entry_data_feeding.php', 'edit-case_study.php','schedule.php','change_view_schedule.php'];
 $isRelatedPage = (isset($_GET['case_study_id']) || isset($_GET['id'])) && in_array($currentPage, $relatedPages);
 
 // Lấy case study ID từ URL (xử lý cả hai trường hợp)

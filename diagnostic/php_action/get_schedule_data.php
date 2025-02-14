@@ -34,10 +34,10 @@ if (isset($_POST['case_study_id'])) {
         }
         echo "<td class='task-done'>" . nl2br(implode("\n", $criteriaNames)) . "</td>";
         echo "<td class='action-column'>
-                <a href='#' class='btn btn-warning btn-sm' data-toggle='modal' data-target='#editScheduleModal' onclick='editSchedule(" . $rows[0]['id'] . ")'>
+                <a  class='btn btn-warning btn-sm' data-toggle='modal' data-target='#editScheduleModal' onclick='editSchedule(" . $rows[0]['id'] . ")'>
                     <i class='fa fa-edit'></i> Edit
                 </a>
-                <a href='#' class='btn btn-danger btn-sm' onclick='confirmDelete(" . $rows[0]['id'] . ")'>
+                <a  class='btn btn-danger btn-sm' onclick='confirmDelete(" . $rows[0]['id'] . ")'>
                     <i class='fa fa-trash'></i> Delete
                 </a>
               </td>";
@@ -62,10 +62,10 @@ if (isset($_POST['case_study_id'])) {
             }
             echo "<td class='task-done'>" . nl2br(implode("\n", $criteriaNames)) . "</td>";
             echo "<td class='action-column'>
-                    <a href='#' class='btn btn-warning btn-sm' data-toggle='modal' data-target='#editScheduleModal' onclick='editSchedule(" . $rows[$i]['id'] . ")'>
+                    <a  class='btn btn-warning btn-sm' data-toggle='modal' data-target='#editScheduleModal' onclick='editSchedule(" . $rows[$i]['id'] . ")'>
                         <i class='fa fa-edit'></i> Edit
                     </a>
-                    <a href='#' class='btn btn-danger btn-sm' onclick='confirmDelete(" . $rows[$i]['id'] . ")'>
+                    <a  class='btn btn-danger btn-sm' onclick='confirmDelete(" . $rows[$i]['id'] . ")'>
                         <i class='fa fa-trash'></i> Delete
                     </a>
                   </td>";
