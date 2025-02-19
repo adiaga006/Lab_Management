@@ -123,18 +123,9 @@ $stmt->close();
 }
 
 /* Định dạng cột đầu tiên */
-td:first-child, th:first-child {
-    background-color: #f4f4f4;
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    min-width: 200px;
-}
 
 /* Màu cho các work_done khác nhau */
-tr td:not(:first-child) {
-    background-color: #ffffff;
-}
+
 
 /* Màu cho các trạng thái work_done */
 tr td[data-color="g"] { background-color: #d4edda !important; }  /* Success - Xanh lá */
@@ -143,7 +134,7 @@ tr td[data-color="o"] { background-color: #fff3cd !important; }  /* Warning - V�
 tr td[data-color="r"] { background-color: #f8d7da !important; }  /* Danger - Đỏ */
 
 /* Hiệu ứng hover */
-.table tbody tr:hover td:not(:first-child) {
+.table tbody tr:hover td {
     background-color: rgba(0,0,0,0.05) !important;
 }
 
@@ -151,17 +142,6 @@ tr td[data-color="r"] { background-color: #f8d7da !important; }  /* Danger - Đ�
 .table td:last-child, .table th:last-child {
     border-right: 2px solid #000 !important;
 }
-
-/* Responsive */
-@media (max-width: 768px) {
-    .table th, .table td {
-        min-width: 150px;
-    }
-    td:first-child, th:first-child {
-        min-width: 200px;
-    }
-}
-
 /* CSS cho table wrapper */
 .table-wrapper {
     position: relative;
@@ -173,7 +153,7 @@ tr td[data-color="r"] { background-color: #f8d7da !important; }  /* Danger - Đ�
     position: absolute;
     left: 0;
     top: auto;
-    width: 150px; /* Điều chỉnh độ rộng cột Task */
+    width: 322px; /* Điều chỉnh độ rộng cột Task */
     background-color: #fff;
     border-right: 2px solid #dee2e6;
     z-index: 2;
@@ -187,7 +167,7 @@ tr td[data-color="r"] { background-color: #f8d7da !important; }  /* Danger - Đ�
 /* CSS cho scrollable area */
 .table-scroll {
     overflow-x: auto;
-    margin-left: 150px; /* Phải khớp với width của fixed-column */
+    margin-left: 322px; /* Phải khớp với width của fixed-column */
 }
 
 /* Đảm bảo các cell cùng chiều cao */
