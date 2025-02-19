@@ -345,7 +345,7 @@ function getColorCode($workDone)
     /* Phần cuộn cho bảng Work Done */
     .work-done-scroll {
         overflow-x: auto;
-        margin-left: px; /* Độ rộng của cột Treatment */
+        margin-left: 322px; /* Độ rộng của cột Treatment */
     }
 
     /* Cột cố định cho bảng Work Done */
