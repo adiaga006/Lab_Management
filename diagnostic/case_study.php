@@ -48,7 +48,7 @@ $result = $stmt->get_result();
                             <div class="filter-icon-wrapper">
                                 <i class="fas fa-folder filter-icon"></i>
                                 <select id="categoryFilter" class="form-select">
-                                    <option value="">All Categories</option>
+                                    <option value="">All types of Case Studies</option>
                                     <?php
                                     $catSql = "SELECT DISTINCT category_name FROM case_study WHERE user_id = ?";
                                     $stmt = $connect->prepare($catSql);
@@ -112,10 +112,10 @@ $result = $stmt->get_result();
                     <table id="myTable" class="table table-bordered">
                         <thead>
                             <tr>
-                                <th class="case-id-column">Case Study ID</th>
+                                <th>Case Study ID</th>
                                 <th>Case Study Name</th>
                                 <th class="location-column">Location</th>
-                                <th class="date-column">Start Date</th>
+                                <th>Start Date</th>
                                 <th>Category</th>
                                 <th>Status</th>
                                 <th class="action-column">Action</th>
@@ -134,12 +134,12 @@ $result = $stmt->get_result();
                                 <tr onclick="window.location='group.php?case_study_id=<?php echo $row['case_study_id']; ?>'" 
                                     style="cursor: pointer;"
                                     data-category="<?php echo $row['category_name']; ?>">
-                                    <td class="case-id-column">
+                                    <td>
                                         <span class="case-study-link"><?php echo $row['case_study_id']; ?></span>
                                     </td>
                                     <td><?php echo $row['case_name']; ?></td>
                                     <td class="location-column" title="<?php echo $row['location']; ?>"><?php echo $row['location']; ?></td>
-                                    <td class="date-column"><?php echo date('d-m-Y', strtotime($row['start_date'])); ?></td>
+                                    <td><?php echo date('d-m-Y', strtotime($row['start_date'])); ?></td>
                                     <td><?php echo $row['categories_name']; ?></td>
                                     <td><?php echo $statusBadge; ?></td>
                                     <td class="action-column">
@@ -282,24 +282,56 @@ $result = $stmt->get_result();
         }
 
         /* Form select với icons */
-        .form-select {
-            padding-left: 35px;  /* Space for icon */
-            height: 38px;
-            background-position: right 0.75rem center;
+        .form-select, .btn-secondary {
+            border-radius: 20px !important;
+            padding: 8px 20px;
+            border: 1px solid #e3e6f0;
         }
 
+        .form-select:focus {
+            box-shadow: none;
+            border-color: #4e73df;
+        }
+
+        /* Filter icons position */
         .filter-icon-wrapper {
             position: relative;
         }
 
         .filter-icon {
             position: absolute;
-            left: 10px;
+            left: 15px;
             top: 50%;
             transform: translateY(-50%);
             z-index: 2;
             color: #6c757d;
-            font-size: 14px;
+        }
+
+        /* Reset button */
+        .btn-reset {
+            background-color: #f8f9fc;
+            border: 1px solid #e3e6f0;
+            color: #6c757d;
+        }
+
+        .btn-reset:hover {
+            background-color: #eaecf4;
+            border-color: #d1d3e2;
+            color: #4e73df;
+        }
+
+        /* Table column widths */
+        .table th.action-column,
+        .table td.action-column {
+            width: 100px;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .table th.location-column,
+        .table td.location-column {
+            width: auto;
+            min-width: 200px;
         }
 
         /* Action buttons */
@@ -310,23 +342,11 @@ $result = $stmt->get_result();
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            margin: 0 3px;
+            margin: 0 2px;
         }
 
         .btn-action i {
             font-size: 14px;
-        }
-
-        /* Specific icon sizes */
-        .fa-pen-to-square,
-        .fa-trash {
-            font-size: 14px !important;
-        }
-
-        /* Action column width */
-        .action-column {
-            width: 100px;
-            text-align: center;
         }
 
         /* Table styling */
@@ -357,9 +377,7 @@ $result = $stmt->get_result();
         }
 
         .table tbody tr:hover {
-            background-color: #f8f9fc !important;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            background-color: rgba(0,0,0,.02);
         }
 
         /* Column widths */
@@ -373,15 +391,6 @@ $result = $stmt->get_result();
         .table td.date-column {
             min-width: 150px;
             width: 15%;
-        }
-
-        .table th.location-column,
-        .table td.location-column {
-            max-width: 200px;
-            width: 20%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         /* Badge styling */
@@ -440,6 +449,68 @@ $result = $stmt->get_result();
         .swal2-cancel.btn-secondary:hover {
             background-color: #5c636a;
         }
+
+        /* Header row styling */
+        .table thead th {
+            background-color: #f8f9fa;
+            color: #4e73df;
+            font-weight: 600;
+            border-bottom: 2px solid #e3e6f0;
+        }
+
+        /* Case Study ID styling */
+        .case-study-link {
+            color: #28a745 !important;  /* Màu xanh lá */
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        tr:hover .case-study-link {
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        /* Filter select styling */
+        .form-select {
+            border-radius: 20px !important;
+            padding: 8px 35px !important; /* Tăng padding bên trái để chừa chỗ cho icon */
+        }
+
+        /* Filter icon positioning */
+        .filter-icon-wrapper {
+            position: relative;
+        }
+
+        .filter-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+            color: #6c757d;
+            margin-right: 10px;
+        }
+
+        /* Filter text spacing */
+        .filter-text {
+            margin-left: 10px; /* Khoảng cách giữa icon và text */
+        }
+
+        /* Action buttons */
+        .btn-action {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 2px;
+        }
+
+        /* Table hover effect */
+        .table tbody tr:hover {
+            background-color: rgba(0,0,0,.02);
+        }
     </style>
 
     <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
@@ -458,10 +529,10 @@ $result = $stmt->get_result();
                     [4, 'desc']
                 ],
                 language: {
-                    lengthMenu: "Show _MENU_ entries",
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                    infoEmpty: "Showing 0 to 0 of 0 entries",
-                    infoFiltered: "(filtered from _MAX_ total entries)",
+                    lengthMenu: "Show _MENU_ case studies",
+                    info: "Showing _START_ to _END_ of _TOTAL_ case studies",
+                    infoEmpty: "Showing 0 to 0 of 0 case studies",
+                    infoFiltered: "(filtered from _MAX_ total case studies)",
                     search: "Search:",
                     paginate: {
                         first: "First",
