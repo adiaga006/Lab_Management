@@ -345,7 +345,8 @@ function getColorCode($workDone)
     /* Phần cuộn cho bảng Work Done */
     .work-done-scroll {
         overflow-x: auto;
-        margin-left: 322px; /* Độ rộng của cột Treatment */
+        margin-left: 322px;
+        /* Độ rộng của cột Treatment */
     }
 
     /* Cột cố định cho bảng Work Done */
@@ -404,7 +405,7 @@ function getColorCode($workDone)
         right: 0;
         bottom: 0;
         width: 4px;
-        background: linear-gradient(to right, rgba(0,0,0,0.1), rgba(0,0,0,0));
+        background: linear-gradient(to right, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0));
     }
 
     /* Styles chung cho cả hai bảng */
@@ -466,11 +467,11 @@ function getColorCode($workDone)
     }
 
     // Đồng bộ chiều cao cho cả hai bảng
-    window.addEventListener('load', function() {
+    window.addEventListener('load', function () {
         syncWorkDoneHeights();
         syncRowHeights(); // Hàm hiện tại cho bảng Task Done
     });
-    window.addEventListener('resize', function() {
+    window.addEventListener('resize', function () {
         syncWorkDoneHeights();
         syncRowHeights();
     });

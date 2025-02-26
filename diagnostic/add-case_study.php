@@ -62,7 +62,7 @@
                                 <!-- Category -->
                                 <div class="form-group">
                                     <div class="row">
-                                        <label class="col-sm-3 control-label">Category</label>
+                                        <label class="col-sm-3 control-label">Type of Case Study</label>
                                         <div class="col-sm-9">
                                             <select class="form-control" id="categoryId" name="categories_id"
                                                 required="">
@@ -79,7 +79,22 @@
                                         </div>
                                     </div>
                                 </div>
-
+                                <div class="form-group">
+                                    <div class="row">
+                                        <label class="col-sm-3 control-label">Category Type</label>
+                                        <div class="col-sm-9">
+                                            <select class="form-control" id="categoryName" name="category_name"
+                                                required>
+                                                <option value="" disabled selected>Select Category</option>
+                                                <option value="lab">Lab</option>
+                                                <option value="farm">Farm</option>
+                                            </select>
+                                            <small class="form-text text-muted">
+                                                This is a case study that takes place in a Lab or Farm.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
                                 <!-- Start Date -->
                                 <div class="form-group">
                                     <div class="row">
@@ -144,7 +159,7 @@
                                                     <input type="text" name="product_application[]" class="form-control"
                                                         placeholder="Product Application" required>
                                                     <input type="number" name="num_reps[]" class="form-control"
-                                                        placeholder="Num Reps" min="1"required>
+                                                        placeholder="Num Reps" min="1" required>
                                                 </div>
                                             </div>
                                             <button type="button" id="addTreatmentRow"
@@ -281,7 +296,12 @@
                     newRow.remove();
                 });
             });
-
+            document.getElementById('categoryName').addEventListener('change', function () {
+                const selectedValue = this.value;
+                const capitalizedValue = selectedValue.charAt(0).toUpperCase() + selectedValue.slice(1); // Viết hoa chữ cái đầu
+                const helpText = this.parentElement.querySelector('.form-text');
+                helpText.textContent = `This is a case study that takes place in a ${capitalizedValue}.`;
+            });
 
         </script>
         <style>

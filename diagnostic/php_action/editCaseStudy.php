@@ -12,6 +12,7 @@ try {
         $categoryId = $_POST['editCategoryName'];
         $startDate = date('Y-m-d', strtotime($_POST['editStartDate'])); // Định dạng YYYY-MM-DD
         $status = $_POST['editCaseStudyStatus'];
+        $categoryName = $_POST['category_name'];
 
         // Lưu thông tin treatments từ form
         $treatments = [];
@@ -56,7 +57,8 @@ try {
                     categories_id = ?, 
                     status = ?, 
                     phases = ?, 
-                    treatment = ? 
+                    treatment = ?,
+                    category_name = ? 
                 WHERE case_study_id = ?";
 
         $stmt = $connect->prepare($sql);
@@ -66,7 +68,7 @@ try {
 
         // Bind các tham số với kiểu dữ liệu chính xác
         $stmt->bind_param(
-            "sssissss",
+            "sssisssss",
             $caseName,
             $location,
             $startDate,
@@ -74,6 +76,7 @@ try {
             $status,
             $phasesJson,
             $treatmentsJson,
+            $categoryName,
             $caseStudyId
         );
 

@@ -1,6 +1,12 @@
 <?php
 require_once 'core.php';
 
+// Kiểm tra xem người dùng đã đăng nhập chưa
+if (!isset($_SESSION['userId'])) {
+    echo json_encode(['success' => false, 'messages' => 'User not logged in.']);
+    exit;
+}
+
 $valid = array('success' => false, 'messages' => '');
 
 try {
@@ -15,6 +21,13 @@ try {
         $startDate = $_POST['start_date'];
         $pondId = isset($_POST['pond_id']) ? $_POST['pond_id'] : NULL;
         $status = $_POST['status'];
+        $categoryName = $_POST['category_name'];
+        
+        // Debug giá trị
+        if (empty($categoryName)) {
+            error_log("Category Name is empty");
+            $categoryName = 'unknown'; // Hoặc xử lý theo cách bạn muốn
+        }
         
         // Xử lý dữ liệu phases
         $phases = [];
@@ -73,15 +86,15 @@ try {
             $valid['messages'] = "Case Study ID is available. Please choose another ID.";
         } else {
             // Thêm user_id vào câu query INSERT
-            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, pond_id, status, treatment, phases, user_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO case_study (case_study_id, case_name, location, categories_id, start_date, pond_id, status, treatment, phases, user_id, category_name) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             $stmt = $connect->prepare($sql);
             if (!$stmt)
                 throw new Exception("Prepare failed: " . $connect->error);
 
             $stmt->bind_param(
-                "sssisisssi", // Thêm j cho user_id (integer)
+                "sssisisssis", // Thêm j cho user_id (integer)
                 $caseStudyId,
                 $caseName,
                 $location,
@@ -91,7 +104,8 @@ try {
                 $status,
                 $treatmentsJson,
                 $phasesJson,
-                $userId // Thêm user_id vào bind_param
+                $userId, // Thêm user_id vào bind_param
+                $categoryName // Thêm category_name vào bind_param
             );
 
             if ($stmt->execute()) {

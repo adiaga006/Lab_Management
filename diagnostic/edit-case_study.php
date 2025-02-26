@@ -72,7 +72,7 @@ $result = $connect->query($sql)->fetch_assoc();
                                     </div>
                                     <div class="form-group">
                                         <div class="row">
-                                            <label class="col-sm-3 control-label">Category</label>
+                                            <label class="col-sm-3 control-label">Type of Case Study</label>
                                             <div class="col-sm-9">
                                                 <select id="categoryId" name="editCategoryName" required
                                                     class="form-control">
@@ -87,6 +87,21 @@ $result = $connect->query($sql)->fetch_assoc();
                                                         </option>
                                                     <?php } ?>
                                                 </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="row">
+                                            <label class="col-sm-3 control-label">Category Type</label>
+                                            <div class="col-sm-9">
+                                                <select class="form-control" id="categoryName" name="category_name"
+                                                    required>
+                                                    <option value="lab" <?php echo (isset($result['category_name']) && strtolower($result['category_name']) == 'lab') ? 'selected' : ''; ?>>Lab</option>
+                                                    <option value="farm" <?php echo (isset($result['category_name']) && strtolower($result['category_name']) == 'farm') ? 'selected' : ''; ?>>Farm</option>
+                                                </select>
+                                                <small class="form-text text-muted">
+                                                    This is a case study that takes place in a <?php echo isset($result['category_name']) ? htmlspecialchars($result['category_name']) : 'Lab'; ?>.
+                                                </small>
                                             </div>
                                         </div>
                                     </div>
@@ -306,6 +321,12 @@ $result = $connect->query($sql)->fetch_assoc();
                 toastElement.classList.remove('show');
             }, 3000);
         }
+        document.getElementById('categoryName').addEventListener('change', function () {
+            const selectedValue = this.value;
+            const capitalizedValue = selectedValue.charAt(0).toUpperCase() + selectedValue.slice(1);
+            const helpText = this.parentElement.querySelector('.form-text');
+            helpText.textContent = `This is a case study that takes place in a ${capitalizedValue}.`;
+        });
     </script>
     <?php include('./constant/layout/footer.php'); ?>
     <style>

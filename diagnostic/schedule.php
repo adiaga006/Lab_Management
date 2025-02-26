@@ -101,21 +101,72 @@ $stmt->close();
     .selected-criteria {
         display: flex;
         flex-wrap: wrap;
-        gap: 5px;
+        gap: 8px;
+        min-height: 45px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #f8f9fa;
     }
 
     .criteria-tag {
-        background: #e9ecef;
-        padding: 5px 10px;
-        border-radius: 3px;
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+        color: #000;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
     }
 
+    .criteria-tag:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+    }
+
+    /* 6 màu cho các task */
+    .criteria-tag:nth-of-type(6n + 1) { background-color: #FFB7B2; }
+    .criteria-tag:nth-of-type(6n + 2) { background-color: #BAFFC9; }
+    .criteria-tag:nth-of-type(6n + 3) { background-color: #BAE1FF; }
+    .criteria-tag:nth-of-type(6n + 4) { background-color: #FFFFBA; }
+    .criteria-tag:nth-of-type(6n + 5) { background-color: #E2BAE1; }
+    .criteria-tag:nth-of-type(6n) { background-color: #B2FFFF; }
+
+    /* Style cho nút remove */
     .remove-criteria {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 8px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.1);
+        color: #666;
         cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .remove-criteria:hover {
+        background: rgba(220,53,69,0.2);
         color: #dc3545;
+    }
+
+    /* Animation khi thêm/xóa task */
+    .criteria-tag {
+        animation: fadeInScale 0.3s ease;
+    }
+
+    @keyframes fadeInScale {
+        from {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
     }
 
     /* Toast styles */
@@ -149,47 +200,6 @@ $stmt->close();
         to {
             opacity: 0;
         }
-    }
-
-    /* Criteria tag styles với 10 màu khác nhau */
-    .criteria-tag:nth-of-type(10n + 1) {
-        background-color: #FF9AA2;
-    }
-
-    .criteria-tag:nth-of-type(10n + 2) {
-        background-color: #FFB7B2;
-    }
-
-    .criteria-tag:nth-of-type(10n + 3) {
-        background-color: #FFDAC1;
-    }
-
-    .criteria-tag:nth-of-type(10n + 4) {
-        background-color: #E2F0CB;
-    }
-
-    .criteria-tag:nth-of-type(10n + 5) {
-        background-color: #B5EAD7;
-    }
-
-    .criteria-tag:nth-of-type(10n + 6) {
-        background-color: #C7CEEA;
-    }
-
-    .criteria-tag:nth-of-type(10n + 7) {
-        background-color: #E8E8E8;
-    }
-
-    .criteria-tag:nth-of-type(10n + 8) {
-        background-color: #F8C8DC;
-    }
-
-    .criteria-tag:nth-of-type(10n + 9) {
-        background-color: #B4F8C8;
-    }
-
-    .criteria-tag:nth-of-type(10n) {
-        background-color: #A0E7E5;
     }
 
     .table th {
@@ -726,19 +736,46 @@ $stmt->close();
         const container = $('.selected-criteria');
         container.empty();
 
-        selectedCriteria.forEach(criteria => {
+        selectedCriteria.forEach((criteria, index) => {
             const criteriaElement = $('<div>', {
-                class: 'badge badge-primary mr-2 mb-2 p-2',
+                class: 'criteria-tag',
+                'data-id': criteria.id,
                 html: criteria.name
+            }).css({
+                'animation': 'fadeInScale 0.3s ease'
             });
 
             // Chỉ thêm nút xóa nếu không bị khóa
             if (!isTaskDoneLocked) {
                 const removeButton = $('<span>', {
-                    class: 'ml-2 cursor-pointer',
+                    class: 'remove-criteria',
                     html: '×',
-                    click: function () {
-                        removeCriteria(criteria.id);
+                    click: function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const tag = $(this).closest('.criteria-tag');
+                        const idToRemove = tag.data('id');
+                        
+                        // Animation khi xóa
+                        tag.css({
+                            'transform': 'scale(0.8)',
+                            'opacity': '0'
+                        });
+                        
+                        setTimeout(() => {
+                            // Xóa tag
+                            tag.remove();
+                            
+                            // Hiện lại option trong select
+                            $(`#checkStatusSelect option[value="${idToRemove}"]`).show();
+                            
+                            // Cập nhật mảng selectedCriteria
+                            selectedCriteria = selectedCriteria.filter(item => item.id !== idToRemove);
+                            
+                            // Cập nhật input hidden
+                            updateCheckStatusInput();
+                        }, 200);
                     }
                 });
                 criteriaElement.append(removeButton);
@@ -749,20 +786,30 @@ $stmt->close();
     }
 
     // Sửa lại hàm xử lý xóa criteria
-    $(document).on('click', '.remove-criteria', function () {
-        const idToRemove = $(this).data('id');
-
-        // Xóa khỏi mảng selectedCriteria
-        selectedCriteria = selectedCriteria.filter(item => item.id !== idToRemove.toString());
-
-        // Hiện lại option trong select
-        $(`#checkStatusSelect option[value="${idToRemove}"]`).show();
-
-        // Cập nhật hiển thị
-        updateCriteriaDisplay();
-
-        // Cập nhật input hidden
-        updateCheckStatusInput();
+    $(document).on('click', '.remove-criteria', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const tag = $(this).closest('.criteria-tag');
+        const idToRemove = tag.data('id');
+        
+        // Animation khi xóa
+        tag.css('transform', 'scale(0.8)');
+        tag.css('opacity', '0');
+        
+        setTimeout(() => {
+            // Xóa tag
+            tag.remove();
+            
+            // Hiện lại option trong select
+            $(`#checkStatusSelect option[value="${idToRemove}"]`).show();
+            
+            // Cập nhật mảng selectedCriteria
+            selectedCriteria = selectedCriteria.filter(item => item.id !== idToRemove);
+            
+            // Cập nhật input hidden
+            $('#checkStatusInput').val(JSON.stringify(selectedCriteria.map(item => item.id)));
+        }, 200);
     });
 
     // Hàm cập nhật input hidden
@@ -1092,5 +1139,41 @@ $stmt->close();
         updateCheckStatusInput();
         $('#checkStatusSelect option').show();
         $('#checkStatusSelect').prop('disabled', false);
+        
+        // Reset selected-criteria container
+        $('.selected-criteria').empty().css({
+            'min-height': '45px',
+            'padding': '10px',
+            'border': '1px solid #ddd',
+            'border-radius': '8px',
+            'background': '#f8f9fa'
+        });
+    });
+
+    // Thêm animation khi thêm task mới trong form add
+    $('#checkStatusSelect').on('change', function() {
+        const selectedId = $(this).val();
+        if (!selectedId) return;
+
+        const selectedText = $(this).find('option:selected').text();
+        const colorIndex = selectedCriteria.length % 6; // Để luân phiên 6 màu
+
+        // Thêm vào mảng selectedCriteria
+        if (!selectedCriteria.find(item => item.id === selectedId)) {
+            selectedCriteria.push({
+                id: selectedId,
+                name: selectedText
+            });
+
+            // Ẩn option đã chọn
+            $(this).find(`option[value="${selectedId}"]`).hide();
+
+            // Cập nhật UI với animation
+            updateCriteriaDisplay();
+            updateCheckStatusInput();
+        }
+
+        // Reset select về giá trị mặc định
+        $(this).val('');
     });
 </script>
