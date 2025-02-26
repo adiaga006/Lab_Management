@@ -22,13 +22,7 @@ try {
         $pondId = isset($_POST['pond_id']) ? $_POST['pond_id'] : NULL;
         $status = $_POST['status'];
         $categoryName = $_POST['category_name'];
-        
-        // Debug giá trị
-        if (empty($categoryName)) {
-            error_log("Category Name is empty");
-            $categoryName = 'unknown'; // Hoặc xử lý theo cách bạn muốn
-        }
-        
+            
         // Xử lý dữ liệu phases
         $phases = [];
         if (isset($_POST['phase_name']) && isset($_POST['phase_duration'])) {
@@ -94,7 +88,7 @@ try {
                 throw new Exception("Prepare failed: " . $connect->error);
 
             $stmt->bind_param(
-                "sssisisssis", // Thêm j cho user_id (integer)
+                "sssisisssis", // Thêm i cho user_id (integer)
                 $caseStudyId,
                 $caseName,
                 $location,

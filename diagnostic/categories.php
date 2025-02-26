@@ -2,7 +2,7 @@
 <?php include('./constant/layout/header.php');?>
 
 <?php include('./constant/layout/sidebar.php');?>   
-<?php include('./constant/connect');
+<?php include('./constant/connect.php');
 $sql = "SELECT categories_id, categories_name, categories_active, categories_status FROM categories WHERE categories_status = 1";
 $result = $connect->query($sql);
 //echo $sql;exit;
