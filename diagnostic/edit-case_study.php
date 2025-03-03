@@ -80,9 +80,9 @@ $result = $connect->query($sql)->fetch_assoc();
                                                     $sql = "SELECT * FROM categories WHERE categories_status=1";
                                                     $categoriesResult = mysqli_query($connect, $sql);
                                                     while ($row = mysqli_fetch_assoc($categoriesResult)) {
-                                                        ?>
+                                                    ?>
                                                         <option value="<?php echo $row['categories_id']; ?>" <?php if ($result['categories_id'] == $row['categories_id'])
-                                                               echo "selected"; ?>>
+                                                                                                                    echo "selected"; ?>>
                                                             <?php echo $row['categories_name']; ?>
                                                         </option>
                                                     <?php } ?>
@@ -92,7 +92,7 @@ $result = $connect->query($sql)->fetch_assoc();
                                     </div>
                                     <div class="form-group">
                                         <div class="row">
-                                            <label class="col-sm-3 control-label">Category Type</label>
+                                            <label class="col-sm-3 control-label">Farm or Lab</label>
                                             <div class="col-sm-9">
                                                 <select class="form-control" id="categoryName" name="category_name"
                                                     required>
@@ -112,11 +112,11 @@ $result = $connect->query($sql)->fetch_assoc();
                                                 <select class="form-control" id="editCaseStudyStatus"
                                                     name="editCaseStudyStatus">
                                                     <option value="Prepare" <?php if ($result['status'] == "Prepare")
-                                                        echo "selected"; ?>>Prepare</option>
+                                                                                echo "selected"; ?>>Prepare</option>
                                                     <option value="In-process" <?php if ($result['status'] == "In-process")
-                                                        echo "selected"; ?>>In-process</option>
+                                                                                    echo "selected"; ?>>In-process</option>
                                                     <option value="Complete" <?php if ($result['status'] == "Complete")
-                                                        echo "selected"; ?>>Complete</option>
+                                                                                    echo "selected"; ?>>Complete</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -144,7 +144,7 @@ $result = $connect->query($sql)->fetch_assoc();
                                                     }
                                                 }
                                             }
-                                            ?>
+                                        ?>
                                             <div class="form-group">
                                                 <label>Phase: <?php echo htmlspecialchars($phaseName); ?></label>
                                                 <input type="number"
@@ -153,7 +153,7 @@ $result = $connect->query($sql)->fetch_assoc();
                                                     value="<?php echo htmlspecialchars($currentDuration); ?>"
                                                     placeholder="Duration in days" required>
                                             </div>
-                                            <?php
+                                        <?php
                                         }
                                         ?>
                                     </div>
@@ -165,7 +165,7 @@ $result = $connect->query($sql)->fetch_assoc();
                                                 $treatments = json_decode($result['treatment'], true);
                                                 if (!empty($treatments)) {
                                                     foreach ($treatments as $treatment) {
-                                                        ?>
+                                                ?>
                                                         <div class="treatmentRow">
                                                             <label class="form-label">Treatment Name</label>
                                                             <input type="text" name="treatment_name[]" class="form-control"
@@ -182,7 +182,7 @@ $result = $connect->query($sql)->fetch_assoc();
                                                             <button type="button"
                                                                 class="btn btn-danger btn-sm removeTreatmentRow">Remove</button>
                                                         </div>
-                                                        <?php
+                                                <?php
                                                     }
                                                 }
                                                 ?>
@@ -218,7 +218,7 @@ $result = $connect->query($sql)->fetch_assoc();
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <script>
-        document.getElementById('addTreatmentRow').addEventListener('click', function () {
+        document.getElementById('addTreatmentRow').addEventListener('click', function() {
             const treatmentsContainer = document.getElementById('treatmentsContainer');
             const newRow = document.createElement('div');
             newRow.className = 'treatmentRow';
@@ -234,32 +234,34 @@ $result = $connect->query($sql)->fetch_assoc();
             treatmentsContainer.appendChild(newRow);
 
             // Thêm sự kiện xóa vào nút Remove
-            newRow.querySelector('.removeTreatmentRow').addEventListener('click', function () {
+            newRow.querySelector('.removeTreatmentRow').addEventListener('click', function() {
                 newRow.remove();
             });
         });
         // Thêm sự kiện xóa cho các dòng `treatment` đã tải từ server
         document.querySelectorAll('.removeTreatmentRow').forEach(button => {
-            button.addEventListener('click', function () {
+            button.addEventListener('click', function() {
                 button.parentElement.remove();
             });
         });
 
-        document.addEventListener('wheel', function (event) {
+        document.addEventListener('wheel', function(event) {
             if (document.activeElement.type === 'number') {
                 event.preventDefault();
             }
-        }, { passive: false });
-        document.getElementById('submitCaseStudyForm').addEventListener('submit', function (e) {
+        }, {
+            passive: false
+        });
+        document.getElementById('submitCaseStudyForm').addEventListener('submit', function(e) {
             e.preventDefault(); // Ngăn chặn hành vi gửi form mặc định
 
             const form = document.getElementById('submitCaseStudyForm');
             const formData = new FormData(form);
 
             fetch('php_action/editCaseStudy.php?id=<?php echo $_GET['id']; ?>', {
-                method: 'POST',
-                body: formData
-            })
+                    method: 'POST',
+                    body: formData
+                })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -296,10 +298,11 @@ $result = $connect->query($sql)->fetch_assoc();
         document.addEventListener('DOMContentLoaded', togglePhasesVisibility);
         // Cấu hình Flatpickr để hiển thị theo định dạng DD-MM-YYYY cho các trường ngày
         flatpickr("#editStartDate", {
-            dateFormat: "d-m-Y",  // Định dạng hiển thị DD-MM-YYYY
+            dateFormat: "d-m-Y", // Định dạng hiển thị DD-MM-YYYY
             altInput: true,
             altFormat: "d-m-Y"
         });
+
         function showToast(message, title = 'Notification', isSuccess = true) {
             const toastTitle = document.getElementById('toastTitle');
             const toastBody = document.getElementById('toastBody');
@@ -321,7 +324,7 @@ $result = $connect->query($sql)->fetch_assoc();
                 toastElement.classList.remove('show');
             }, 3000);
         }
-        document.getElementById('categoryName').addEventListener('change', function () {
+        document.getElementById('categoryName').addEventListener('change', function() {
             const selectedValue = this.value;
             const capitalizedValue = selectedValue.charAt(0).toUpperCase() + selectedValue.slice(1);
             const helpText = this.parentElement.querySelector('.form-text');

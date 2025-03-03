@@ -81,17 +81,16 @@
                                 </div>
                                 <div class="form-group">
                                     <div class="row">
-                                        <label class="col-sm-3 control-label">Category Type</label>
+                                        <label class="col-sm-3 control-label">Farm or Lab</label>
                                         <div class="col-sm-9">
                                             <select class="form-control" id="categoryName" name="category_name"
                                                 required>
-                                                <option value="" disabled selected>Select Category</option>
+                                                <option value="" disabled selected>Select</option>
                                                 <option value="lab">Lab</option>
                                                 <option value="farm">Farm</option>
                                             </select>
                                             <small class="form-text text-muted">
-                                                This is a case study that takes place in a Lab or Farm.
-                                            </small>
+                                                Is this case study taking place in Lab or Farm ? </small>
                                         </div>
                                     </div>
                                 </div>
@@ -126,25 +125,25 @@
                                         <input type="text" name="phase_name[]" value="Acclimation period" readonly
                                             class="form-control">
                                         <input type="number" name="phase_duration[]" class="form-control"
-                                            placeholder="Duration in days" required>
+                                            placeholder="Duration in days">
                                     </div>
                                     <div class="form-group">
                                         <input type="text" name="phase_name[]" value="Pre-challenge" readonly
                                             class="form-control">
                                         <input type="number" name="phase_duration[]" class="form-control"
-                                            placeholder="Duration in days" required>
+                                            placeholder="Duration in days">
                                     </div>
                                     <div class="form-group">
                                         <input type="text" name="phase_name[]" value="Challenge" readonly
                                             class="form-control">
                                         <input type="number" name="phase_duration[]" class="form-control"
-                                            placeholder="Duration in days" required>
+                                            placeholder="Duration in days">
                                     </div>
                                     <div class="form-group">
                                         <input type="text" name="phase_name[]" value="Post-challenge" readonly
                                             class="form-control">
                                         <input type="number" name="phase_duration[]" class="form-control"
-                                            placeholder="Duration in days" required>
+                                            placeholder="Duration in days">
                                     </div>
                                 </div>
                                 <!-- Treatments Section -->
@@ -188,13 +187,15 @@
         <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
         <script>
-            document.addEventListener('wheel', function (event) {
+            document.addEventListener('wheel', function(event) {
                 if (document.activeElement.type === 'number') {
                     event.preventDefault();
                 }
-            }, { passive: false });
+            }, {
+                passive: false
+            });
             // Lắng nghe sự kiện thay đổi trên dropdown của Category
-            document.getElementById('categoryId').addEventListener('change', function () {
+            document.getElementById('categoryId').addEventListener('change', function() {
                 const selectedCategory = this.value; // Lấy giá trị được chọn
                 const definePhasesSection = document.getElementById('phasesContainer'); // Phần Define Phases
 
@@ -206,7 +207,7 @@
             });
             // Cấu hình Flatpickr để hiển thị theo định dạng DD-MM-YYYY
             flatpickr("#startDate", {
-                dateFormat: "d-m-Y",  // Định dạng hiển thị DD-MM-YYYY
+                dateFormat: "d-m-Y", // Định dạng hiển thị DD-MM-YYYY
                 altInput: true,
                 altFormat: "d-m-Y"
             });
@@ -215,6 +216,7 @@
                 const [day, month, year] = date.split("-");
                 return `${year}-${month}-${day}`;
             }
+
             function showNotification(message, type = 'success') {
                 const notification = document.getElementById('customNotification');
                 const notificationMessage = document.getElementById('notificationMessage');
@@ -241,7 +243,7 @@
             }
 
             // Sử dụng thông báo trong Fetch API
-            document.getElementById('submitCaseStudyForm').addEventListener('submit', function (e) {
+            document.getElementById('submitCaseStudyForm').addEventListener('submit', function(e) {
                 e.preventDefault(); // Ngăn chặn gửi form mặc định
                 const startDateInput = document.getElementById('startDate');
 
@@ -255,9 +257,9 @@
                 const formData = new FormData(form);
 
                 fetch('php_action/createCaseStudy.php', {
-                    method: 'POST',
-                    body: formData
-                })
+                        method: 'POST',
+                        body: formData
+                    })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
@@ -273,7 +275,7 @@
                         showNotification('An error occurred while processing your request.', 'error');
                     });
             });
-            document.getElementById('addTreatmentRow').addEventListener('click', function () {
+            document.getElementById('addTreatmentRow').addEventListener('click', function() {
                 const treatmentsContainer = document.getElementById('treatmentsContainer');
 
                 // Tạo một hàng mới
@@ -292,17 +294,16 @@
                 treatmentsContainer.appendChild(newRow);
 
                 // Thêm sự kiện xóa hàng
-                newRow.querySelector('.removeTreatmentRow').addEventListener('click', function () {
+                newRow.querySelector('.removeTreatmentRow').addEventListener('click', function() {
                     newRow.remove();
                 });
             });
-            document.getElementById('categoryName').addEventListener('change', function () {
+            document.getElementById('categoryName').addEventListener('change', function() {
                 const selectedValue = this.value;
                 const capitalizedValue = selectedValue.charAt(0).toUpperCase() + selectedValue.slice(1); // Viết hoa chữ cái đầu
                 const helpText = this.parentElement.querySelector('.form-text');
                 helpText.textContent = `This is a case study that takes place in a ${capitalizedValue}.`;
             });
-
         </script>
         <style>
             .treatmentRow {

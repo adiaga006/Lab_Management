@@ -43,12 +43,12 @@ $result = $stmt->get_result();
                 </div>
 
                 <div id="filterSection" class="filter-section" style="display: none;">
-                    <form id="filterForm" class="row g-3">
-                        <div class="col-md-3">
+                    <form id="filterForm" class="row g-3 align-items-center">
+                        <div class="col-md">
                             <div class="filter-icon-wrapper">
-                                <i class="fas fa-folder filter-icon"></i>
+                                <i class="fas fa-map-marker-alt filter-icon"></i>
                                 <select id="categoryFilter" class="form-select">
-                                    <option value="">All types of Case Studies</option>
+                                    <option value="">Case study location</option>
                                     <?php
                                     $catSql = "SELECT DISTINCT category_name FROM case_study WHERE user_id = ?";
                                     $stmt = $connect->prepare($catSql);
@@ -56,53 +56,81 @@ $result = $stmt->get_result();
                                     $stmt->execute();
                                     $catResult = $stmt->get_result();
                                     while ($row = $catResult->fetch_assoc()) {
-                                        echo '<option value="'.$row['category_name'].'">'.ucwords(strtolower($row['category_name'])).'</option>';
+                                        // Chuẩn hóa text: viết hoa chữ cái đầu
+                                        $formattedName = ucwords(strtolower($row['category_name']));
+                                        echo '<option value="' . $row['category_name'] . '">' .
+                                            htmlspecialchars($formattedName) .
+                                            '</option>';
                                     }
                                     ?>
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md">
                             <div class="filter-icon-wrapper">
-                                <i class="fas fa-calendar filter-icon"></i>
+                                <i class="fas fa-tag filter-icon"></i>
+                                <select id="categoriesFilter" class="form-select">
+                                    <option value="">Categories</option>
+                                    <?php
+                                    $categoriesSql = "SELECT DISTINCT c.categories_id, c.categories_name 
+                                                    FROM categories c 
+                                                    INNER JOIN case_study cs ON c.categories_id = cs.categories_id 
+                                                    WHERE cs.user_id = ? 
+                                                    ORDER BY c.categories_name ASC";
+                                    $stmt = $connect->prepare($categoriesSql);
+                                    $stmt->bind_param("i", $_SESSION['userId']);
+                                    $stmt->execute();
+                                    $categoriesResult = $stmt->get_result();
+                                    while ($row = $categoriesResult->fetch_assoc()) {
+                                        echo '<option value="' . $row['categories_name'] . '">' .
+                                            htmlspecialchars($row['categories_name']) .
+                                            '</option>';
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md">
+                            <div class="filter-icon-wrapper">
+                                <i class="far fa-calendar filter-icon"></i>
                                 <select id="monthFilter" class="form-select">
-                                    <option value="">All Months</option>
+                                    <option value="">Month</option>
                                     <?php
                                     for ($m = 1; $m <= 12; $m++) {
-                                        echo '<option value="'.$m.'">'.date('F', mktime(0, 0, 0, $m, 1)).'</option>';
+                                        echo '<option value="' . $m . '">' . date('F', mktime(0, 0, 0, $m, 1)) . '</option>';
                                     }
                                     ?>
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md">
                             <div class="filter-icon-wrapper">
-                                <i class="fas fa-calendar-alt filter-icon"></i>
+                                <i class="far fa-calendar-alt filter-icon"></i>
                                 <select id="yearFilter" class="form-select">
-                                    <option value="">All Years</option>
+                                    <option value="">Year</option>
                                     <?php
                                     $currentYear = date('Y');
                                     for ($y = $currentYear; $y >= $currentYear - 5; $y--) {
-                                        echo '<option value="'.$y.'">'.$y.'</option>';
+                                        echo '<option value="' . $y . '">' . $y . '</option>';
                                     }
                                     ?>
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md">
                             <div class="filter-icon-wrapper">
                                 <i class="fas fa-tasks filter-icon"></i>
                                 <select id="statusFilter" class="form-select">
-                                    <option value="">All Status</option>
+                                    <option value="">Status</option>
                                     <option value="Prepare">Prepare</option>
-                                    <option value="In-process">In-process</option>
+                                    <option value="In-process">In Process</option>
                                     <option value="Complete">Complete</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-2">
-                            <button type="button" id="resetFilter" class="btn btn-secondary w-100">
-                                <i class="fas fa-undo me-2"></i>Reset
+                        <div class="col-auto ms-auto">
+                            <button type="button" id="resetFilter" class="btn btn-secondary">
+                                <i class="fas fa-undo"></i> Reset
                             </button>
                         </div>
                     </form>
@@ -124,20 +152,20 @@ $result = $stmt->get_result();
                         <tbody>
                             <?php
                             while ($row = $result->fetch_assoc()) {
-                                $statusBadge = match($row['status']) {
+                                $statusBadge = match ($row['status']) {
                                     'Prepare' => '<span class="badge bg-info">Prepare</span>',
                                     'In-process' => '<span class="badge bg-warning">In-process</span>',
                                     'Complete' => '<span class="badge bg-success">Complete</span>',
                                     default => '<span class="badge bg-secondary">Unknown</span>'
                                 };
-                                ?>
-                                <tr onclick="window.location='group.php?case_study_id=<?php echo $row['case_study_id']; ?>'" 
-                                    style="cursor: pointer;"
-                                    data-category="<?php echo $row['category_name']; ?>">
+                            ?>
+                                <tr data-category-name="<?php echo htmlspecialchars($row['category_name']); ?>"
+                                    onclick="window.location='group.php?case_study_id=<?php echo $row['case_study_id']; ?>'"
+                                    style="cursor: pointer;">
                                     <td>
-                                        <?php 
+                                        <?php
                                         // Xác định màu dựa trên status
-                                        $statusColor = match($row['status']) {
+                                        $statusColor = match ($row['status']) {
                                             'Prepare' => 'text-info',         // Màu xanh dương nhạt
                                             'In-process' => 'text-warning',   // Màu vàng
                                             'Complete' => 'text-success',     // Màu xanh lá
@@ -154,15 +182,15 @@ $result = $stmt->get_result();
                                     <td><?php echo $row['categories_name']; ?></td>
                                     <td><?php echo $statusBadge; ?></td>
                                     <td class="action-column">
-                                        <a href="edit-case_study.php?id=<?php echo $row['case_study_id']; ?>" 
-                                           class="btn btn-primary btn-sm btn-action" 
-                                           onclick="event.stopPropagation();">
+                                        <a href="edit-case_study.php?id=<?php echo $row['case_study_id']; ?>"
+                                            class="btn btn-primary btn-sm btn-action"
+                                            onclick="event.stopPropagation();">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </a>
-                                        <button type="button" 
-                                                class="btn btn-danger btn-sm btn-action btn-delete" 
-                                                data-id="<?php echo $row['case_study_id']; ?>" 
-                                                onclick="event.stopPropagation();">
+                                        <button type="button"
+                                            class="btn btn-danger btn-sm btn-action btn-delete"
+                                            data-id="<?php echo $row['case_study_id']; ?>"
+                                            onclick="event.stopPropagation();">
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
                                     </td>
@@ -273,12 +301,14 @@ $result = $stmt->get_result();
 
         /* Table text color */
         .table tbody td {
-            color: #2f2f2f;  /* Đậm hơn */
+            color: #2f2f2f;
+            /* Đậm hơn */
         }
 
         /* Case Study ID color */
         .case-study-link {
-            color: #28a745 !important;  /* Màu xanh lá */
+            color: #28a745 !important;
+            /* Màu xanh lá */
             text-decoration: none;
             font-weight: 500;
         }
@@ -287,48 +317,105 @@ $result = $stmt->get_result();
         .filter-section {
             background: #fff;
             border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        /* Form select với icons */
-        .form-select, .btn-secondary {
-            border-radius: 20px !important;
-            padding: 8px 20px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
             border: 1px solid #e3e6f0;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
 
-        .form-select:focus {
-            box-shadow: none;
-            border-color: #4e73df;
-        }
-
-        /* Filter icons position */
+        /* Form elements */
         .filter-icon-wrapper {
             position: relative;
+            margin-bottom: 0;
         }
 
         .filter-icon {
             position: absolute;
-            left: 15px;
+            left: 12px;
             top: 50%;
             transform: translateY(-50%);
-            z-index: 2;
-            color: #6c757d;
+            color: #6e707e;
+            z-index: 1;
+            font-size: 0.875rem;
+        }
+
+        .form-select {
+            padding-left: 2.25rem;
+            padding-right: 2rem;
+            height: 38px;
+            font-size: 0.875rem;
+            border-radius: 0.5rem;
+            border: 1px solid #e3e6f0;
+            background-color: #fff;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .form-select:focus {
+            border-color: #4e73df;
+            box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+        }
+
+        .form-select:hover {
+            border-color: #bac8f3;
         }
 
         /* Reset button */
-        .btn-reset {
-            background-color: #f8f9fc;
-            border: 1px solid #e3e6f0;
-            color: #6c757d;
+        .btn-secondary {
+            color: #fff;
+            background-color: #858796;
+            border-color: #858796;
+            padding: 0.375rem 1rem;
+            font-size: 0.875rem;
+            border-radius: 0.5rem;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.15s ease-in-out;
         }
 
-        .btn-reset:hover {
-            background-color: #eaecf4;
-            border-color: #d1d3e2;
-            color: #4e73df;
+        .btn-secondary:hover {
+            background-color: #717384;
+            border-color: #6c6e7c;
+            transform: translateY(-1px);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .filter-section {
+                padding: 1rem;
+            }
+
+            .row.g-3 {
+                row-gap: 0.75rem !important;
+            }
+
+            .col-auto {
+                width: 100%;
+                margin-top: 1rem;
+            }
+
+            .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Animation */
+        .filter-section {
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Table column widths */
@@ -388,7 +475,7 @@ $result = $stmt->get_result();
         }
 
         .table tbody tr:hover {
-            background-color: rgba(0,0,0,.02);
+            background-color: rgba(0, 0, 0, .02);
         }
 
         /* Column widths */
@@ -409,19 +496,6 @@ $result = $stmt->get_result();
             padding: 8px 12px;
             font-weight: 500;
             border-radius: 6px;
-        }
-
-        /* Animation */
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         /* SweetAlert2 custom styles */
@@ -471,7 +545,8 @@ $result = $stmt->get_result();
 
         /* Case Study ID styling */
         .case-study-link {
-            color: #28a745 !important;  /* Màu xanh lá */
+            color: #28a745 !important;
+            /* Màu xanh lá */
             text-decoration: none;
             font-weight: 500;
         }
@@ -479,48 +554,6 @@ $result = $stmt->get_result();
         tr:hover .case-study-link {
             text-decoration: underline;
             cursor: pointer;
-        }
-
-        /* Filter select styling */
-        .form-select {
-            border-radius: 20px !important;
-            padding: 8px 35px !important; /* Tăng padding bên trái để chừa chỗ cho icon */
-        }
-
-        /* Filter icon positioning */
-        .filter-icon-wrapper {
-            position: relative;
-        }
-
-        .filter-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            z-index: 2;
-            color: #6c757d;
-            margin-right: 10px;
-        }
-
-        /* Filter text spacing */
-        .filter-text {
-            margin-left: 10px; /* Khoảng cách giữa icon và text */
-        }
-
-        /* Action buttons */
-        .btn-action {
-            width: 32px;
-            height: 32px;
-            padding: 0;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 2px;
-        }
-
-        /* Table hover effect */
-        .table tbody tr:hover {
-            background-color: rgba(0,0,0,.02);
         }
 
         /* Màu cho status */
@@ -585,7 +618,7 @@ $result = $stmt->get_result();
             // Toggle filter section
             const toggleFilter = document.getElementById('toggleFilter');
             const filterSection = document.getElementById('filterSection');
-            
+
             toggleFilter.addEventListener('click', function() {
                 if (filterSection.style.display === 'none') {
                     filterSection.style.display = 'block';
@@ -600,38 +633,32 @@ $result = $stmt->get_result();
 
             // Custom filtering function
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-                var category = $('#categoryFilter').val();
+                var categoryType = $('#categoryFilter').val();
+                var categories = $('#categoriesFilter').val();
                 var month = $('#monthFilter').val();
                 var year = $('#yearFilter').val();
                 var status = $('#statusFilter').val();
-                
+
                 var row = table.row(dataIndex).node();
-                var rowCategory = $(row).data('category');
-                var rowDate = data[3];  // Start Date column
-                
-                // Get status text directly from the badge span
-                var statusCell = $(row).find('td:eq(5)'); // Status column
-                var rowStatus = statusCell.find('span.badge').text().trim();
-                
+                var rowCategoryType = $(row).data('category-name'); // Lấy từ data attribute
+                var rowCategories = data[4]; // Categories Name column từ DataTable
+                var rowDate = data[3]; // Start Date column
+                var rowStatus = $(row).find('td:eq(5)').find('span.badge').text().trim();
+
                 // Parse date
                 var date = rowDate.split('-');
                 var rowMonth = parseInt(date[1]);
                 var rowYear = parseInt(date[2]);
-                
-                // Debug logs
-                console.log('Status Filter:', {
-                    selectedStatus: status,
-                    rowStatus: rowStatus,
-                    match: !status || status === rowStatus
-                });
-                
+
                 // Check each filter
-                var categoryMatch = !category || category.toLowerCase() === (rowCategory || '').toLowerCase();
+                var categoryTypeMatch = !categoryType ||
+                    categoryType.toLowerCase() === rowCategoryType.toLowerCase();
+                var categoriesMatch = !categories || categories === rowCategories;
                 var monthMatch = !month || parseInt(month) === rowMonth;
                 var yearMatch = !year || parseInt(year) === rowYear;
                 var statusMatch = !status || status === rowStatus;
-                
-                return categoryMatch && monthMatch && yearMatch && statusMatch;
+
+                return categoryTypeMatch && categoriesMatch && monthMatch && yearMatch && statusMatch;
             });
 
             // Apply filters
@@ -641,7 +668,9 @@ $result = $stmt->get_result();
 
             // Reset filters
             $('#resetFilter').click(function() {
-                $('#filterForm')[0].reset();
+                ['categoryFilter', 'categoriesFilter', 'monthFilter', 'yearFilter', 'statusFilter'].forEach(id => {
+                    document.getElementById(id).value = '';
+                });
                 table.draw();
             });
 
@@ -649,10 +678,10 @@ $result = $stmt->get_result();
             $('.btn-delete').on('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 const id = $(this).data('id');
                 console.log('Deleting case study ID:', id); // Debug log
-                
+
                 Swal.fire({
                     title: 'Are you sure?',
                     text: "You won't be able to revert this!",
@@ -673,11 +702,13 @@ $result = $stmt->get_result();
                         $.ajax({
                             url: 'php_action/removeCaseStudy.php',
                             type: 'POST',
-                            data: {id: id},
+                            data: {
+                                id: id
+                            },
                             dataType: 'json',
                             success: function(response) {
                                 console.log('Server response:', response); // Debug log
-                                
+
                                 if (response.success) {
                                     Swal.fire({
                                         title: 'Deleted!',
@@ -708,7 +739,7 @@ $result = $stmt->get_result();
                                     error: error,
                                     response: xhr.responseText
                                 });
-                                
+
                                 Swal.fire({
                                     title: 'Error!',
                                     text: 'Something went wrong while deleting.',
