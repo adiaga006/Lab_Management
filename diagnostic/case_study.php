@@ -135,7 +135,18 @@ $result = $stmt->get_result();
                                     style="cursor: pointer;"
                                     data-category="<?php echo $row['category_name']; ?>">
                                     <td>
-                                        <span class="case-study-link"><?php echo $row['case_study_id']; ?></span>
+                                        <?php 
+                                        // Xác định màu dựa trên status
+                                        $statusColor = match($row['status']) {
+                                            'Prepare' => 'text-info',         // Màu xanh dương nhạt
+                                            'In-process' => 'text-warning',   // Màu vàng
+                                            'Complete' => 'text-success',     // Màu xanh lá
+                                            default => 'text-secondary'       // Màu xám cho trường hợp khác
+                                        };
+                                        ?>
+                                        <span class="case-study-link <?php echo $statusColor; ?> fw-bold">
+                                            <?php echo $row['case_study_id']; ?>
+                                        </span>
                                     </td>
                                     <td><?php echo $row['case_name']; ?></td>
                                     <td class="location-column" title="<?php echo $row['location']; ?>"><?php echo $row['location']; ?></td>
@@ -510,6 +521,34 @@ $result = $stmt->get_result();
         /* Table hover effect */
         .table tbody tr:hover {
             background-color: rgba(0,0,0,.02);
+        }
+
+        /* Màu cho status */
+        .text-info {
+            color: #0dcaf0 !important;
+        }
+
+        .text-warning {
+            color: #ffc107 !important;
+        }
+
+        .text-success {
+            color: #198754 !important;
+        }
+
+        .text-secondary {
+            color: #6c757d !important;
+        }
+
+        /* Thêm hiệu ứng hover nếu cần */
+        .case-study-link:hover {
+            opacity: 0.8;
+            cursor: pointer;
+        }
+
+        /* Đảm bảo font weight */
+        .fw-bold {
+            font-weight: 600 !important;
         }
     </style>
 

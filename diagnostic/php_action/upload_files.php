@@ -18,6 +18,26 @@ try {
 
         $caseStudyId = $_POST['case_study_id'] ?? null;
         $uploadDate = $_POST['upload_date'] ?? null;
+        $dayNote = isset($_POST['day_note']) ? $_POST['day_note'] : '';
+        $notesFile = $baseDir . "/uploads/case_studies/{$caseStudyId}/day_notes.json";
+        // Tạo thư mục nếu chưa tồn tại
+        $notesDir = dirname($notesFile);
+        if (!file_exists($notesDir)) {
+            mkdir($notesDir, 0777, true);
+        }
+
+        // Tạo hoặc cập nhật file notes
+        $notes = [];
+        if (file_exists($notesFile)) {
+            $notesContent = file_get_contents($notesFile);
+            $notes = json_decode($notesContent, true) ?: [];
+        }
+
+        // Thêm note mới
+        $notes[$uploadDate] = $dayNote;
+
+        // Lưu file
+        file_put_contents($notesFile, json_encode($notes, JSON_PRETTY_PRINT));
 
         if (!$caseStudyId || !$uploadDate) {
             throw new Exception("Missing required fields");
@@ -26,10 +46,10 @@ try {
         // Sửa lại đường dẫn để trỏ tới thư mục assets đồng cấp với diagnostic
         $baseDir = dirname(dirname(__FILE__)); // Lấy thư mục diagnostic
         $assetsDir = dirname($baseDir) . "/assets"; // Lên một cấp và vào thư mục assets
-        
+
         $imageDir = $assetsDir . "/uploadImage/Shrimp_image/{$caseStudyId}/{$uploadDate}/";
         $videoDir = $assetsDir . "/uploadVideo/{$caseStudyId}/{$uploadDate}/";
-        
+
         // Log paths for debugging
         $response['debug']['base_dir'] = $baseDir;
         $response['debug']['assets_dir'] = $assetsDir;
@@ -64,7 +84,7 @@ try {
 
             if ($fileError === UPLOAD_ERR_OK) {
                 $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-                
+
                 // Determine file type
                 $isVideo = in_array($fileType, $allowedVideoTypes) || in_array($extension, ['mp4', 'webm', 'ogg', 'mov']);
                 $isImage = in_array($fileType, $allowedImageTypes) || in_array($extension, ['jpg', 'jpeg', 'png', 'gif']);
@@ -110,14 +130,14 @@ try {
         if ($successImageCount > 0 || $successVideoCount > 0) {
             $response['success'] = true;
             $successMessages = array();
-            
+
             if ($successImageCount > 0) {
                 $successMessages[] = "$successImageCount image" . ($successImageCount > 1 ? "s" : "");
             }
             if ($successVideoCount > 0) {
                 $successMessages[] = "$successVideoCount video" . ($successVideoCount > 1 ? "s" : "");
             }
-            
+
             $response['message'] = "Successfully uploaded " . implode(" and ", $successMessages);
             if (!empty($errors)) {
                 $response['message'] .= ". Errors: " . implode(", ", $errors);

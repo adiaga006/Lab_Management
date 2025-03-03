@@ -130,73 +130,102 @@ foreach ($entries as $entry) {
         <?php foreach ($groupedByDate as $date => $dailyEntries): ?>
             <div class="card">
                 <div class="card-body">
-                    <h4 class="text-center"
-                        style="font-size: 1.5em;background-color:#A8CD89; color:black; font-weight: bold;">
+                    <h4 class="text-center mb-4"
+                        style="font-size: 1.5em;background-color:#A8CD89; color:black; font-weight: bold; padding: 10px;">
                         Day: <?php echo date('d-m-Y', strtotime($date)); ?>
                     </h4>
-                    <div class="table-responsive m-t-20">
+                    <div class="table-responsive">
                         <table class="table table-bordered table-striped">
                             <thead>
                                 <tr>
-                                    <th style="width: 220px;">Treatment Name</th>
-                                    <th style="width: 250px;">Product Application</th>
-                                    <th style="width: 50px;">Reps</th>
-                                    <th style="width: 50px;">Hour</th>
-                                    <th>Death Sample</th>
-                                    <th style=" text-align: center;width: 150px;">Action</th>
+                                    <th style="width: 20%;">Treatment Name</th>
+                                    <th style="width: 25%;">Product Application</th>
+                                    <th style="width: 10%;">Reps</th>
+                                    <th style="width: 10%;">Hour</th>
+                                    <th style="width: 15%;">Death Sample</th>
+                                    <th style="width: 20%; text-align: center;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php
-                                $currentTreatment = '';
-                                $currentRep = '';
-                                foreach ($dailyEntries as $index => $entry):
-                                    $isNewTreatment = $currentTreatment !== $entry['treatment_name'];
-                                    $isNewRep = $currentRep !== $entry['rep'];
+                                // Sắp xếp entries theo treatment_name
+                                usort($dailyEntries, function ($a, $b) {
+                                    return strcmp($a['treatment_name'], $b['treatment_name']);
+                                });
 
-                                    if ($isNewTreatment) {
-                                        $currentTreatment = $entry['treatment_name'];
-                                        $currentRep = ''; // Reset current rep on new treatment
+                                // Nhóm entries theo treatment_name
+                                $groupedTreatments = [];
+                                foreach ($dailyEntries as $entry) {
+                                    $treatmentName = $entry['treatment_name'];
+                                    if (!isset($groupedTreatments[$treatmentName])) {
+                                        $groupedTreatments[$treatmentName] = [];
                                     }
-                                    if ($isNewRep) {
-                                        $currentRep = $entry['rep'];
+                                    $groupedTreatments[$treatmentName][] = $entry;
+                                }
+
+                                foreach ($groupedTreatments as $treatmentName => $treatmentEntries) {
+                                    // Tính tổng số hàng cho treatment này
+                                    $totalRows = count($treatmentEntries);
+                                    $firstTreatmentRow = true;
+
+                                    // Nhóm theo rep
+                                    $groupedReps = [];
+                                    foreach ($treatmentEntries as $entry) {
+                                        $rep = $entry['rep'];
+                                        if (!isset($groupedReps[$rep])) {
+                                            $groupedReps[$rep] = [];
+                                        }
+                                        $groupedReps[$rep][] = $entry;
                                     }
 
-                                    // Tính rowspan cho Rep
-                                    $repRowspan = count(array_filter($dailyEntries, function ($e) use ($currentTreatment, $currentRep) {
-                                        return $e['treatment_name'] === $currentTreatment && $e['rep'] === $currentRep;
-                                    }));
-                                    ?>
-                                    <tr>
-                                        <?php if ($isNewRep): ?>
-                                            <td rowspan="<?php echo $repRowspan; ?>" style="vertical-align: middle;">
-                                                <?php echo htmlspecialchars($entry['treatment_name']); ?>
-                                            </td>
-                                            <td rowspan="<?php echo $repRowspan; ?>" style="vertical-align: middle;">
-                                                <?php echo htmlspecialchars($entry['product_application']); ?>
-                                            </td>
-                                            <td rowspan="<?php echo $repRowspan; ?>" style="vertical-align: middle;">
-                                                <?php echo htmlspecialchars($entry['rep']); ?>
-                                            </td>
-                                        <?php endif; ?>
+                                    foreach ($groupedReps as $rep => $repEntries) {
+                                        $repRowCount = count($repEntries);
+                                        $firstRepRow = true;
 
-                                        <td><?php echo htmlspecialchars($entry['test_hour']); ?>:00</td>
-                                        <td><?php echo htmlspecialchars($entry['death_sample']); ?></td>
-                                        <td>
-                                            <div class="action-buttons">
-                                                <button class="btn btn-warning btn-sm"
-                                                    onclick="editEntry(<?php echo htmlspecialchars($entry['id']); ?>)">
-                                                    <i class="fa fa-pencil"></i> Edit
-                                                </button>
-                                                <button class="btn btn-danger btn-sm"
-                                                    onclick="deleteEntry(<?php echo htmlspecialchars($entry['id']); ?>)">
-                                                    <i class="fa fa-trash"></i> Delete
-                                                </button>
-                                            </div>
-                                        </td>
+                                        foreach ($repEntries as $entry) {
+                                ?>
+                                            <tr>
+                                                <?php if ($firstTreatmentRow): ?>
+                                                    <td rowspan="<?php echo $totalRows; ?>" class="align-middle">
+                                                        <?php echo htmlspecialchars($treatmentName); ?>
+                                                    </td>
+                                                    <td rowspan="<?php echo $totalRows; ?>" class="align-middle">
+                                                        <?php echo htmlspecialchars($entry['product_application']); ?>
+                                                    </td>
+                                                <?php endif; ?>
 
-                                    </tr>
-                                <?php endforeach; ?>
+                                                <?php if ($firstRepRow): ?>
+                                                    <td rowspan="<?php echo $repRowCount; ?>" class="align-middle text-center">
+                                                        <?php echo htmlspecialchars($rep); ?>
+                                                    </td>
+                                                <?php endif; ?>
+
+                                                <td class="text-center">
+                                                    <?php echo sprintf('%02d:00', $entry['test_hour']); ?>
+                                                </td>
+                                                <td class="text-center">
+                                                    <?php echo htmlspecialchars($entry['death_sample']); ?>
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-warning btn-sm me-2"
+                                                            onclick="editEntry(<?php echo htmlspecialchars($entry['id']); ?>)">
+                                                            <i class="fa fa-pencil"></i> Edit
+                                                        </button>
+                                                        <button type="button" class="btn btn-danger btn-sm"
+                                                            onclick="deleteEntry(<?php echo htmlspecialchars($entry['id']); ?>)">
+                                                            <i class="fa fa-trash"></i> Delete
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                <?php
+                                            $firstRepRow = false;
+                                            $firstTreatmentRow = false;
+                                        }
+                                    }
+                                }
+                                ?>
                             </tbody>
                         </table>
                     </div>
@@ -210,7 +239,7 @@ foreach ($entries as $entry) {
 <!-- Flatpickr JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
         // Initialize Flatpickr for filterDate
         flatpickr("#filterDate", {
             dateFormat: "d-m-Y", // Set the display format to dd-MM-YYYY
@@ -240,7 +269,7 @@ foreach ($entries as $entry) {
                 filterDate: filterDate
             },
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success) {
                     renderFilteredData(response.data);
                     showToast('Filter applied successfully!', 'Success', true);
@@ -248,7 +277,7 @@ foreach ($entries as $entry) {
                     showToast(response.message || 'Failed to fetch data!', 'Error', false);
                 }
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
                 console.error('AJAX Error:', error);
                 showToast('Error during data fetch!', 'Error', false);
             }
@@ -398,9 +427,11 @@ foreach ($entries as $entry) {
         $.ajax({
             url: 'php_action/get_entry_death.php',
             type: 'POST',
-            data: { id: entryID },
+            data: {
+                id: entryID
+            },
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success) {
                     const data = response.data;
 
@@ -431,7 +462,7 @@ foreach ($entries as $entry) {
                     showToast(response.message || 'Failed to fetch entry details!', 'Error', false);
                 }
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
                 console.error('AJAX Error:', error);
                 showToast('Error fetching entry details!', 'Error', false);
             }
@@ -458,7 +489,7 @@ foreach ($entries as $entry) {
             type: 'POST',
             data: data,
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success) {
                     showToast('Entry updated successfully!', 'Success', true);
                     $('#editEntryModal').modal('hide'); // Đóng modal
@@ -474,7 +505,7 @@ foreach ($entries as $entry) {
                     showToast(response.message || 'Failed to update entry!', 'Error', false);
                 }
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
                 console.error('AJAX Error:', error);
                 showToast('Error updating entry!', 'Error', false);
             }
@@ -491,9 +522,11 @@ foreach ($entries as $entry) {
             $.ajax({
                 url: './php_action/delete_shrimp_death_data.php', // API xử lý xóa bản ghi
                 type: 'POST',
-                data: { id: entryId },
+                data: {
+                    id: entryId
+                },
                 dataType: 'json',
-                success: function (response) {
+                success: function(response) {
                     if (response.success) {
                         showToast(response.message || 'Death shrimp data deleted successfully!', 'Success', true);
 
@@ -508,7 +541,7 @@ foreach ($entries as $entry) {
                         showToast(response.message || 'Failed to delete entry!', 'Error', false);
                     }
                 },
-                error: function (xhr, status, error) {
+                error: function(xhr, status, error) {
                     console.error('AJAX Error:', error);
                     console.error('Response:', xhr.responseText);
                     showToast('Error during entry deletion!', 'Error', false);
@@ -531,7 +564,6 @@ foreach ($entries as $entry) {
         // Chuyển hướng đến file view_death_data.php
         window.location.href = url;
     }
-
 </script>
 <style>
     /* Container cho toast */
@@ -720,6 +752,76 @@ foreach ($entries as $entry) {
     .table-bordered tbody tr td[rowspan] {
         border-top: 3px solid #333;
         /* Đường viền trên các treatment đậm hơn */
+    }
+
+    .card {
+        margin-bottom: 2rem;
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        white-space: nowrap;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .btn-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .align-middle {
+        vertical-align: middle !important;
+    }
+
+    .text-center {
+        text-align: center !important;
+    }
+
+    /* Đảm bảo các cột có chiều rộng cố định */
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    /* Thêm hover effect cho các hàng */
+    .table-striped tbody tr:hover {
+        background-color: rgba(0, 0, 0, .05);
+    }
+
+    /* Style cho các nút action */
+    .btn-warning {
+        color: #fff;
+        background-color: #ffc107;
+        border-color: #ffc107;
+    }
+
+    .btn-danger {
+        color: #fff;
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+
+    /* Đảm bảo các icon có khoảng cách với text */
+    .fa {
+        margin-right: 4px;
     }
 </style>
 <?php include('./constant/layout/footer.php'); ?>

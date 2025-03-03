@@ -518,21 +518,24 @@ uksort($mediaByDate, 'compareDates');
     .page-title i {
         color: #2ecc71;
         font-size: 2.2rem;
-        margin-top: 10px; /* Giảm khoảng cách giữa nút trên và nút dưới */
+        margin-top: 10px;
+        /* Giảm khoảng cách giữa nút trên và nút dưới */
 
     }
 
     .page-title h3 {
         color: #222;
         font-weight: 700;
-        margin-top: 5px; /* Giảm khoảng cách giữa nút trên và nút dưới */
+        margin-top: 5px;
+        /* Giảm khoảng cách giữa nút trên và nút dưới */
 
     }
 
     .page-title span {
         color: #2ecc71;
         font-weight: 700;
-        margin-top: 5px; /* Giảm khoảng cách giữa nút trên và nút dưới */
+        margin-top: 5px;
+        /* Giảm khoảng cách giữa nút trên và nút dưới */
 
     }
 
@@ -595,74 +598,341 @@ uksort($mediaByDate, 'compareDates');
     /* Style cho Upload Date header */
     .date-header {
         background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-        padding: 15px 20px;
-        margin: 20px 0;
+        padding: 20px;
         border-radius: 10px;
         box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
         border-left: 4px solid #2ecc71;
-        animation: slideInLeft 0.3s ease;
+        margin-bottom: 20px;
     }
 
-    .date-header span {
-        font-size: 1.2rem;
+    .upload-date {
+        font-size: 1.1rem;
         color: #2c3e50;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+        font-weight: 500;
     }
 
-    .date-header i {
+    /* Style cho note card */
+    .note-card {
+        background: #fff;
+        border-radius: 8px;
+        border: 1px solid rgba(46, 204, 113, 0.2);
+        box-shadow: 0 2px 8px rgba(46, 204, 113, 0.1);
+        padding: 15px;
+        margin-top: 10px;
+    }
+
+    .note-content {
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .note-content i {
         color: #2ecc71;
-        font-size: 1.3rem;
+        font-size: 1.1rem;
+        margin-top: 3px;
     }
 
-    /* Style cho confirm dialog */
-    .custom-confirm {
-        background: white;
-        padding: 25px;
+    .note-content p {
+        color: #555;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-left: 10px;
+        flex: 1;
+    }
+
+    /* Style cho buttons */
+    .btn-link {
+        color: #2ecc71;
+        text-decoration: none;
+        padding: 6px 12px;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9rem;
+        background-color: rgba(46, 204, 113, 0.1);
+    }
+
+    .btn-link:hover {
+        background-color: rgba(46, 204, 113, 0.2);
+        color: #27ae60;
+        transform: translateY(-1px);
+    }
+
+    .btn-link i {
+        font-size: 0.85rem;
+    }
+
+    /* Style cho modal */
+    .modal-content {
         border-radius: 12px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-        animation: fadeInUp 0.3s ease;
-        max-width: 400px;
-        width: 90%;
+        border: none;
     }
 
-    .custom-confirm h5 {
+    .modal-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eee;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .modal-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #eee;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .form-control {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 10px;
+    }
+
+    .form-control:focus {
+        border-color: #2ecc71;
+        box-shadow: 0 0 0 0.2rem rgba(46, 204, 113, 0.25);
+    }
+
+    /* Cải thiện khoảng cách icon trong date header */
+    .date-header .d-flex.align-items-center i {
+        margin-right: 10px;
+        color: #2ecc71;
+    }
+
+    /* Modern Centered Toast Notifications */
+    #toast {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) translateY(50px);
+        z-index: 9999;
+        min-width: 400px;
+        padding: 25px;
+        border-radius: 20px;
+        background: white;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    #toast.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translate(-50%, -50%) translateY(0);
+    }
+
+    /* Toast Icon */
+    #toast #toastIcon {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    /* Success Toast */
+    #toast.toast-success {
+        border: 2px solid rgba(46, 204, 113, 0.2);
+        background: linear-gradient(145deg, #ffffff, #f8fff8);
+    }
+
+    #toast.toast-success #toastIcon {
+        color: #2ecc71;
+        animation: toastIconPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Error Toast */
+    #toast.toast-error {
+        border: 2px solid rgba(231, 76, 60, 0.2);
+        background: linear-gradient(145deg, #ffffff, #fff8f8);
+    }
+
+    #toast.toast-error #toastIcon {
         color: #e74c3c;
-        font-size: 1.4rem;
-        margin-bottom: 1rem;
+    }
+
+    /* Warning Toast */
+    #toast.toast-warning {
+        border: 2px solid rgba(241, 196, 15, 0.2);
+        background: linear-gradient(145deg, #ffffff, #fffdf8);
+    }
+
+    #toast.toast-warning #toastIcon {
+        color: #f1c40f;
+    }
+
+    /* Toast Content */
+    #toast .toast-content {
+        text-align: center;
+    }
+
+    #toast .toast-content span {
+        color: #2c3e50;
+        font-size: 1.1rem;
+        font-weight: 500;
+        display: block;
+    }
+
+    /* Toast Close Button */
+    #toast .toast-close {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: transparent;
+        border: none;
+        color: #95a5a6;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        justify-content: center;
+        transition: all 0.3s ease;
     }
 
-    .custom-confirm h5 i {
-        font-size: 1.6rem;
+    #toast .toast-close:hover {
+        background: rgba(0, 0, 0, 0.05);
+        color: #2c3e50;
+        transform: rotate(90deg);
     }
 
-    /* Animations */
-    @keyframes slideInLeft {
+    /* Toast Animations */
+    @keyframes toastIconPop {
+        0% {
+            transform: scale(0.5);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(1.2);
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    /* Toast Progress Bar */
+    #toast::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 0 0 20px 20px;
+    }
+
+    #toast.show::after {
+        animation: toastProgress 3s linear forwards;
+    }
+
+    @keyframes toastProgress {
+        0% {
+            width: 100%;
+        }
+        100% {
+            width: 0%;
+        }
+    }
+
+    /* Overlay background */
+    .toast-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .toast-overlay.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* SweetAlert2 custom styles */
+    .swal2-popup {
+        padding: 2rem;
+        border-radius: 15px !important;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    .swal2-icon {
+        border: none !important;
+        margin: 1.5rem auto !important;
+        width: 5em !important;
+        height: 5em !important;
+    }
+
+    .swal2-title {
+        font-size: 1.2rem !important;
+        font-weight: 500 !important;
+        color: #2c3e50 !important;
+        margin: 1rem 0 !important;
+    }
+
+    /* Success popup */
+    .swal2-success-popup {
+        border: 2px solid rgba(46, 204, 113, 0.2) !important;
+    }
+
+    .swal2-success-icon {
+        color: #2ecc71 !important;
+    }
+
+    /* Error popup */
+    .swal2-error-popup {
+        border: 2px solid rgba(220, 53, 69, 0.2) !important;
+    }
+
+    /* Warning popup */
+    .swal2-warning-popup {
+        border: 2px solid rgba(255, 193, 7, 0.2) !important;
+    }
+
+    /* Animation */
+    @keyframes fadeInDown {
         from {
             opacity: 0;
-            transform: translateX(-20px);
+            transform: translate3d(0, -20%, 0);
         }
-
         to {
             opacity: 1;
-            transform: translateX(0);
+            transform: translate3d(0, 0, 0);
         }
     }
 
-    @keyframes fadeOutZoom {
-        to {
-            transform: scale(0.8);
-            opacity: 0;
-        }
+    .animated {
+        animation-duration: 0.3s;
+        animation-fill-mode: both;
     }
 
-    .removing {
-        animation: fadeOutZoom 0.2s ease forwards;
+    .fadeInDown {
+        animation-name: fadeInDown;
+    }
+
+    /* Progress bar */
+    .swal2-timer-progress-bar {
+        background: rgba(46, 204, 113, 0.2) !important;
+        height: 0.25rem !important;
+        border-radius: 0 0 15px 15px !important;
+    }
+
+    .swal2-error-popup .swal2-timer-progress-bar {
+        background: rgba(220, 53, 69, 0.2) !important;
+    }
+
+    .swal2-warning-popup .swal2-timer-progress-bar {
+        background: rgba(255, 193, 7, 0.2) !important;
     }
 </style>
 
@@ -686,19 +956,25 @@ uksort($mediaByDate, 'compareDates');
                     </div>
                     <div class="modal-body">
                         <form id="uploadForm" enctype="multipart/form-data">
-                            <div class="form-group">
+                            <div class="form-group mb-3">
                                 <label for="upload_date">Upload Date:</label>
                                 <input type="text" name="upload_date" id="uploadDatePicker" class="form-control"
                                     required>
                                 <input type="hidden" name="case_study_id"
                                     value="<?php echo htmlspecialchars($caseStudyId); ?>">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group mb-3">
+                                <label for="day_note">Day Note (optional):</label>
+                                <textarea name="day_note" id="dayNote" class="form-control"
+                                    placeholder="Add a note for this day's uploads"
+                                    rows="3"></textarea>
+                            </div>
+                            <div class="form-group mb-3">
                                 <label for="files">Select Files:</label>
                                 <input type="file" name="files[]" multiple class="form-control" required
                                     accept="image/*,video/mp4,video/webm,video/ogg,video/quicktime">
                             </div>
-                            <button type="submit" class="btn btn-success">Upload</button>
+                            <button type="submit" class="btn btn-success w-100">Upload</button>
                         </form>
                     </div>
                 </div>
@@ -737,22 +1013,70 @@ uksort($mediaByDate, 'compareDates');
             </div>
         </div>
 
+        <!-- Thêm Modal cho Note -->
+        <div class="modal fade" id="noteModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Day Note</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="modalDayNote" class="form-label">Note for <span id="noteDate"></span></label>
+                            <textarea id="modalDayNote" class="form-control" rows="4"
+                                placeholder="Edit a note for this day's uploads"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="saveNote()">Save Note</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Images Display -->
         <div id="imageGallery">
             <?php foreach ($mediaByDate as $date => $mediaItems): ?>
                 <div class="img-container" data-date="<?php echo htmlspecialchars($date); ?>">
                     <div class="date-header">
                         <div class="d-flex justify-content-between align-items-center">
-                            <span>
-                                <i class="far fa-calendar-check"></i>
-                                Upload Date: <?php echo htmlspecialchars($date); ?>
-                            </span>
+                            <div class="d-flex align-items-center">
+                                <i class="far fa-calendar-check me-3"></i>
+                                <span class="upload-date">Upload Date: <?php echo htmlspecialchars($date); ?></span>
+                                <button class="btn btn-link btn-sm ms-3" 
+                                        onclick='showNoteModal("<?php echo htmlspecialchars($date); ?>", <?php echo isset($notes[$date]) ? json_encode($notes[$date]) : "\"\""; ?>)'>
+                                    <i class="fas fa-edit me-1"></i> Edit Note
+                                </button>
+                            </div>
                             <div class="select-all-container" style="display: none;">
                                 <input type="checkbox" id="selectAll_<?php echo htmlspecialchars($date); ?>"
                                     class="select-all" data-date="<?php echo htmlspecialchars($date); ?>">
                                 <label for="selectAll_<?php echo htmlspecialchars($date); ?>">Select All</label>
                             </div>
                         </div>
+
+                        <?php
+                        // Đọc notes từ file
+                        $notesFile = dirname(__FILE__) . "/uploads/case_studies/{$caseStudyId}/day_notes.json";
+                        $notes = [];
+                        if (file_exists($notesFile)) {
+                            $notes = json_decode(file_get_contents($notesFile), true) ?: [];
+                        }
+
+                        // Hiển thị note nếu có
+                        if (isset($notes[$date]) && !empty($notes[$date])):
+                        ?>
+                            <div class="day-note mt-3">
+                                <div class="note-card">
+                                    <div class="note-content">
+                                        <i class="fas fa-sticky-note me-2"></i>
+                                        <p class="mb-0"><?php echo nl2br(htmlspecialchars($notes[$date])); ?></p>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
                     <div class="image-grid">
                         <?php foreach ($mediaItems as $item): ?>
@@ -789,7 +1113,19 @@ uksort($mediaByDate, 'compareDates');
     </div>
 </div>
 
-<div id="toast" class="toast"></div>
+<!-- Thêm overlay cho toast -->
+<div class="toast-overlay"></div>
+
+<!-- Cập nhật HTML cho toast message -->
+<div id="toast" class="toast">
+    <i id="toastIcon" class="fas"></i>
+    <div class="toast-content">
+        <span id="toastMessage"></span>
+    </div>
+    <button class="toast-close" onclick="hideToast()">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
 
 <!-- Scripts -->
 
@@ -797,18 +1133,220 @@ uksort($mediaByDate, 'compareDates');
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
 <script>
-    function showToast(message, type) {
-        const toast = document.getElementById('toast');
-        toast.textContent = message;
-        toast.className = 'toast toast-' + type;
-        toast.style.display = 'block';
+    // Khai báo biến global ở đầu script
+    var currentEditDate = '';
 
-        setTimeout(function () {
-            toast.style.display = 'none';
-        }, 3000);
+    // Sau đó mới định nghĩa các hàm
+    function showNoteModal(date, currentNote) {
+        currentEditDate = date;
+        document.getElementById('noteDate').textContent = date;
+        document.getElementById('modalDayNote').value = currentNote || '';
+        
+        // Sử dụng Bootstrap 5
+        const noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
+        noteModal.show();
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    function saveNote() {
+        const newNote = document.getElementById('modalDayNote').value;
+        
+        fetch('php_action/update_day_note.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                case_study_id: '<?php echo htmlspecialchars($caseStudyId); ?>',
+                date: currentEditDate,
+                note: newNote
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Đóng modal
+                const noteModal = bootstrap.Modal.getInstance(document.getElementById('noteModal'));
+                noteModal.hide();
+                
+                // Cập nhật UI trực tiếp
+                updateNoteDisplay(currentEditDate, newNote);
+                
+                // Hiển thị thông báo thành công
+                showToast('Note updated successfully', 'success');
+            } else {
+                showToast(data.message || 'Error updating note', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error updating note', 'error');
+        });
+    }
+
+    function updateNoteDisplay(date, noteContent) {
+        // Tìm container của ngày tương ứng
+        const dateContainer = document.querySelector(`.img-container[data-date="${date}"]`);
+        if (!dateContainer) return;
+        
+        const dateHeader = dateContainer.querySelector('.date-header');
+        let dayNoteDiv = dateHeader.querySelector('.day-note');
+        
+        if (noteContent && noteContent.trim() !== '') {
+            // Nếu chưa có div day-note, tạo mới
+            if (!dayNoteDiv) {
+                dayNoteDiv = document.createElement('div');
+                dayNoteDiv.className = 'day-note mt-3';
+                dateHeader.appendChild(dayNoteDiv);
+            }
+            
+            // Cập nhật nội dung
+            dayNoteDiv.innerHTML = `
+                <div class="note-card">
+                    <div class="note-content">
+                        <i class="fas fa-sticky-note me-2"></i>
+                        <p class="mb-0">${noteContent.replace(/\n/g, '<br>').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                    </div>
+                </div>
+            `;
+            
+            // Cập nhật nút edit note với note mới
+            const editButton = dateHeader.querySelector('.btn-link');
+            if (editButton) {
+                editButton.onclick = function() {
+                    showNoteModal(date, noteContent);
+                };
+            }
+        } else {
+            // Nếu note trống, xóa div day-note nếu tồn tại
+            if (dayNoteDiv) {
+                dayNoteDiv.remove();
+            }
+            
+            // Cập nhật nút edit note với note trống
+            const editButton = dateHeader.querySelector('.btn-link');
+            if (editButton) {
+                editButton.onclick = function() {
+                    showNoteModal(date, '');
+                };
+            }
+        }
+    }
+
+    // Event listener cho form upload
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+
+            try {
+                // Upload files và note
+                const response = await fetch('./php_action/upload_files.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Nếu upload thành công, cập nhật note
+                    const uploadDate = formData.get('upload_date');
+                    const dayNote = formData.get('day_note');
+
+                    if (dayNote) {
+                        await fetch('php_action/update_day_note.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                case_study_id: '<?php echo htmlspecialchars($caseStudyId); ?>',
+                                date: uploadDate,
+                                note: dayNote
+                            })
+                        });
+                    }
+
+                    showToast('Files uploaded successfully', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showToast(result.message || 'Upload failed', 'error');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast('Upload failed: ' + error.message, 'error');
+            }
+        });
+    });
+
+    function showToast(message, type = 'success') {
+        const Toast = Swal.mixin({
+            toast: false,
+            position: 'center',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
+            showCloseButton: false,
+            customClass: {
+                popup: 'animated fadeInDown',
+                closeButton: 'btn btn-light-danger',
+            }
+        });
+
+        switch(type) {
+            case 'success':
+                Toast.fire({
+                    icon: 'success',
+                    title: message,
+                    background: '#fff',
+                    iconColor: '#2ecc71',
+                    customClass: {
+                        popup: 'swal2-success-popup',
+                        icon: 'swal2-success-icon'
+                    }
+                });
+                break;
+            case 'error':
+                Toast.fire({
+                    icon: 'error',
+                    title: message,
+                    background: '#fff',
+                    iconColor: '#dc3545',
+                    customClass: {
+                        popup: 'swal2-error-popup'
+                    }
+                });
+                break;
+            case 'warning':
+                Toast.fire({
+                    icon: 'warning',
+                    title: message,
+                    background: '#fff',
+                    iconColor: '#ffc107',
+                    customClass: {
+                        popup: 'swal2-warning-popup'
+                    }
+                });
+                break;
+        }
+    }
+
+    function hideToast() {
+        const toast = document.getElementById('toast');
+        const overlay = document.querySelector('.toast-overlay');
+        
+        toast.classList.remove('show');
+        overlay.classList.remove('show');
+        
+        // Clean up after animation
+        toast.addEventListener('transitionend', function handler() {
+            toast.removeEventListener('transitionend', handler);
+            toast.className = 'toast';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
         // Initialize Flatpickr
         flatpickr("#uploadDatePicker", {
             dateFormat: "d-m-Y"
@@ -846,7 +1384,7 @@ uksort($mediaByDate, 'compareDates');
         }
 
         // Event listener cho form submit
-        document.getElementById('uploadForm').addEventListener('submit', async function (e) {
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const formData = new FormData();
@@ -884,13 +1422,13 @@ uksort($mediaByDate, 'compareDates');
         }
 
         // Update showConfirmDialog function
-        window.showConfirmDialog = function () {
+        window.showConfirmDialog = function() {
             confirmBackdrop.style.display = 'block';
             confirmDialog.style.display = 'block';
         };
 
         // Update closeConfirmDialog function
-        window.closeConfirmDialog = function () {
+        window.closeConfirmDialog = function() {
             confirmBackdrop.style.display = 'none';
             confirmDialog.style.display = 'none';
         };
@@ -923,13 +1461,13 @@ uksort($mediaByDate, 'compareDates');
             history: false,
             // Thêm handler cho nút close
             closeButton: {
-                click: function () {
+                click: function() {
                     isClosedByUser = true;
                     return true;
                 }
             },
             // Handler cho click outside
-            click: function () {
+            click: function() {
                 isClosedByUser = true;
                 return "close";
             },
@@ -942,7 +1480,7 @@ uksort($mediaByDate, 'compareDates');
         });
 
         // Xử lý khi người dùng nhấn nút back của trình duyệt
-        window.addEventListener('popstate', function (event) {
+        window.addEventListener('popstate', function(event) {
             const instance = Fancybox.getInstance();
             if (instance) {
                 isClosedByUser = false;
@@ -951,7 +1489,7 @@ uksort($mediaByDate, 'compareDates');
         });
 
         // Xử lý click outside
-        document.addEventListener('click', function (event) {
+        document.addEventListener('click', function(event) {
             const instance = Fancybox.getInstance();
             if (instance && !event.target.closest('.fancybox__container')) {
                 isClosedByUser = true;
@@ -959,7 +1497,7 @@ uksort($mediaByDate, 'compareDates');
         }, true);
 
         // Xử lý phím ESC
-        document.addEventListener('keydown', function (event) {
+        document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 isClosedByUser = true;
             }
@@ -1054,7 +1592,7 @@ uksort($mediaByDate, 'compareDates');
 
     // Handle Select All functionality
     document.querySelectorAll('.select-all').forEach(checkbox => {
-        checkbox.addEventListener('change', function () {
+        checkbox.addEventListener('change', function() {
             const date = this.dataset.date;
             const imageCheckboxes = document.querySelectorAll(`.media-select[data-date="${date}"]`);
             imageCheckboxes.forEach(box => {
@@ -1066,7 +1604,7 @@ uksort($mediaByDate, 'compareDates');
 
     // Handle individual checkbox changes
     document.querySelectorAll('.media-select').forEach(checkbox => {
-        checkbox.addEventListener('change', function () {
+        checkbox.addEventListener('change', function() {
             updateDeleteButton();
 
             const date = this.dataset.date;
@@ -1102,7 +1640,9 @@ uksort($mediaByDate, 'compareDates');
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ images: selectedImages })
+                body: JSON.stringify({
+                    images: selectedImages
+                })
             });
 
             const result = await response.json();
@@ -1157,7 +1697,9 @@ uksort($mediaByDate, 'compareDates');
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ media: selectedMedia })
+                body: JSON.stringify({
+                    media: selectedMedia
+                })
             });
 
             const result = await response.json();
@@ -1197,7 +1739,9 @@ uksort($mediaByDate, 'compareDates');
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
 
 <script type="module">
-    import { Fancybox } from "https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.esm.js";
+    import {
+        Fancybox
+    } from "https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.esm.js";
 
     document.addEventListener('DOMContentLoaded', () => {
         const options = {
@@ -1305,3 +1849,5 @@ uksort($mediaByDate, 'compareDates');
 <?php include('./constant/layout/footer.php'); ?>
 <!-- Thêm Font Awesome cho icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
