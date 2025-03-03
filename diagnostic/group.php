@@ -68,7 +68,7 @@ $endDate = (new DateTime($startDate))
 // Encode end_date thành JSON để sử dụng trong JavaScript
 $endDateJs = json_encode($endDate);
 
-// L�����y thông tin case study và category ID
+// Lấy thông tin case study và category ID
 $sql = "SELECT case_name, categories_id FROM case_study WHERE case_study_id = '$caseStudyId'";
 $caseStudyResult = $connect->query($sql);
 $caseStudy = $caseStudyResult->fetch_assoc();
@@ -90,21 +90,24 @@ $groupResult = $connect->query($groupSql);
             </h3>
             <div class="button-container d-flex flex-column align-items-end">
                 <div class="top-buttons">
-                    <a href="schedule.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" 
-                       class="btn btn-schedule btn-lg">
+                    <a href="schedule.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
+                        class="btn btn-schedule btn-lg">
                         <i class="fa fa-calendar"></i> Schedule
                     </a>
-                    <a href="chart.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" 
-                       class="btn btn-chart btn-lg">
+                    <a href="chart.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
+                        class="btn btn-chart btn-lg">
                         <i class="fa fa-pie-chart"></i> Show Chart
                     </a>
-                    <a href="results.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" 
-                       class="btn btn-results btn-lg">
+                    <a href="results.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
+                        class="btn btn-results btn-lg">
                         <i class="fa fa-bar-chart"></i> Show Results
                     </a>
+                    <button class="btn btn-info" onclick="showQRCode()">
+                        <i class="fas fa-qrcode"></i> Show QR
+                    </button>
                 </div>
-                <a href="manage_image.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>" 
-                   class="btn btn-media btn-lg mt-2">
+                <a href="manage_image.php?case_study_id=<?php echo htmlspecialchars($caseStudyId); ?>"
+                    class="btn btn-media btn-lg mt-2">
                     <i class="fa fa-image"></i> Show Image / Video
                 </a>
             </div>
@@ -185,10 +188,10 @@ $groupResult = $connect->query($groupSql);
                                 <?php endwhile; ?>
                             </tbody>
                         </table>
-                    </div>
-                <?php else: ?>
-                    <p>No groups available for this category.</p>
-                <?php endif; ?>
+                </div>
+            <?php else: ?>
+                <p>No groups available for this category.</p>
+            <?php endif; ?>
             </div>
         </div>
     </div>
@@ -426,9 +429,11 @@ $groupResult = $connect->query($groupSql);
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <!-- Flatpickr JS -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- QR JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
-    window.addEventListener('pageshow', function (event) {
+    window.addEventListener('pageshow', function(event) {
         if (event.persisted) {
             sessionStorage.clear(); // Xóa sessionStorage
             $('input, select').val(''); // Reset các trường dữ liệu
@@ -436,28 +441,31 @@ $groupResult = $connect->query($groupSql);
         }
     });
 
-    window.addEventListener("beforeunload", function () {
+    window.addEventListener("beforeunload", function() {
         sessionStorage.clear(); // Xóa sessionStorage
         $('input, select').val(''); // Reset các trường dữ liệu
     });
     if (window.performance && window.performance.getEntriesByType("navigation")[0].type === "back_forward") {
         location.reload(); // Tải lại trang để xóa dữ liệu cũ
     }
-    window.addEventListener("pagehide", function () {
+    window.addEventListener("pagehide", function() {
         sessionStorage.clear(); // Xóa sessionStorage khi trang bị ẩn
         $('input, select').val('');
     });
-    window.onpageshow = function (event) {
+    window.onpageshow = function(event) {
         if (event.persisted) {
             sessionStorage.clear(); // Xóa sessionStorage khi trang bị ẩn
             $('input, select').val('');
         }
     };
-    document.addEventListener('wheel', function (event) {
+    document.addEventListener('wheel', function(event) {
         if (document.activeElement.type === 'number') {
             event.preventDefault();
         }
-    }, { passive: false });
+    }, {
+        passive: false
+    });
+
     function showToast(message, title = 'Notification', isSuccess = true) {
         const toastTitle = document.getElementById('toastTitle');
         const toastBody = document.getElementById('toastBody');
@@ -523,7 +531,7 @@ $groupResult = $connect->query($groupSql);
     }
 
     // Thêm event listener cho input ngày
-    $('input[name="day"]').on('change', function () {
+    $('input[name="day"]').on('change', function() {
         const selectedDate = flatpickr.parseDate(this.value, "d-m-Y");
         if (selectedDate) {
             checkAndSetSystemType(selectedDate);
@@ -556,7 +564,7 @@ $groupResult = $connect->query($groupSql);
         }
 
         // Đăng ký sự kiện "keydown" khi form đang hiển thị
-        $('#addDataForm').on('keydown', function (event) {
+        $('#addDataForm').on('keydown', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault(); // Ngăn không cho form submit mặc định
                 submitEntryData(); // Gọi hàm submitEntryData để gửi dữ liệu
@@ -565,8 +573,8 @@ $groupResult = $connect->query($groupSql);
     }
     // Mở form thêm Water Quality và điền case_study_id vào form
     function openWaterQualityModal(caseStudyId, groupName) {
-        $('#modalCaseStudyId3').val(caseStudyId);        // Đăng ký sự kiện "keydown" khi form đang hiển thị
-        $('#addWaterQualityForm').on('keydown', function (event) {
+        $('#modalCaseStudyId3').val(caseStudyId); // Đăng ký sự kiện "keydown" khi form đang hiển thị
+        $('#addWaterQualityForm').on('keydown', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault(); // Ngăn không cho form submit mặc định
                 submitWaterQualityData(); // Gọi hàm submitWaterQualityData để gửi dữ liệu
@@ -574,7 +582,7 @@ $groupResult = $connect->query($groupSql);
         });
     }
     // Đóng form và hủy sự kiện "keydown" để tránh xung đột
-    $('.btn-close-modal').on('click', function () {
+    $('.btn-close-modal').on('click', function() {
         $('#addDataForm').off('keydown'); // Xóa sự kiện cho Form 1
         $('#addShrimpDeathDataForm').off('keydown'); // Xóa sự kiện cho Form 2
     });
@@ -618,7 +626,7 @@ $groupResult = $connect->query($groupSql);
             type: 'POST',
             data: formData,
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success) {
                     showToast('Data added successfully!', 'Success', true);
 
@@ -634,7 +642,7 @@ $groupResult = $connect->query($groupSql);
                     showToast(response.messages, 'Error', false); // Hiển thị lỗi từ API
                 }
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
                 console.error("AJAX Error:", error);
                 showToast("An unexpected error occurred.", "Error", false);
             }
@@ -647,9 +655,11 @@ $groupResult = $connect->query($groupSql);
         $.ajax({
             url: 'php_action/get_recent_entries.php', // Endpoint để lấy recent entries
             type: 'POST',
-            data: { case_study_id: caseStudyId },
+            data: {
+                case_study_id: caseStudyId
+            },
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success) {
                     let tableHtml = `
                     <table class="table table-bordered table-striped">
@@ -684,7 +694,7 @@ $groupResult = $connect->query($groupSql);
                     $('#recentEntriesContainer').html('<p>No recent entries found.</p>');
                 }
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
                 console.error('Failed to fetch recent entries:', error);
             }
         });
@@ -731,13 +741,13 @@ $groupResult = $connect->query($groupSql);
         const formData = {
             case_study_id: caseStudyId,
             day: formattedDate,
-            salinity: salinity || null,        // Gửi null nếu không có giá trị
+            salinity: salinity || null, // Gửi null nếu không có giá trị
             temperature: temperature,
             dissolved_oxygen: dissolvedOxygen,
             pH: pH,
-            alkalinity: alkalinity || null,    // Gửi null nếu không có giá trị
-            tan: tan || null,                  // Gửi null nếu không có giá trị
-            nitrite: nitrite || null,          // Gửi null nếu không có giá trị
+            alkalinity: alkalinity || null, // Gửi null nếu không có giá trị
+            tan: tan || null, // Gửi null nếu không có giá trị
+            nitrite: nitrite || null, // Gửi null nếu không có giá trị
             system_type: systemType,
         };
 
@@ -747,7 +757,7 @@ $groupResult = $connect->query($groupSql);
             type: 'POST',
             data: formData,
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success) {
                     showToast('Water Quality data added successfully!', 'Success', true);
 
@@ -758,7 +768,7 @@ $groupResult = $connect->query($groupSql);
                     showToast(response.messages, 'Error', false); // Hiển thị lỗi từ API
                 }
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
                 console.error("AJAX Error:", error);
                 showToast("An unexpected error occurred.", "Error", false);
             }
@@ -767,7 +777,7 @@ $groupResult = $connect->query($groupSql);
 
 
     // Lưu ngày vào sessionStorage khi người dùng nhập
-    $('input[name="lab_day"]').on('change', function () {
+    $('input[name="lab_day"]').on('change', function() {
         const labDay = $('input[name="lab_day"]').val(); // Giá trị đầu vào (d-M-Y)
         const parts = labDay.split('-'); // Tách thành [d, M, Y]
         if (parts.length === 3) {
@@ -776,12 +786,12 @@ $groupResult = $connect->query($groupSql);
         }
     });
     // Tạo timeout để tự động xóa session sau 3 tiếng (10800000 ms)
-    setTimeout(function () {
+    setTimeout(function() {
         sessionStorage.removeItem('treatment_name');
         sessionStorage.removeItem('product_application');
         sessionStorage.removeItem('lab_day');
     }, 10800000);
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
         // Xóa sessionStorage của form 2 khi tải lại trang
         $('input, select').val('');
         sessionStorage.clear(); // Xóa mọi dữ liệu trong sessionStorage
@@ -848,6 +858,7 @@ $groupResult = $connect->query($groupSql);
         // Gọi hàm resetRep để reset giá trị rep về 1
         resetRep(treatmentDropdown);
     }
+
     function openShrimpDeathModal(caseStudyId, groupName) {
         $('#modalCaseStudyId2').val(caseStudyId);
         updateRecentEntriesGroup2();
@@ -869,21 +880,21 @@ $groupResult = $connect->query($groupSql);
         if (savedProductApplication) {
             $('#productApplicationGroup2').val(savedProductApplication);
         }
-        $('input[name="test_date"]').on('change', function () {
+        $('input[name="test_date"]').on('change', function() {
             sessionStorage.setItem('test_date_group2', $(this).val());
         });
 
-        $('select[name="test_hour"]').on('change', function () {
+        $('select[name="test_hour"]').on('change', function() {
             sessionStorage.setItem('test_hour_group2', $(this).val());
         });
 
-        $('select[name="treatmentNameGroup2"]').on('change', function () {
+        $('select[name="treatmentNameGroup2"]').on('change', function() {
             const selectedValue = $(this).val();
             sessionStorage.setItem('treatmentNameGroup2', selectedValue);
         });
 
         // Đăng ký sự kiện nhấn Enter
-        $('#addShrimpDeathDataForm').on('keydown', function (event) {
+        $('#addShrimpDeathDataForm').on('keydown', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
                 submitShrimpDeathData();
@@ -891,7 +902,7 @@ $groupResult = $connect->query($groupSql);
         });
     }
     // Xóa session sau 3 tiếng
-    setTimeout(function () {
+    setTimeout(function() {
         sessionStorage.removeItem('treatmentNameGroup2');
         sessionStorage.removeItem('test_date_group2');
         sessionStorage.removeItem('test_hour_group2');
@@ -956,7 +967,7 @@ $groupResult = $connect->query($groupSql);
             type: 'POST',
             data: formData,
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success) {
                     showToast('Shrimp Death Data added successfully!', 'Success', true);
 
@@ -970,7 +981,7 @@ $groupResult = $connect->query($groupSql);
                     showToast(response.messages, 'Error', false); // Hiển thị lỗi từ API
                 }
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
                 console.error("AJAX Error:", error);
                 showToast("An unexpected error occurred.", "Error", false); // Lỗi không mong muốn
             }
@@ -979,7 +990,7 @@ $groupResult = $connect->query($groupSql);
 
 
 
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
         const endDate = new Date(<?php echo $endDateJs; ?>); // end_date từ PHP
         const formattedEndDate = endDate.toLocaleDateString('en-GB').replace(/\//g, '-'); // Chuyển định dạng
         const formattedStartDate = startDate.toLocaleDateString('en-GB').replace(/\//g, '-'); // Chuyển định dạng
@@ -988,7 +999,7 @@ $groupResult = $connect->query($groupSql);
         flatpickr("#testTimePicker", {
             dateFormat: "d-m-Y", // Định dạng ngày
             defaultDate: new Date(), // Ngày mặc định
-            onChange: function (selectedDates, dateStr, instance) {
+            onChange: function(selectedDates, dateStr, instance) {
                 if (selectedDates.length > 0) {
                     const selectedDate = new Date(selectedDates[0]);
                     selectedDate.setHours(0, 0, 0, 0); // Chuẩn hóa về date-only
@@ -1020,9 +1031,11 @@ $groupResult = $connect->query($groupSql);
         $.ajax({
             url: 'php_action/get_recent_entries_death.php',
             type: 'POST',
-            data: { case_study_id: caseStudyId },
+            data: {
+                case_study_id: caseStudyId
+            },
             dataType: 'json',
-            success: function (response) {
+            success: function(response) {
                 if (response.success) {
                     let tableHtml = `
                     <table class="table table-bordered table-striped">
@@ -1039,7 +1052,14 @@ $groupResult = $connect->query($groupSql);
                     response.data.forEach(entry => {
                         // Định dạng lại test_time
                         const testTime = new Date(entry.test_time);
-                        const options = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
+                        const options = {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                        };
                         const formattedTestTime = testTime.toLocaleString('en-GB', options).replace(',', ''); // Định dạng theo d-M-Y H:i
 
                         tableHtml += `
@@ -1058,11 +1078,12 @@ $groupResult = $connect->query($groupSql);
                     $('#recentEntriesContainerGroup2').html('<p>No recent entries found.</p>');
                 }
             },
-            error: function (xhr, status, error) {
+            error: function(xhr, status, error) {
                 console.error('Failed to fetch recent entries:', error);
             }
         });
     }
+
     function resetRep(selectElement) {
         const formGroup = selectElement.closest('.form-group').parentElement;
         const repInput = formGroup.querySelector('input[name="rep"], input[name="rep_2"]');
@@ -1143,8 +1164,115 @@ $groupResult = $connect->query($groupSql);
 
         return true;
     }
+    // Đặt code trong document.ready để đảm bảo DOM đã load xong
+    document.addEventListener('DOMContentLoaded', function() {
+        // Định nghĩa các hàm toàn cục
+        window.showQRCode = function() {
+            const currentUrl = window.location.href;
+            const qrImage = document.getElementById('qrImage');
+            
+            qrImage.crossOrigin = "anonymous";
+            const qrServerApi = 'https://api.qrserver.com/v1/create-qr-code/?data=' + 
+                               encodeURIComponent(currentUrl) + 
+                               '&size=256x256&format=png';
+            
+            qrImage.src = qrServerApi;
+            
+            // Hiển thị URL trong input
+            document.getElementById('qrUrlDisplay').value = currentUrl;
+            
+            const modal = new bootstrap.Modal(document.getElementById('qrModal'));
+            modal.show();
+        };
+
+        window.copyQRUrl = function() {
+            // Lấy input element
+            const urlInput = document.getElementById('qrUrlDisplay');
+            
+            // Select text trong input
+            urlInput.select();
+            urlInput.setSelectionRange(0, 99999); // Cho mobile
+            
+            // Copy
+            document.execCommand('copy');
+            
+            // Bỏ select
+            urlInput.blur();
+            
+            showToast('Page URL copied to clipboard!', 'Success', true);
+        };
+
+        window.saveQRImage = function() {
+            const img = document.getElementById('qrImage');
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                const caseStudyId = '<?php echo $caseStudyId; ?>';
+                
+                link.href = url;
+                link.download = `QR_CaseStudy_${caseStudyId}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                showToast('QR Code saved successfully!', 'Success', true);
+            }, 'image/png');
+        };
+    });
+
+    // Thêm CSS để làm cho ảnh QR code có thể select và copy được
+    document.head.insertAdjacentHTML('beforeend', `
+        <style>
+        #qrImage {
+            user-select: all;
+            -webkit-user-select: all;
+        }
+        </style>
+    `);
 </script>
 <style>
+    /* Thêm styles cho QR code */
+.qr-container {
+    padding: 15px;
+}
+
+.qr-image-container {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+.copy-instruction {
+    font-size: 0.9rem;
+    padding: 8px;
+    margin: 0;
+    background-color: #e8f4f8;
+    border-color: #b8e7f3;
+    color: #0c5460;
+}
+
+.copy-instruction i {
+    margin-right: 5px;
+}
+
+.gap-2 {
+    gap: 0.5rem !important;
+}
+
+.btn {
+    white-space: nowrap;
+}
+
     /* Container cho toast */
     .custom-toast-container {
         position: fixed;
@@ -1530,53 +1658,49 @@ $groupResult = $connect->query($groupSql);
 
     .top-buttons {
         display: flex;
-        gap: 12px;
-        margin-bottom: 8px;
+        gap: 8px;
+        margin-bottom: 15px;
         flex-wrap: wrap;
+        justify-content: flex-start;
     }
 
-    .btn {
-        padding: 10px 20px;
+    .top-buttons .btn {
+        flex: 1 1 45%;
+        min-width: 110px;
+        padding: 8px 15px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
         border-radius: 8px;
         font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 8px;
         transition: all 0.3s ease;
         border: none;
-        color: white !important;
+        font-size: 15px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        text-transform: none;
+        letter-spacing: normal;
     }
 
+    .top-buttons .btn:nth-child(n+3) {
+        flex: 1 1 30%;
+    }
+
+    /* Button Icons */
+    .top-buttons .btn i {
+        font-size: 15px;
+        color: #fff;
+    }
+
+    /* Button Colors and Hover Effects */
     .btn-primary {
         background: #6f42c1;
-        border: none;
+        color: #fff !important;
     }
 
-    .btn-success {
-        background: #28a745;
-        border: none;
-    }
-
-    .btn-secondary {
-        background: #6c757d;
-        border: none;
-        width: 100%;
-        /* Đảm bảo nút dưới cùng có độ rộng bằng tổng 2 nút trên */
-    }
-
-    .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-    }
-
-    /* Style cho icon */
-    .btn i {
-        font-size: 1.1em;
-    }
-
-    /* Nút Show Chart */
     .btn-chart {
         background: linear-gradient(45deg, #6f42c1, #8250df);
+        color: #fff !important;
     }
 
     .btn-chart:hover {
@@ -1585,9 +1709,9 @@ $groupResult = $connect->query($groupSql);
         box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
     }
 
-    /* Nút Show Results */
     .btn-results {
         background: linear-gradient(45deg, #2ecc71, #27ae60);
+        color: #fff !important;
     }
 
     .btn-results:hover {
@@ -1596,12 +1720,9 @@ $groupResult = $connect->query($groupSql);
         box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
     }
 
-    /* Nút Show Image/Video */
     .btn-media {
         background: linear-gradient(45deg, #34495e, #2c3e50);
-        width: 100%;
-        justify-content: center;
-        text-align: center;
+        color: #fff !important;
     }
 
     .btn-media:hover {
@@ -1610,48 +1731,141 @@ $groupResult = $connect->query($groupSql);
         box-shadow: 0 4px 15px rgba(52, 73, 94, 0.3);
     }
 
-    .page-title {
-        font-size: 24px;
-        /* Kích thước chữ lớn hơn */
-        font-weight: bold;
-        /* Chữ in đậm */
-        color: #5CB338;
-        /* Màu chữ tối */
-        margin-bottom: 15px;
-        /* Khoảng cách dưới tiêu đề */
-        display: flex;
-        /* Sử dụng flexbox để căn chỉnh icon và text */
-        align-items: center;
-        /* Căn giữa theo chiều dọc */
-        padding: 10px 15px;
-        /* Thêm padding cho tiêu đề */
-        background-color: #f8f9fa;
-        /* Màu nền nhẹ cho tiêu đề */
-        border-radius: 8px;
-        /* Bo góc cho tiêu đề */
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        /* Thêm bóng nhẹ */
-    }
-
-    .page-title i {
-        margin-right: 10px;
-        /* Khoảng cách giữa icon và text */
-        font-size: 1.5em;
-        /* Kích thước icon lớn hơn */
-        color: #6f42c1;
-        /* Màu icon */
-    }
-
     .btn-schedule {
         background: #20c997;
-        border: none;
+        color: #fff !important;
     }
 
     .btn-schedule:hover {
         background: #1ba97e;
         transform: translateY(-2px);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 15px rgba(32, 201, 151, 0.3);
+    }
+
+    /* General Button Hover */
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Button Icons */
+    .btn i {
+        font-size: 1.1em;
+        color: #fff;
+    }
+
+    /* Page Title */
+    .page-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #5CB338;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-title i {
+        margin-right: 10px;
+        font-size: 1.5em;
+        color: #6f42c1;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .top-buttons {
+            padding: 0 10px;
+            margin-top: 10px;
+        }
+        
+        .top-buttons .btn {
+            flex: 1 1 100%;
+            margin-bottom: 5px;
+            font-size: 14px;
+            padding: 10px 15px;
+            min-height: 45px;
+        }
+        
+        .top-buttons .btn:nth-child(n+3) {
+            flex: 1 1 100%;
+        }
+        
+        .page-title {
+            font-size: 20px;
+            padding: 8px 12px;
+            margin: 10px;
+        }
+    }
+
+    /* Đảm bảo text màu trắng cho tất cả buttons */
+    .btn-media,
+    .btn-media *,
+    .top-buttons .btn,
+    .top-buttons .btn * {
+        color: #fff !important;
+    }
+
+    #qrUrlDisplay {
+        word-break: break-all;
+        background-color: #f8f9fa;
+    }
+
+    /* Thêm hiệu ứng hover cho container ảnh */
+    .qr-image-container:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    /* Style cho alert trên mobile */
+    @media (max-width: 576px) {
+        .copy-instruction {
+            font-size: 0.8rem;
+            padding: 6px;
+        }
     }
 </style>
 <!-- Thêm Font Awesome cho icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<!-- Thêm Modal QR Code -->
+<div class="modal fade" id="qrModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">QR Code for Current Page</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="qrContainer" class="qr-container text-center">
+                    <!-- Thêm hướng dẫn copy ảnh -->
+                    <div class="copy-instruction alert alert-info mb-3">
+                        <i class="fas fa-info-circle"></i>
+                        To copy image: Right-click on QR code → Select "Copy image"
+                    </div>
+                    
+                    <div class="qr-image-container mb-3">
+                        <img id="qrImage" alt="QR Code" style="max-width: 256px;">
+                    </div>
+                    
+                    <div class="input-group mb-3">
+                        <input type="text" id="qrUrlDisplay" class="form-control" readonly>
+                        <button class="btn btn-info" onclick="copyQRUrl()">
+                            <i class="fas fa-copy"></i> Copy URL
+                        </button>
+                    </div>
+                    
+                    <div class="qr-actions d-flex justify-content-center gap-2">
+                        <button class="btn btn-primary" onclick="saveQRImage()">
+                            <i class="fas fa-save"></i> Save Image
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.open(document.getElementById('qrImage').src)">
+                            <i class="fas fa-external-link-alt"></i> Open Image
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

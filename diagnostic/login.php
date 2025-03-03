@@ -13,8 +13,17 @@
 include('./constant/layout/head.php');
 session_start();
 
-if (isset($_SESSION['userId'])) {
-    header('location: dashboard.php');   
+// Nếu đã đăng nhập và có URL chuyển hướng
+if (isset($_SESSION['userId']) && isset($_SESSION['redirect_url'])) {
+    $redirect_url = $_SESSION['redirect_url'];
+    unset($_SESSION['redirect_url']);
+    header('location: ' . $redirect_url);
+    exit();
+} 
+// Nếu đã đăng nhập nhưng không có URL chuyển hướng
+else if (isset($_SESSION['userId'])) {
+    header('location: dashboard.php');
+    exit();
 }
 
 $errors = array();
@@ -31,51 +40,51 @@ if ($_POST) {
             $errors[] = "Password is required";
         }
     } else {
-        // Kiểm tra sự tồn tại của username trong bảng user_infor
+        // Kiểm tra username trong database
         $sql = "SELECT * FROM user_infor WHERE username = '$username'";
         $result = $connect->query($sql);
 
         if ($result->num_rows == 1) {
-            $password = md5($password); // Mã hóa mật khẩu để khớp với dữ liệu lưu trữ
-
-            // Kiểm tra username và mật khẩu
+            $password = md5($password);
             $mainSql = "SELECT * FROM user_infor WHERE username = '$username' AND password = '$password'";
             $mainResult = $connect->query($mainSql);
 
             if ($mainResult->num_rows == 1) {
                 $value = $mainResult->fetch_assoc();
-                $user_id = $value['user_id'];
-                $role = $value['role'];
-
+                
                 // Thiết lập session
-                $_SESSION['userId'] = $user_id;
-                $_SESSION['role'] = $role;
-                $_SESSION['session_id'] = session_create_id('user_'); // Tạo một ID phiên duy nhất cho người dùng
+                $_SESSION['userId'] = $value['user_id'];
+                $_SESSION['role'] = $value['role'];
+                $_SESSION['session_id'] = session_create_id('user_');
+                $_SESSION['isAdmin'] = ($value['role'] == 1);
 
-                // Kiểm tra role và chuyển hướng
-                if ($role == 1) { // Admin
-                    $_SESSION['isAdmin'] = true; // session để kiểm tra nếu là admin
+                // Kiểm tra URL chuyển hướng
+                if (isset($_SESSION['redirect_url'])) {
+                    $redirect_url = $_SESSION['redirect_url'];
+                    unset($_SESSION['redirect_url']);
                     ?>
                     <div class="popup popup--icon -success js_success-popup popup--visible">
                         <div class="popup__background"></div>
                         <div class="popup__content">
                             <h3 class="popup__content__title">Success</h3>
-                            <p>Admin Login Successfully</p>
-                            <p><?php echo "<script>setTimeout(\"location.href = 'dashboard.php';\",1500);</script>"; ?></p>
+                            <p>Login Successfully</p>
+                            <p><?php echo "<script>setTimeout(\"location.href = '" . $redirect_url . "';\",1500);</script>"; ?></p>
                         </div>
                     </div>
-                <?php } else { // Client
-                    $_SESSION['isAdmin'] = false; // không cấp quyền admin cho client
+                    <?php
+                } else {
+                    // Hiển thị popup thành công và chuyển về dashboard như cũ
                     ?>
                     <div class="popup popup--icon -success js_success-popup popup--visible">
                         <div class="popup__background"></div>
                         <div class="popup__content">
                             <h3 class="popup__content__title">Success</h3>
-                            <p>Client Login Successfully</p>
+                            <p><?php echo ($value['role'] == 1) ? 'Admin' : 'Client'; ?> Login Successfully</p>
                             <p><?php echo "<script>setTimeout(\"location.href = 'dashboard.php';\",1500);</script>"; ?></p>
                         </div>
                     </div>
-                <?php }
+                    <?php
+                }
             } else { ?>
                 <div class="popup popup--icon -error js_error-popup popup--visible">
                     <div class="popup__background"></div>

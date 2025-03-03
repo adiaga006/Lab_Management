@@ -1,15 +1,12 @@
-<?php 
-
+<?php
 session_start();
 
-require_once 'connect.php';
-
-//echo $_SESSION['userId'];
-
-if(!$_SESSION['userId']) {
-	header('location:./login.php');	
-} 
-
-
-
+if (!isset($_SESSION['userId'])) {
+    // Lưu URL hiện tại vào session
+    $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
+    
+    // Chuyển hướng đến trang đăng nhập
+    header('Location: login.php');
+    exit();
+}
 ?>
