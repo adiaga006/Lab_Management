@@ -6,6 +6,13 @@ include('./constant/connect.php');
 
 $caseStudyId = $_GET['case_study_id'] ?? null;
 
+// Di chuyển phần đọc notes ra ngoài vòng lặp foreach, đặt ở đầu file sau phần khai báo biến
+$notesFile = dirname(__FILE__) . "/uploads/case_studies/{$caseStudyId}/day_notes.json";
+$notes = [];
+if (file_exists($notesFile)) {
+    $notes = json_decode(file_get_contents($notesFile), true) ?: [];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['images']) && isset($_POST['submit'])) {
     $uploadDate = $_POST['upload_date'];
 
@@ -1056,26 +1063,15 @@ uksort($mediaByDate, 'compareDates');
                                 <label for="selectAll_<?php echo htmlspecialchars($date); ?>">Select All</label>
                             </div>
                         </div>
-
-                        <?php
-                        // Đọc notes từ file
-                        $notesFile = dirname(__FILE__) . "/uploads/case_studies/{$caseStudyId}/day_notes.json";
-                        $notes = [];
-                        if (file_exists($notesFile)) {
-                            $notes = json_decode(file_get_contents($notesFile), true) ?: [];
-                        }
-
-                        // Hiển thị note nếu có
-                        if (isset($notes[$date]) && !empty($notes[$date])):
-                        ?>
-                            <div class="day-note mt-3">
-                                <div class="note-card">
-                                    <div class="note-content">
-                                        <i class="fas fa-sticky-note me-2"></i>
-                                        <p class="mb-0"><?php echo nl2br(htmlspecialchars($notes[$date])); ?></p>
-                                    </div>
+                        <?php if (isset($notes[$date]) && !empty($notes[$date])): ?>
+                        <div class="day-note mt-3">
+                            <div class="note-card">
+                                <div class="note-content">
+                                    <i class="fas fa-sticky-note me-2"></i>
+                                    <p class="mb-0"><?php echo nl2br(htmlspecialchars($notes[$date])); ?></p>
                                 </div>
                             </div>
+                        </div>
                         <?php endif; ?>
                     </div>
                     <div class="image-grid">

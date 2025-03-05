@@ -248,6 +248,36 @@ foreach ($feedingData as $treatmentName => $reps) {
         ];
     }
 }
+
+// Fetch and calculate shrimp weight statistics
+$sql = "SELECT weight FROM shrimp_weight WHERE case_study_id = ?";
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$result = $stmt->get_result();
+
+$weights = [];
+while ($row = $result->fetch_assoc()) {
+    $weights[] = $row['weight'];
+}
+$stmt->close();
+
+// Calculate statistics
+$weightStats = [];
+if (!empty($weights)) {
+    $weightStats = [
+        'total' => round(array_sum($weights), 2),
+        'mean' => round(array_sum($weights) / count($weights), 2),
+        'sd' => round(calculateStandardDeviation($weights), 2)
+    ];
+} else {
+    $weightStats = [
+        'total' => 'No data',
+        'mean' => 'No data',
+        'sd' => 'No data'
+    ];
+}
+
 // Xuất dữ liệu JSON
 header('Content-Type: application/json'); // Set header là JSON
 //echo json_encode($feedingData, JSON_PRETTY_PRINT);
@@ -285,7 +315,38 @@ header('Content-Type: application/json'); // Set header là JSON
             </div>
         </div>
 
-
+        <!-- Add this section after your existing tables -->
+        <div class="card">
+            <div class="card-body">
+                <h4 style="font-size: 1.5em; color: black; font-weight: bold; text-align: center;">Shrimp Weight Statistics</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center">
+                        <thead>
+                            <tr style="font-weight: bold;">
+                                <th>Total Weight (g)</th>
+                                <th>Mean Weight (g)</th>
+                                <th>Standard Deviation</th>
+                                <th>Mean ± SD</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><?php echo $weightStats['total']; ?></td>
+                                <td><?php echo $weightStats['mean']; ?></td>
+                                <td><?php echo $weightStats['sd']; ?></td>
+                                <td><?php
+                                    if ($weightStats['mean'] !== 'No data') {
+                                        echo $weightStats['mean'] . ' ± ' . $weightStats['sd'];
+                                    } else {
+                                        echo 'No data';
+                                    }
+                                    ?></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
         <div class="card">
             <div class="card-body text-center">
@@ -299,16 +360,16 @@ header('Content-Type: application/json'); // Set header là JSON
             <div class="card-body">
                 <h5 style="font-size: 1.25em; font-weight: bold;color:black;">
                     Number of survival shrimp after immunology sampling: <?php
-                    $sql = "SELECT no_of_survival_shrimp_after_immunology_sampling FROM case_study WHERE case_study_id = ?";
-                    $stmt = $connect->prepare($sql);
-                    $stmt->bind_param("s", $caseStudyId);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    $data = $result->fetch_assoc();
-                    $shrimpCount = $data['no_of_survival_shrimp_after_immunology_sampling'];
-                    $stmt->close();
-                    echo htmlspecialchars($shrimpCount ?? "Not set");
-                    ?>
+                                                                            $sql = "SELECT no_of_survival_shrimp_after_immunology_sampling FROM case_study WHERE case_study_id = ?";
+                                                                            $stmt = $connect->prepare($sql);
+                                                                            $stmt->bind_param("s", $caseStudyId);
+                                                                            $stmt->execute();
+                                                                            $result = $stmt->get_result();
+                                                                            $data = $result->fetch_assoc();
+                                                                            $shrimpCount = $data['no_of_survival_shrimp_after_immunology_sampling'];
+                                                                            $stmt->close();
+                                                                            echo htmlspecialchars($shrimpCount ?? "Not set");
+                                                                            ?>
                 </h5>
             </div>
         </div>
@@ -437,7 +498,7 @@ header('Content-Type: application/json'); // Set header là JSON
     }
 </style>
 <script>
-    document.getElementById('addShrimpForm').addEventListener('submit', function (e) {
+    document.getElementById('addShrimpForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
         const shrimpCount = document.getElementById('shrimpCount').value;
@@ -445,12 +506,15 @@ header('Content-Type: application/json'); // Set header là JSON
 
         // Send the data via AJAX
         fetch('php_action/add_shrimp_data.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({ case_study_id: caseStudyId, shrimpCount: shrimpCount })
-        })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    case_study_id: caseStudyId,
+                    shrimpCount: shrimpCount
+                })
+            })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {

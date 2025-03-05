@@ -139,6 +139,8 @@ $groupResult = $connect->query($groupSql);
                                                 $url = "water_quality.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
                                             } elseif ($group['group_id'] == 2) {
                                                 $url = "death_data.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
+                                            } elseif ($group['group_id'] == 4) {
+                                                $url = "shrimp_weight.php?case_study_id=" . htmlspecialchars($caseStudyId) . "&group_id=" . htmlspecialchars($group['group_id']);
                                             } else {
                                                 $url = "#";
                                             }
@@ -172,6 +174,14 @@ $groupResult = $connect->query($groupSql);
                                                     <button class="btn btn-primary" data-toggle="modal"
                                                         data-target="#addDataModalGroup3"
                                                         onclick="openWaterQualityModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
+                                                        Add Data
+                                                    </button>
+                                                </div>
+                                            <?php elseif ($group['group_id'] == 4): ?>
+                                                <div class="button-container">
+                                                    <button class="btn btn-primary" data-toggle="modal"
+                                                        data-target="#addDataModalGroup4"
+                                                        onclick="openShrimpWeightModal('<?php echo htmlspecialchars($caseStudyId); ?>', '<?php echo htmlspecialchars($group['group_name']); ?>')">
                                                         Add Data
                                                     </button>
                                                 </div>
@@ -413,6 +423,36 @@ $groupResult = $connect->query($groupSql);
         </form>
     </div>
 </div>
+<!-- Add Data Modal for Group 4 (Shrimp Weight) -->
+<div id="addDataModalGroup4" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Shrimp Weight Data</h5>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addShrimpWeightForm">
+                    <input type="hidden" name="case_study_id" id="modalCaseStudyId4">
+
+                    <div class="form-group">
+                        <label>Number of Shrimps</label>
+                        <input type="number" id="shrimpCount" class="form-control" min="1" max="100" required>
+                        <small class="form-text text-muted">Enter the number of shrimps to measure (max 100)</small>
+                    </div>
+
+                    <div id="weightInputsContainer" class="weight-inputs-container">
+                        <!-- Weight inputs will be generated here -->
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="submitShrimpWeightData()">Submit</button>
+                <button type="button" class="btn btn-default btn-close-modal" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Thông báo Toast -->
 <div class="custom-toast-container">
     <div id="toastMessage" class="custom-toast" role="alert" aria-live="assertive" aria-atomic="true">
@@ -431,7 +471,8 @@ $groupResult = $connect->query($groupSql);
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <!-- QR JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
+<!-- Thêm vào phần head -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     window.addEventListener('pageshow', function(event) {
         if (event.persisted) {
@@ -585,6 +626,8 @@ $groupResult = $connect->query($groupSql);
     $('.btn-close-modal').on('click', function() {
         $('#addDataForm').off('keydown'); // Xóa sự kiện cho Form 1
         $('#addShrimpDeathDataForm').off('keydown'); // Xóa sự kiện cho Form 2
+        $('#addWaterQualityForm').off('keydown'); // Xóa sự kiện cho Form 3
+        $('#addShrimpWeightForm').off('keydown'); // Xóa sự kiện cho Form 4
     });
 
     // Submit dữ liệu Entry Data và reset chỉ hai trường cụ thể
@@ -1170,17 +1213,17 @@ $groupResult = $connect->query($groupSql);
         window.showQRCode = function() {
             const currentUrl = window.location.href;
             const qrImage = document.getElementById('qrImage');
-            
+
             qrImage.crossOrigin = "anonymous";
-            const qrServerApi = 'https://api.qrserver.com/v1/create-qr-code/?data=' + 
-                               encodeURIComponent(currentUrl) + 
-                               '&size=256x256&format=png';
-            
+            const qrServerApi = 'https://api.qrserver.com/v1/create-qr-code/?data=' +
+                encodeURIComponent(currentUrl) +
+                '&size=256x256&format=png';
+
             qrImage.src = qrServerApi;
-            
+
             // Hiển thị URL trong input
             document.getElementById('qrUrlDisplay').value = currentUrl;
-            
+
             const modal = new bootstrap.Modal(document.getElementById('qrModal'));
             modal.show();
         };
@@ -1188,17 +1231,17 @@ $groupResult = $connect->query($groupSql);
         window.copyQRUrl = function() {
             // Lấy input element
             const urlInput = document.getElementById('qrUrlDisplay');
-            
+
             // Select text trong input
             urlInput.select();
             urlInput.setSelectionRange(0, 99999); // Cho mobile
-            
+
             // Copy
             document.execCommand('copy');
-            
+
             // Bỏ select
             urlInput.blur();
-            
+
             showToast('Page URL copied to clipboard!', 'Success', true);
         };
 
@@ -1207,22 +1250,22 @@ $groupResult = $connect->query($groupSql);
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
-            
+
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
-            
+
             canvas.toBlob(function(blob) {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 const caseStudyId = '<?php echo $caseStudyId; ?>';
-                
+
                 link.href = url;
                 link.download = `QR_CaseStudy_${caseStudyId}.png`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                
+
                 showToast('QR Code saved successfully!', 'Success', true);
             }, 'image/png');
         };
@@ -1237,41 +1280,261 @@ $groupResult = $connect->query($groupSql);
         }
         </style>
     `);
+
+    // Generate weight inputs based on shrimp count
+    document.getElementById('shrimpCount').addEventListener('change', function() {
+        const count = parseInt(this.value);
+        const container = document.getElementById('weightInputsContainer');
+        container.innerHTML = '';
+
+        if (count > 100) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Warning',
+                text: 'Maximum number of shrimps is 100'
+            });
+            this.value = 100;
+            return;
+        }
+
+        for (let i = 1; i <= count; i++) {
+            const inputGroup = document.createElement('div');
+            inputGroup.className = 'input-group mb-2';
+            inputGroup.innerHTML = `
+                <span class="input-group-text">Shrimp #${i}</span>
+                <input type="number" 
+                       class="form-control weight-input" 
+                       name="weights[]" 
+                       step="0.01" 
+                       min="0"
+                       placeholder="Weight in grams"
+                       data-index="${i}"
+                       required>
+            `;
+            container.appendChild(inputGroup);
+        }
+
+        // Focus vào input đầu tiên
+        const firstInput = container.querySelector('.weight-input');
+        if (firstInput) {
+            firstInput.focus();
+        }
+
+        // Thêm xử lý keydown cho form
+        setupWeightInputsKeydown(count);
+    });
+
+    function setupWeightInputsKeydown(totalInputs) {
+        const form = document.getElementById('addShrimpWeightForm');
+        const inputs = form.querySelectorAll('.weight-input');
+        
+        // Remove existing keydown events first
+        inputs.forEach(input => {
+            input.removeEventListener('keydown', handleWeightInputKeydown);
+        });
+
+        // Add new keydown event listeners
+        inputs.forEach(input => {
+            input.addEventListener('keydown', function(e) {
+                handleWeightInputKeydown(e, totalInputs);
+            });
+        });
+    }
+
+    function handleWeightInputKeydown(e, totalInputs) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            
+            const currentIndex = parseInt(e.target.dataset.index);
+            const allInputs = document.querySelectorAll('.weight-input');
+            const currentInput = e.target;
+
+            // Kiểm tra giá trị hợp lệ
+            if (!currentInput.value || currentInput.value <= 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid Input',
+                    text: 'Please enter a valid weight'
+                });
+                return;
+            }
+
+            if (currentIndex < totalInputs) {
+                // Focus vào input tiếp theo
+                const nextInput = document.querySelector(`.weight-input[data-index="${currentIndex + 1}"]`);
+                if (nextInput) {
+                    nextInput.focus();
+                }
+            } else {
+                // Kiểm tra xem tất cả input đã được điền chưa
+                const allFilled = Array.from(allInputs).every(input => input.value && input.value > 0);
+                
+                if (allFilled) {
+                    // Tự động submit form
+                    submitShrimpWeightData();
+                } else {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Incomplete Data',
+                        text: 'Please fill in all weights before submitting'
+                    });
+                }
+            }
+        }
+    }
+
+    // Xử lý khi modal được mở
+    $('#addDataModalGroup4').on('shown.bs.modal', function() {
+        // Xóa các event listener cũ của các form khác
+        $('#addDataForm').off('keydown');
+        $('#addShrimpDeathDataForm').off('keydown');
+        $('#addWaterQualityForm').off('keydown');
+        
+        // Focus vào input số lượng tôm
+        $('#shrimpCount').focus();
+    });
+
+    // Xử lý khi modal đóng
+    $('#addDataModalGroup4').on('hidden.bs.modal', function() {
+        // Reset form
+        $('#addShrimpWeightForm')[0].reset();
+        // Xóa các input đã tạo
+        $('#weightInputsContainer').empty();
+        // Xóa session storage
+        sessionStorage.removeItem('isSubmitting');
+        // Xóa các event listener
+        $('.weight-input').off('keydown');
+    });
+
+    // Submit form data
+    function submitShrimpWeightData() {
+        if (sessionStorage.getItem('isSubmitting')) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Please wait',
+                text: 'Your request is being processed'
+            });
+            return;
+        }
+
+        const form = document.getElementById('addShrimpWeightForm');
+        if (!form.checkValidity()) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validation Error',
+                text: 'Please fill in all required fields'
+            });
+            return;
+        }
+
+        sessionStorage.setItem('isSubmitting', 'true');
+
+        // Lấy case_study_id và danh sách weights
+        const caseStudyId = document.getElementById('modalCaseStudyId4').value;
+        const weights = Array.from(document.querySelectorAll('.weight-input')).map(input => input.value);
+
+        // Gửi request
+        $.ajax({
+            url: 'php_action/add_shrimp_weight.php',
+            method: 'POST',
+            data: {
+                case_study_id: caseStudyId,
+                weights: weights
+            },
+            success: function(response) {
+                sessionStorage.removeItem('isSubmitting');
+                try {
+                    const data = JSON.parse(response);
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: data.messages
+                        }).then(() => {
+                            $('#addDataModalGroup4').modal('hide');
+                            form.reset();
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.messages || 'An error occurred'
+                        });
+                    }
+                } catch (e) {
+                    console.error('JSON Parse Error:', e, response);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error processing server response'
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                sessionStorage.removeItem('isSubmitting');
+                console.error('AJAX Error:', status, error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to submit data'
+                });
+            }
+        });
+    }
+
+    function openShrimpWeightModal(caseStudyId, groupName) {
+        // Set case study ID
+        document.getElementById('modalCaseStudyId4').value = caseStudyId;
+        
+        // Reset form and container
+        const form = document.getElementById('addShrimpWeightForm');
+        form.reset();
+        document.getElementById('weightInputsContainer').innerHTML = '';
+    }
+
+    // Thêm event listener cho modal khi đóng
+    $('.btn-close-modal').on('click', function() {
+        $('#addDataForm').off('keydown'); // Xóa sự kiện cho Form 1
+        $('#addShrimpDeathDataForm').off('keydown'); // Xóa sự kiện cho Form 2
+        $('#addWaterQualityForm').off('keydown'); // Xóa sự kiện cho Form 3
+        $('#addShrimpWeightForm').off('keydown'); // Xóa sự kiện cho Form 4
+    });
 </script>
 <style>
     /* Thêm styles cho QR code */
-.qr-container {
-    padding: 15px;
-}
+    .qr-container {
+        padding: 15px;
+    }
 
-.qr-image-container {
-    background: #fff;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    cursor: pointer;
-}
+    .qr-image-container {
+        background: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+    }
 
-.copy-instruction {
-    font-size: 0.9rem;
-    padding: 8px;
-    margin: 0;
-    background-color: #e8f4f8;
-    border-color: #b8e7f3;
-    color: #0c5460;
-}
+    .copy-instruction {
+        font-size: 0.9rem;
+        padding: 8px;
+        margin: 0;
+        background-color: #e8f4f8;
+        border-color: #b8e7f3;
+        color: #0c5460;
+    }
 
-.copy-instruction i {
-    margin-right: 5px;
-}
+    .copy-instruction i {
+        margin-right: 5px;
+    }
 
-.gap-2 {
-    gap: 0.5rem !important;
-}
+    .gap-2 {
+        gap: 0.5rem !important;
+    }
 
-.btn {
-    white-space: nowrap;
-}
+    .btn {
+        white-space: nowrap;
+    }
 
     /* Container cho toast */
     .custom-toast-container {
@@ -1780,7 +2043,7 @@ $groupResult = $connect->query($groupSql);
             padding: 0 10px;
             margin-top: 10px;
         }
-        
+
         .top-buttons .btn {
             flex: 1 1 100%;
             margin-bottom: 5px;
@@ -1788,11 +2051,11 @@ $groupResult = $connect->query($groupSql);
             padding: 10px 15px;
             min-height: 45px;
         }
-        
+
         .top-buttons .btn:nth-child(n+3) {
             flex: 1 1 100%;
         }
-        
+
         .page-title {
             font-size: 20px;
             padding: 8px 12px;
@@ -1815,7 +2078,7 @@ $groupResult = $connect->query($groupSql);
 
     /* Thêm hiệu ứng hover cho container ảnh */
     .qr-image-container:hover {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
 
     /* Style cho alert trên mobile */
@@ -1824,6 +2087,46 @@ $groupResult = $connect->query($groupSql);
             font-size: 0.8rem;
             padding: 6px;
         }
+    }
+
+    .weight-inputs-container {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 15px;
+        margin-top: 20px;
+    }
+
+    .input-group {
+        margin-bottom: 10px;
+    }
+
+    .input-group-text {
+        min-width: 100px;
+        background-color: #f8f9fa;
+    }
+
+    .form-control:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .25);
+    }
+
+    /* Custom scrollbar */
+    .weight-inputs-container::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .weight-inputs-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .weight-inputs-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    .weight-inputs-container::-webkit-scrollbar-thumb:hover {
+        background: #555;
     }
 </style>
 <!-- Thêm Font Awesome cho icons -->
@@ -1844,18 +2147,18 @@ $groupResult = $connect->query($groupSql);
                         <i class="fas fa-info-circle"></i>
                         To copy image: Right-click on QR code → Select "Copy image"
                     </div>
-                    
+
                     <div class="qr-image-container mb-3">
                         <img id="qrImage" alt="QR Code" style="max-width: 256px;">
                     </div>
-                    
+
                     <div class="input-group mb-3">
                         <input type="text" id="qrUrlDisplay" class="form-control" readonly>
                         <button class="btn btn-info" onclick="copyQRUrl()">
                             <i class="fas fa-copy"></i> Copy URL
                         </button>
                     </div>
-                    
+
                     <div class="qr-actions d-flex justify-content-center gap-2">
                         <button class="btn btn-primary" onclick="saveQRImage()">
                             <i class="fas fa-save"></i> Save Image
