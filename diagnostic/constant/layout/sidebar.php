@@ -70,10 +70,10 @@ $currentCaseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : (
                 <?php } ?>
 
                 <li> <a class="has-arrow" href="#" aria-expanded="false"><i class="fa fa-files-o"></i><span
-                            class="hide-menu">Invoices</span></a>
+                            class="hide-menu">SOP</span></a>
                     <ul aria-expanded="false" class="collapse">
-                        <li><a href="add-invoice.php">Add Invoice</a></li>
-                        <li><a href="invoice.php">Manage Invoices</a></li>
+                        <li><a href="add_SOP.php">Add SOP</a></li>
+                        <li><a href="manage_SOP.php">Manage SOP</a></li>
                     </ul>
                 </li>
 

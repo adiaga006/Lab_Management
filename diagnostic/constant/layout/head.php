@@ -11,8 +11,8 @@
 <meta name="description" content="">
 <meta name="keywords" content="">
 <meta name="author" content="">
-    
-    <link rel="icon" type="image/png" sizes="16x16" href="assets/uploadImage/Logo/favicon.png">
+
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/uploadImage/Logo/shrimvet_logo.png">
      <?php
      
              include('./constant/connect.php');
