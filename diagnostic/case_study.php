@@ -1,19 +1,101 @@
-<?php include('./constant/layout/head.php'); ?>
-<?php include('./constant/layout/header.php'); ?>
-<?php include('./constant/layout/sidebar.php'); ?>
-<?php include('./constant/connect.php');
+<?php
+// Khởi động session nếu chưa được khởi động
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+include('./constant/layout/head.php'); 
+include('./constant/layout/header.php'); 
+include('./constant/layout/sidebar.php'); 
+include('./constant/connect.php');
+
+// Kiểm tra đăng nhập
+if (!isset($_SESSION['userId'])) {
+    header('location: login.php');
+    exit();
+}
+
+// Kiểm tra kết nối database
+if (!$connect) {
+    die("Kết nối thất bại: " . mysqli_connect_error());
+}
 
 $userId = $_SESSION['userId'];
 
-$sql = "SELECT cs.*, c.categories_name 
-        FROM case_study cs 
-        LEFT JOIN categories c ON cs.categories_id = c.categories_id 
-        WHERE cs.user_id = ?";
+// Đảm bảo các biến session tồn tại
+if (!isset($_SESSION['isAdmin'])) {
+    $_SESSION['isAdmin'] = (isset($_SESSION['role']) && $_SESSION['role'] == 1);
+}
+if (!isset($_SESSION['isEmployee'])) {
+    $_SESSION['isEmployee'] = (isset($_SESSION['role']) && $_SESSION['role'] == 2);
+}
+if (!isset($_SESSION['isGuest'])) {
+    $_SESSION['isGuest'] = (isset($_SESSION['role']) && $_SESSION['role'] == 3);
+}
 
-$stmt = $connect->prepare($sql);
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$result = $stmt->get_result();
+try {
+    // Query cơ bản cho tất cả các role
+    $baseQuery = "SELECT cs.*, c.categories_name, u.fullname as leader_name 
+                  FROM case_study cs 
+                  LEFT JOIN categories c ON cs.categories_id = c.categories_id
+                  LEFT JOIN user_infor u ON cs.leader = u.user_id";
+
+    if ($_SESSION['isAdmin']) {
+        // Admin có thể xem tất cả case study
+        $sql = $baseQuery . " ORDER BY cs.start_date DESC";
+        $stmt = $connect->prepare($sql);
+    } else if ($_SESSION['isEmployee']) {
+        // Employee chỉ xem case study mà họ là leader hoặc participant
+        $sql = $baseQuery . " WHERE cs.leader = ? 
+                             OR (
+                                cs.participants IS NOT NULL 
+                                AND cs.participants LIKE CONCAT('%', ?, '%')
+                             )
+                             ORDER BY cs.start_date DESC";
+        $stmt = $connect->prepare($sql);
+        $stmt->bind_param("ii", $userId, $userId);
+    } else {
+        // Guest chỉ xem case study mà họ là participant
+        $sql = $baseQuery . " WHERE cs.participants IS NOT NULL 
+                             AND cs.participants LIKE CONCAT('%', ?, '%')
+                             ORDER BY cs.start_date DESC";
+        $stmt = $connect->prepare($sql);
+        $stmt->bind_param("i", $userId);
+    }
+
+    // Debug information
+    error_log("Role: " . ($_SESSION['isAdmin'] ? 'Admin' : ($_SESSION['isEmployee'] ? 'Employee' : 'Guest')));
+    error_log("User ID: " . $userId);
+    error_log("SQL Query: " . $sql);
+
+    if (!$stmt) {
+        error_log("Prepare Error: " . $connect->error);
+        throw new Exception("Lỗi prepare statement: " . $connect->error);
+    }
+
+    if (!$stmt->execute()) {
+        error_log("Execute Error: " . $stmt->error);
+        throw new Exception("Lỗi thực thi câu lệnh: " . $stmt->error);
+    }
+
+    $result = $stmt->get_result();
+    
+    if (!$result) {
+        error_log("Result Error: " . $stmt->error);
+        throw new Exception("Lỗi lấy kết quả: " . $stmt->error);
+    }
+
+    // Log số lượng kết quả
+    error_log("Number of rows: " . $result->num_rows);
+
+} catch (Exception $e) {
+    error_log("Error in case_study.php: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    $result = false;
+}
+
+// Kiểm tra và set biến để hiển thị thông báo
+$hasData = ($result && $result->num_rows > 0);
 ?>
 <div class="page-wrapper">
     <div class="row page-titles">
@@ -50,13 +132,22 @@ $result = $stmt->get_result();
                                 <select id="categoryFilter" class="form-select">
                                     <option value="">Case study location</option>
                                     <?php
-                                    $catSql = "SELECT DISTINCT category_name FROM case_study WHERE user_id = ?";
-                                    $stmt = $connect->prepare($catSql);
-                                    $stmt->bind_param("i", $_SESSION['userId']);
+                                    if ($_SESSION['isAdmin']) {
+                                        $catSql = "SELECT DISTINCT category_name FROM case_study ORDER BY category_name ASC";
+                                        $stmt = $connect->prepare($catSql);
+                                    } else {
+                                        $catSql = "SELECT DISTINCT cs.category_name 
+                                                  FROM case_study cs 
+                                                  WHERE cs.leader = ? 
+                                                  OR (cs.participants IS NOT NULL AND cs.participants LIKE CONCAT('%', ?, '%'))
+                                                  ORDER BY cs.category_name ASC";
+                                        $stmt = $connect->prepare($catSql);
+                                        $stmt->bind_param("ii", $_SESSION['userId'], $_SESSION['userId']);
+                                    }
                                     $stmt->execute();
                                     $catResult = $stmt->get_result();
                                     while ($row = $catResult->fetch_assoc()) {
-                                        // Chuẩn hóa text: viết hoa chữ cái đầu
+                                        // Normalize text: capitalize first letter
                                         $formattedName = ucwords(strtolower($row['category_name']));
                                         echo '<option value="' . $row['category_name'] . '">' .
                                             htmlspecialchars($formattedName) .
@@ -72,13 +163,22 @@ $result = $stmt->get_result();
                                 <select id="categoriesFilter" class="form-select">
                                     <option value="">Categories</option>
                                     <?php
-                                    $categoriesSql = "SELECT DISTINCT c.categories_id, c.categories_name 
-                                                    FROM categories c 
-                                                    INNER JOIN case_study cs ON c.categories_id = cs.categories_id 
-                                                    WHERE cs.user_id = ? 
-                                                    ORDER BY c.categories_name ASC";
-                                    $stmt = $connect->prepare($categoriesSql);
-                                    $stmt->bind_param("i", $_SESSION['userId']);
+                                    if ($_SESSION['isAdmin']) {
+                                        $categoriesSql = "SELECT DISTINCT c.categories_id, c.categories_name 
+                                                        FROM categories c 
+                                                        INNER JOIN case_study cs ON c.categories_id = cs.categories_id 
+                                                        ORDER BY c.categories_name ASC";
+                                        $stmt = $connect->prepare($categoriesSql);
+                                    } else {
+                                        $categoriesSql = "SELECT DISTINCT c.categories_id, c.categories_name 
+                                                        FROM categories c 
+                                                        INNER JOIN case_study cs ON c.categories_id = cs.categories_id 
+                                                        WHERE cs.leader = ? 
+                                                        OR (cs.participants IS NOT NULL AND cs.participants LIKE CONCAT('%', ?, '%'))
+                                                        ORDER BY c.categories_name ASC";
+                                        $stmt = $connect->prepare($categoriesSql);
+                                        $stmt->bind_param("ii", $_SESSION['userId'], $_SESSION['userId']);
+                                    }
                                     $stmt->execute();
                                     $categoriesResult = $stmt->get_result();
                                     while ($row = $categoriesResult->fetch_assoc()) {
@@ -137,67 +237,92 @@ $result = $stmt->get_result();
                 </div>
 
                 <div class="table-responsive">
-                    <table id="myTable" class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Case Study ID</th>
-                                <th>Case Study Name</th>
-                                <th class="location-column">Location</th>
-                                <th>Start Date</th>
-                                <th>Category</th>
-                                <th>Status</th>
-                                <th class="action-column">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            while ($row = $result->fetch_assoc()) {
-                                $statusBadge = match ($row['status']) {
-                                    'Prepare' => '<span class="badge bg-info">Prepare</span>',
-                                    'In-process' => '<span class="badge bg-warning">In-process</span>',
-                                    'Complete' => '<span class="badge bg-success">Complete</span>',
-                                    default => '<span class="badge bg-secondary">Unknown</span>'
-                                };
-                            ?>
-                                <tr data-category-name="<?php echo htmlspecialchars($row['category_name']); ?>"
-                                    onclick="window.location='group.php?case_study_id=<?php echo $row['case_study_id']; ?>'"
-                                    style="cursor: pointer;">
-                                    <td>
-                                        <?php
-                                        // Xác định màu dựa trên status
-                                        $statusColor = match ($row['status']) {
-                                            'Prepare' => 'text-info',         // Màu xanh dương nhạt
-                                            'In-process' => 'text-warning',   // Màu vàng
-                                            'Complete' => 'text-success',     // Màu xanh lá
-                                            default => 'text-secondary'       // Màu xám cho trường hợp khác
-                                        };
-                                        ?>
-                                        <span class="case-study-link <?php echo $statusColor; ?> fw-bold">
-                                            <?php echo $row['case_study_id']; ?>
-                                        </span>
-                                    </td>
-                                    <td><?php echo $row['case_name']; ?></td>
-                                    <td class="location-column" title="<?php echo $row['location']; ?>"><?php echo $row['location']; ?></td>
-                                    <td><?php echo date('d-m-Y', strtotime($row['start_date'])); ?></td>
-                                    <td><?php echo $row['categories_name']; ?></td>
-                                    <td><?php echo $statusBadge; ?></td>
-                                    <td class="action-column">
-                                        <a href="edit-case_study.php?id=<?php echo $row['case_study_id']; ?>"
-                                            class="btn btn-primary btn-sm btn-action"
-                                            onclick="event.stopPropagation();">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </a>
-                                        <button type="button"
-                                            class="btn btn-danger btn-sm btn-action btn-delete"
-                                            data-id="<?php echo $row['case_study_id']; ?>"
-                                            onclick="event.stopPropagation();">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </td>
+                    <?php if (!$result) { ?>
+                        <div class="alert alert-warning">
+                            An error occurred while loading data. Please try again later.
+                        </div>
+                    <?php } else { ?>
+                        <table id="myTable" class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Case Study ID</th>
+                                    <th>Case Study Name</th>
+                                    <th class="location-column">Location</th>
+                                    <th>Start Date</th>
+                                    <th>Category</th>
+                                    <th>Status</th>
+                                    <th class="action-column">Action</th>
                                 </tr>
-                            <?php } ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php
+                                if ($hasData) {
+                                    while ($row = $result->fetch_assoc()) {
+                                        $statusBadge = match ($row['status']) {
+                                            'Prepare' => '<span class="badge bg-info">Prepare</span>',
+                                            'In-process' => '<span class="badge bg-warning">In-process</span>',
+                                            'Complete' => '<span class="badge bg-success">Complete</span>',
+                                            default => '<span class="badge bg-secondary">Unknown</span>'
+                                        };
+                                    ?>
+                                        <tr data-category-name="<?php echo htmlspecialchars($row['category_name']); ?>"
+                                            onclick="window.location='group.php?case_study_id=<?php echo $row['case_study_id']; ?>'"
+                                            style="cursor: pointer;">
+                                            <td>
+                                                <?php
+                                                // Xác định màu dựa trên status
+                                                $statusColor = match ($row['status']) {
+                                                    'Prepare' => 'text-info',         // Màu xanh dương nhạt
+                                                    'In-process' => 'text-warning',   // Màu vàng
+                                                    'Complete' => 'text-success',     // Màu xanh lá
+                                                    default => 'text-secondary'       // Màu xám cho trường hợp khác
+                                                };
+                                                ?>
+                                                <span class="case-study-link <?php echo $statusColor; ?> fw-bold">
+                                                    <?php echo $row['case_study_id']; ?>
+                                                </span>
+                                            </td>
+                                            <td><?php echo $row['case_name']; ?></td>
+                                            <td class="location-column" title="<?php echo $row['location']; ?>"><?php echo $row['location']; ?></td>
+                                            <td><?php echo date('d-m-Y', strtotime($row['start_date'])); ?></td>
+                                            <td><?php echo $row['categories_name']; ?></td>
+                                            <td><?php echo $statusBadge; ?></td>
+                                            <td class="action-column">
+                                                <a href="edit-case_study.php?id=<?php echo $row['case_study_id']; ?>"
+                                                    class="btn btn-primary btn-sm btn-action"
+                                                    onclick="event.stopPropagation();">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </a>
+                                                <button type="button"
+                                                    class="btn btn-danger btn-sm btn-action btn-delete"
+                                                    data-id="<?php echo $row['case_study_id']; ?>"
+                                                    onclick="event.stopPropagation();">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php }
+                                } else {
+                                    ?>
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            <?php 
+                                            if ($_SESSION['isEmployee']) {
+                                                echo "You haven't participated in or led any case studies yet.";
+                                            } elseif ($_SESSION['isGuest']) {
+                                                echo "You haven't participated in any case studies yet.";
+                                            } else {
+                                                echo "No case studies available.";
+                                            }
+                                            ?>
+                                        </td>
+                                    </tr>
+                                    <?php
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    <?php } ?>
                 </div>
             </div>
         </div>
@@ -594,11 +719,15 @@ $result = $stmt->get_result();
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Khởi tạo DataTable
+            // Initialize DataTable
             var table = $('#myTable').DataTable({
                 responsive: true,
-                order: [
-                    [4, 'desc']
+                order: [[3, 'desc']], // Sort by Start Date
+                columnDefs: [
+                    {
+                        targets: -1, // Last column (Action)
+                        orderable: false // Disable sorting
+                    }
                 ],
                 language: {
                     lengthMenu: "Show _MENU_ case studies",
@@ -611,7 +740,9 @@ $result = $stmt->get_result();
                         last: "Last",
                         next: "Next",
                         previous: "Previous"
-                    }
+                    },
+                    emptyTable: "No data available",
+                    zeroRecords: "No matching records found"
                 }
             });
 
@@ -651,8 +782,8 @@ $result = $stmt->get_result();
                 var rowYear = parseInt(date[2]);
 
                 // Check each filter
-                var categoryTypeMatch = !categoryType ||
-                    categoryType.toLowerCase() === rowCategoryType.toLowerCase();
+                var categoryTypeMatch = !categoryType || 
+                    (rowCategoryType && categoryType.toLowerCase() === rowCategoryType.toLowerCase());
                 var categoriesMatch = !categories || categories === rowCategories;
                 var monthMatch = !month || parseInt(month) === rowMonth;
                 var yearMatch = !year || parseInt(year) === rowYear;
@@ -680,7 +811,6 @@ $result = $stmt->get_result();
                 e.stopPropagation();
 
                 const id = $(this).data('id');
-                console.log('Deleting case study ID:', id); // Debug log
 
                 Swal.fire({
                     title: 'Are you sure?',
@@ -702,13 +832,9 @@ $result = $stmt->get_result();
                         $.ajax({
                             url: 'php_action/removeCaseStudy.php',
                             type: 'POST',
-                            data: {
-                                id: id
-                            },
+                            data: { id: id },
                             dataType: 'json',
                             success: function(response) {
-                                console.log('Server response:', response); // Debug log
-
                                 if (response.success) {
                                     Swal.fire({
                                         title: 'Deleted!',
@@ -719,7 +845,7 @@ $result = $stmt->get_result();
                                         },
                                         buttonsStyling: false
                                     }).then(() => {
-                                        window.location.reload(); // Force page reload
+                                        window.location.reload();
                                     });
                                 } else {
                                     Swal.fire({
@@ -734,12 +860,6 @@ $result = $stmt->get_result();
                                 }
                             },
                             error: function(xhr, status, error) {
-                                console.error('Ajax error:', {
-                                    status: status,
-                                    error: error,
-                                    response: xhr.responseText
-                                });
-
                                 Swal.fire({
                                     title: 'Error!',
                                     text: 'Something went wrong while deleting.',

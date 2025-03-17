@@ -162,17 +162,18 @@ try {
 
     // 2. Kiểm tra dữ liệu cho biểu đồ death rate và survival rate
     if ($noOfSurvivalShrimp > 0) {
-        $sql = "SELECT DATE(MIN(test_time)) as base_date FROM shrimp_death_data WHERE case_study_id = ?";
+        // Lấy thời gian sớm nhất trực tiếp từ test_time
+        $sql = "SELECT MIN(test_time) as base_time FROM shrimp_death_data WHERE case_study_id = ?";
         $stmt = $connect->prepare($sql);
         $stmt->bind_param("s", $caseStudyId);
         $stmt->execute();
-        $stmt->bind_result($baseDate);
-        $stmt->fetch();
+        $result = $stmt->get_result();
+        $baseTimeRow = $result->fetch_assoc();
         $stmt->close();
 
-        // Thêm giờ 15:00 vào ngày sớm nhất
-        if (is_string($baseDate) && !empty($baseDate)) {
-            $baseTime = new DateTime("{$baseDate} 15:00:00");
+        // Sử dụng trực tiếp thời gian sớm nhất làm base time
+        if ($baseTimeRow && !empty($baseTimeRow['base_time'])) {
+            $baseTime = new DateTime($baseTimeRow['base_time']);
             
             // Fetch death sample data
             $sql = "SELECT treatment_name, rep, test_time, death_sample
@@ -434,13 +435,23 @@ canvas {
                 },
                 options: {
                     responsive: true,
+                    layout: {
+                        padding: {
+                            top: 15
+                        }
+                    },
                     scales: {
                         y: {
-                            beginAtZero: true,
-                            max: 100,
                             title: {
                                 display: true,
-                                text: 'Survival rate (%)'
+                                text: 'Survival Rate (%)',
+                            },
+                            beginAtZero: true,
+                            ticks: {
+                                padding: 10
+                            },
+                            afterFit: function(scaleInstance) {
+                                scaleInstance.paddingTop = 15;
                             }
                         }
                     },
@@ -471,13 +482,23 @@ canvas {
                 },
                 options: {
                     responsive: true,
+                    layout: {
+                        padding: {
+                            top: 15
+                        }
+                    },
                     scales: {
                         y: {
-                            beginAtZero: true,
-                            max: 100,
                             title: {
                                 display: true,
-                                text: 'Survival rate (%)'
+                                text: 'Survival Rate (%)',
+                            },
+                            beginAtZero: true,
+                            ticks: {
+                                padding: 10
+                            },
+                            afterFit: function(scaleInstance) {
+                                scaleInstance.paddingTop = 15;
                             }
                         }
                     },
@@ -525,6 +546,11 @@ canvas {
                 data: chartData,
                 options: {
                     responsive: true,
+                    layout: {
+                        padding: {
+                            top: 15
+                        }
+                    },
                     plugins: {
                         legend: {
                             display: true,
@@ -568,9 +594,14 @@ canvas {
                                 text: 'Mortality Rate (%)',
                             },
                             beginAtZero: true,
-                            max: 100,
+                            ticks: {
+                                padding: 10
+                            },
+                            afterFit: function(scaleInstance) {
+                                scaleInstance.paddingTop = 15;
+                            }
                         },
-                    },
+                    }
                 },
             });
         }
@@ -594,6 +625,11 @@ canvas {
                 data: survivalChartData,
                 options: {
                     responsive: true,
+                    layout: {
+                        padding: {
+                            top: 15
+                        }
+                    },
                     plugins: {
                         legend: {
                             display: true,
@@ -637,9 +673,14 @@ canvas {
                                 text: 'Survival Rate (%)',
                             },
                             beginAtZero: true,
-                            max: 100,
+                            ticks: {
+                                padding: 10
+                            },
+                            afterFit: function(scaleInstance) {
+                                scaleInstance.paddingTop = 15;
+                            }
                         },
-                    },
+                    }
                 },
             });
         }

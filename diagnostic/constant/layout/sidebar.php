@@ -19,7 +19,11 @@ $currentCaseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : (
             <ul id="sidebarnav">
                 <li class="nav-devider"></li>
                 <li class="nav-label">Home</li>
-                <li> <a href="dashboard.php" aria-expanded="false"><i class="fa fa-tachometer"></i>Dashboard</a></li>
+                <li> 
+                    <a href="dashboard.php" aria-expanded="false">
+                        <i class="fas fa-tachometer-alt"></i>Dashboard
+                    </a>
+                </li>
 
                 <!-- Hiển thị phần dành riêng cho admin -->
                 <?php if (isset($_SESSION['isAdmin']) && $_SESSION['isAdmin']) { ?>
@@ -41,49 +45,89 @@ $currentCaseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : (
                             <li><a href="categories.php">Manage Categories</a></li>
                         </ul>
                     </li>
+                <?php } ?>
 
-                    <!-- Case Study Menu -->
-                    <li>
-                        <a class="<?php echo !$isRelatedPage ? 'has-arrow' : 'active'; ?>" href="#"
-                            aria-expanded="<?php echo $isRelatedPage ? 'true' : 'false'; ?>">
-                            <i class="fa fa-flask"></i>
-                            <span class="hide-menu">Case Study</span>
-                        </a>
-                        <ul aria-expanded="<?php echo $isRelatedPage ? 'true' : 'false'; ?>"
-                            class="collapse submenu <?php echo $isRelatedPage ? 'show' : ''; ?>">
+                <!-- Case Study Menu - Hiển thị cho tất cả các role -->
+                <li>
+                    <a class="<?php echo !$isRelatedPage ? 'has-arrow' : 'active'; ?>" href="#"
+                        aria-expanded="<?php echo $isRelatedPage ? 'true' : 'false'; ?>">
+                        <i class="fa fa-flask"></i>
+                        <span class="hide-menu">Case Study</span>
+                    </a>
+                    <ul aria-expanded="<?php echo $isRelatedPage ? 'true' : 'false'; ?>"
+                        class="collapse submenu <?php echo $isRelatedPage ? 'show' : ''; ?>">
+                        <?php if (isset($_SESSION['isAdmin']) && $_SESSION['isAdmin']) { ?>
                             <li><a href="add-case_study.php">Add Case Study</a></li>
-                            <li <?php echo ($currentPage == 'case_study.php') ? 'class="active"' : ''; ?>>
-                                <a href="case_study.php">Manage Case Study</a>
-                            </li>
-                            <?php
-                            if ($currentCaseStudyId) {
-                                echo '<li class="active" style="background-color: #A7D477;">';
-                                echo '<a href="group.php?case_study_id=' . htmlspecialchars($currentCaseStudyId) . '" style="color: #ffffff; padding-left: 30px;">';
-                                echo '<i class="fa fa-angle-right"></i> ';
-                                echo htmlspecialchars($currentCaseStudyId);
-                                echo '</a>';
-                                echo '</li>';
-                            }
-                            ?>
+                        <?php } ?>
+                        <li <?php echo ($currentPage == 'case_study.php') ? 'class="active"' : ''; ?>>
+                            <a href="case_study.php">Manage Case Study</a>
+                        </li>
+                        <?php
+                        if ($currentCaseStudyId) {
+                            echo '<li class="active" style="background-color: #A7D477;">';
+                            echo '<a href="group.php?case_study_id=' . htmlspecialchars($currentCaseStudyId) . '" style="color: #ffffff; padding-left: 30px;">';
+                            echo '<i class="fa fa-angle-right"></i> ';
+                            echo htmlspecialchars($currentCaseStudyId);
+                            echo '</a>';
+                            echo '</li>';
+                        }
+                        ?>
+                    </ul>
+                </li>
+
+                <!-- SOP Menu - Hiển thị cho Admin và Employee -->
+                <?php if (isset($_SESSION['isAdmin']) && $_SESSION['isAdmin'] || isset($_SESSION['isEmployee']) && $_SESSION['isEmployee']) { ?>
+                    <li> 
+                        <a class="has-arrow" href="#" aria-expanded="false">
+                            <i class="fa fa-files-o"></i>
+                            <span class="hide-menu">SOP</span>
+                        </a>
+                        <ul aria-expanded="false" class="collapse">
+                            <?php if (isset($_SESSION['isAdmin']) && $_SESSION['isAdmin']) { ?>
+                                <li><a href="add_SOP.php">Add SOP</a></li>
+                            <?php } ?>
+                            <li><a href="manage_SOP.php">Manage SOP</a></li>
                         </ul>
                     </li>
                 <?php } ?>
 
-                <li> <a class="has-arrow" href="#" aria-expanded="false"><i class="fa fa-files-o"></i><span
-                            class="hide-menu">SOP</span></a>
-                    <ul aria-expanded="false" class="collapse">
-                        <li><a href="add_SOP.php">Add SOP</a></li>
-                        <li><a href="manage_SOP.php">Manage SOP</a></li>
-                    </ul>
-                </li>
-
-                <!-- Các phần chỉ dành cho admin -->
+                <!-- Client và Categories chỉ dành cho Admin -->
                 <?php if (isset($_SESSION['isAdmin']) && $_SESSION['isAdmin']) { ?>
-                    <li><a href="report.php" aria-expanded="false"><i class="fa fa-print"></i><span
-                                class="hide-menu">Reports</span></a></li>
+                    <li> 
+                        <a class="has-arrow" href="#" aria-expanded="false">
+                            <i class="fa fa-user"></i>
+                            <span class="hide-menu">Client</span>
+                        </a>
+                        <ul aria-expanded="false" class="collapse">
+                            <li><a href="add_client.php">Add Client</a></li>
+                            <li><a href="client.php">Manage Client</a></li>
+                        </ul>
+                    </li>
+                    
+                    <li>
+                        <a class="has-arrow" href="#" aria-expanded="false">
+                            <i class="fa fa-list"></i>
+                            <span class="hide-menu">Test Categories</span>
+                        </a>
+                        <ul class="collapse submenu">
+                            <li><a href="add-category.php">Add Test Category</a></li>
+                            <li><a href="categories.php">Manage Categories</a></li>
+                        </ul>
+                    </li>
 
-                    <li> <a class="has-arrow" href="#" aria-expanded="false"><i class="fa fa-cog"></i><span
-                                class="hide-menu">Setting</span></a>
+                    <!-- Reports và Settings chỉ dành cho Admin -->
+                    <li>
+                        <a href="report.php" aria-expanded="false">
+                            <i class="fa fa-print"></i>
+                            <span class="hide-menu">Reports</span>
+                        </a>
+                    </li>
+
+                    <li> 
+                        <a class="has-arrow" href="#" aria-expanded="false">
+                            <i class="fa fa-cog"></i>
+                            <span class="hide-menu">Setting</span>
+                        </a>
                         <ul aria-expanded="false" class="collapse">
                             <li><a href="manage_website.php">Appearance</a></li>
                             <li><a href="email_config.php">Email</a></li>

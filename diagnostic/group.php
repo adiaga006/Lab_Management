@@ -324,11 +324,13 @@ $groupResult = $connect->query($groupSql);
                         <!-- Nhập giờ -->
                         <select name="test_hour" id="testHour" class="form-control mt-2" required>
                             <option value="" disabled selected hidden>Select Hour</option>
-                            <option value="03">03:00</option>
-                            <option value="07">07:00</option>
+                            <option value="02">02:00</option>
+                            <option value="05">05:00</option>
+                            <option value="08">08:00</option>
                             <option value="11">11:00</option>
-                            <option value="15">15:00</option>
-                            <option value="19">19:00</option>
+                            <option value="14">14:00</option>
+                            <option value="17">17:00</option>
+                            <option value="20">20:00</option>
                             <option value="23">23:00</option>
                         </select>
                     </div>
@@ -903,6 +905,13 @@ $groupResult = $connect->query($groupSql);
     }
 
     function openShrimpDeathModal(caseStudyId, groupName) {
+        // Reset form và các event handlers
+        $('#addShrimpDeathDataForm')[0].reset();
+        $('#addShrimpDeathDataForm').off('keydown');
+        
+        // Reset flag
+        window.isSubmittingDeathData = false;
+
         $('#modalCaseStudyId2').val(caseStudyId);
         updateRecentEntriesGroup2();
 
@@ -923,34 +932,30 @@ $groupResult = $connect->query($groupSql);
         if (savedProductApplication) {
             $('#productApplicationGroup2').val(savedProductApplication);
         }
-        $('input[name="test_date"]').on('change', function() {
-            sessionStorage.setItem('test_date_group2', $(this).val());
-        });
 
-        $('select[name="test_hour"]').on('change', function() {
-            sessionStorage.setItem('test_hour_group2', $(this).val());
-        });
-
-        $('select[name="treatmentNameGroup2"]').on('change', function() {
-            const selectedValue = $(this).val();
-            sessionStorage.setItem('treatmentNameGroup2', selectedValue);
-        });
-
-        // Đăng ký sự kiện nhấn Enter
+        // Thêm event handler cho keydown với kiểm tra điều kiện
         $('#addShrimpDeathDataForm').on('keydown', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
                 submitShrimpDeathData();
             }
         });
+
+        // Focus vào trường death_sample khi mở modal
+        setTimeout(() => {
+            $('input[name="death_sample"]').focus();
+        }, 500);
     }
-    // Xóa session sau 3 tiếng
-    setTimeout(function() {
-        sessionStorage.removeItem('treatmentNameGroup2');
-        sessionStorage.removeItem('test_date_group2');
-        sessionStorage.removeItem('test_hour_group2');
-        sessionStorage.removeItem('product_application_group2');
-    }, 10800000); // 3 tiếng
+
+    // Xử lý khi modal đóng
+    $('#addDataModalGroup2').on('hidden.bs.modal', function() {
+        // Reset form
+        $('#addShrimpDeathDataForm')[0].reset();
+        
+        // Reset flag
+        window.isSubmittingDeathData = false;
+    });
+
     function updateProductApplicationGroup2() {
         const treatmentDropdown2 = document.getElementById("treatmentNameGroup2");
         const selectedOption = treatmentDropdown2.options[treatmentDropdown2.selectedIndex]; // Sửa từ `treatmentDropdown` thành `treatmentDropdown2`
@@ -970,6 +975,11 @@ $groupResult = $connect->query($groupSql);
     }
 
     function submitShrimpDeathData() {
+        // Ngăn submit nếu đang trong quá trình submit
+        if (window.isSubmittingDeathData) {
+            return;
+        }
+
         const caseStudyId = $('#modalCaseStudyId2').val();
         const treatmentName = $('select[name="treatmentNameGroup2"]').val();
         const productApplication = $('#productApplicationGroup2').val();
@@ -992,7 +1002,10 @@ $groupResult = $connect->query($groupSql);
             return;
         }
 
-        const formattedDate = testDate.split("-").reverse().join("-"); // Định dạng ngày
+        // Set flag đang submit
+        window.isSubmittingDeathData = true;
+
+        const formattedDate = testDate.split("-").reverse().join("-");
         const testTime = `${formattedDate} ${testHour}:00:00`;
 
         const formData = {
@@ -1018,15 +1031,22 @@ $groupResult = $connect->query($groupSql);
                     $('input[name="death_sample"]').val('');
                     const currentRep = parseInt($('input[name="rep_2"]').val(), 10);
                     $('input[name="rep_2"]').val(currentRep + 1);
+                    
+                    // Focus vào trường death_sample để sẵn sàng nhập tiếp
+                    $('input[name="death_sample"]').focus();
 
                     updateRecentEntriesGroup2();
                 } else {
-                    showToast(response.messages, 'Error', false); // Hiển thị lỗi từ API
+                    showToast(response.messages, 'Error', false);
                 }
+                // Reset flag sau khi hoàn thành
+                window.isSubmittingDeathData = false;
             },
             error: function(xhr, status, error) {
                 console.error("AJAX Error:", error);
-                showToast("An unexpected error occurred.", "Error", false); // Lỗi không mong muốn
+                showToast("An unexpected error occurred.", "Error", false);
+                // Reset flag khi có lỗi
+                window.isSubmittingDeathData = false;
             }
         });
     }
@@ -1499,6 +1519,21 @@ $groupResult = $connect->query($groupSql);
         $('#addShrimpDeathDataForm').off('keydown'); // Xóa sự kiện cho Form 2
         $('#addWaterQualityForm').off('keydown'); // Xóa sự kiện cho Form 3
         $('#addShrimpWeightForm').off('keydown'); // Xóa sự kiện cho Form 4
+    });
+
+    // Xử lý khi modal đóng
+    $('#addDataModalGroup2').on('hidden.bs.modal', function() {
+        // Reset form
+        $('#addShrimpDeathDataForm')[0].reset();
+        
+        // Xóa tất cả event handlers
+        $('#addShrimpDeathDataForm').off();
+        $('input[name="test_date"]').off();
+        $('select[name="test_hour"]').off();
+        $('select[name="treatmentNameGroup2"]').off();
+        
+        // Reset flag
+        window.isSubmittingDeathData = false;
     });
 </script>
 <style>

@@ -51,24 +51,100 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Define the 6 specific time slots
-$timeSlots = ['03:00', '07:00', '11:00', '15:00', '19:00', '23:00'];
-
-// Get the earliest test date
-$sql = "SELECT MIN(DATE(test_time)) AS earliest_date FROM shrimp_death_data WHERE case_study_id = ?";
+// Get distinct time slots from the database
+$sql = "SELECT DISTINCT TIME_FORMAT(TIME(test_time), '%H:%i') as time_slot 
+        FROM shrimp_death_data 
+        WHERE case_study_id = ? 
+        ORDER BY TIME(test_time)";
 $stmt = $connect->prepare($sql);
 $stmt->bind_param("s", $caseStudyId);
 $stmt->execute();
 $result = $stmt->get_result();
-$row = $result->fetch_assoc();
+$timeSlots = [];
+while ($row = $result->fetch_assoc()) {
+    $timeSlots[] = $row['time_slot'];
+}
 $stmt->close();
 
-if (!$row || !$row['earliest_date']) {
-    die("Error: Unable to fetch the earliest date from the database.");
-}
+// Get the earliest test_time as base time
+$sql = "SELECT MIN(test_time) as base_time FROM shrimp_death_data WHERE case_study_id = ?";
+$stmt = $connect->prepare($sql);
+$stmt->bind_param("s", $caseStudyId);
+$stmt->execute();
+$result = $stmt->get_result();
+$baseTimeRow = $result->fetch_assoc();
+$stmt->close();
 
-$baseDate = $row['earliest_date'];
-$baseTime = new DateTime($baseDate . ' 15:00'); // Base time for hour difference calculations
+// Initialize variables
+$baseTime = null;
+$averageStdResults = [];
+
+// Only proceed with calculations if we have data
+if (!empty($deathData) && !empty($timeSlots) && $baseTimeRow && !empty($baseTimeRow['base_time'])) {
+    $baseTime = new DateTime($baseTimeRow['base_time']);
+
+    foreach ($treatmentList as $treatment) {
+        if (isset($deathData[$treatment['name']])) {
+            foreach ($deathData[$treatment['name']] as $date => $reps) {
+                foreach ($timeSlots as $slot) {
+                    $currentKey = "$date $slot";
+                    $currentTime = new DateTime($currentKey);
+
+                    // Nếu trước baseTime, bỏ qua
+                    if ($currentTime < $baseTime) {
+                        $averageStdResults[$treatment['name']][$currentKey] = [
+                            'average' => 0.00,
+                            'std_dev' => 0.00,
+                        ];
+                        continue;
+                    }
+
+                    $deathRates = [];
+
+                    // Tính death_rate cho từng rep
+                    for ($rep = 1; $rep <= $treatment['num_reps']; $rep++) {
+                        $cumulativeDeath = 0;
+
+                        // Cộng dồn death_data từ baseTime đến currentTime
+                        foreach ($deathData[$treatment['name']] as $pastDate => $pastReps) {
+                            foreach ($timeSlots as $pastSlot) {
+                                $pastKey = "$pastDate $pastSlot";
+                                $pastTime = new DateTime($pastKey);
+
+                                if ($pastTime >= $baseTime && $pastTime <= $currentTime) {
+                                    $cumulativeDeath += $pastReps[$rep][$pastSlot] ?? 0;
+                                }
+                            }
+                        }
+
+                        // Tính death_rate (nhân vi 100 để biểu diễn phần trăm)
+                        $deathRate = $noOfSurvivalShrimp > 0 ? ($cumulativeDeath / $noOfSurvivalShrimp) * 100 : 0.00;
+                        $deathRates[] = $deathRate;
+                    }
+
+                    // Tính mean và SD chỉ khi có dữ liệu
+                    if (!empty($deathRates)) {
+                        $mean = round(array_sum($deathRates) / count($deathRates), 2);
+                        
+                        if (count($deathRates) > 1) {
+                            $variance = array_sum(array_map(function ($x) use ($mean) {
+                                return pow($x - $mean, 2);
+                            }, $deathRates)) / (count($deathRates) - 1);
+                            $sd = round(sqrt($variance), 2);
+                        } else {
+                            $sd = 0.00;
+                        }
+
+                        $averageStdResults[$treatment['name']][$currentKey] = [
+                            'average' => $mean,
+                            'std_dev' => $sd,
+                        ];
+                    }
+                }
+            }
+        }
+    }
+}
 
 // Helper function to format date
 function formatDate($date)
@@ -76,89 +152,7 @@ function formatDate($date)
     $dateObj = DateTime::createFromFormat('Y-m-d', $date);
     return $dateObj ? $dateObj->format('d-m-Y') : $date;
 }
-// Initialize cumulative sums and results for averages and std deviations
-$averageStdResults = [];
 
-foreach ($treatmentList as $treatment) {
-    foreach ($deathData[$treatment['name']] as $date => $reps) {
-        foreach ($timeSlots as $slot) {
-            $currentKey = "$date $slot";
-            $currentTime = new DateTime($currentKey);
-
-            // Nếu trước baseTime, bỏ qua
-            if ($currentTime < $baseTime) {
-                $averageStdResults[$treatment['name']][$currentKey] = [
-                    'average' => 0.00,
-                    'std_dev' => 0.00,
-                ];
-                continue;
-            }
-
-            $deathRates = [];
-
-            // Tính death_rate cho từng rep
-            for ($rep = 1; $rep <= $treatment['num_reps']; $rep++) {
-                $cumulativeDeath = 0;
-
-                // Cộng dồn death_data từ baseTime đến currentTime
-                foreach ($deathData[$treatment['name']] as $pastDate => $pastReps) {
-                    foreach ($timeSlots as $pastSlot) {
-                        $pastKey = "$pastDate $pastSlot";
-                        $pastTime = new DateTime($pastKey);
-
-                        if ($pastTime >= $baseTime && $pastTime <= $currentTime) {
-                            $cumulativeDeath += $pastReps[$rep][$pastSlot] ?? 0;
-                        }
-                    }
-                }
-
-                // Tính death_rate (nhân với 100 để biểu diễn phần trăm)
-                $deathRate = $noOfSurvivalShrimp > 0 ? ($cumulativeDeath / $noOfSurvivalShrimp) * 100 : 0.00;
-                $deathRates[] = $deathRate; // Lưu giá trị death_rate cho rep
-            }
-
-            // Tính mean của death_rate
-            $mean = !empty($deathRates) ? round(array_sum($deathRates) / count($deathRates), 2) : 0.00;
-
-            // Tính độ lệch chuẩn của death_rate
-            if (!empty($deathRates) && count($deathRates) > 1) {
-                $variance = array_sum(array_map(function ($x) use ($mean) {
-                    return pow($x - $mean, 2);
-                }, $deathRates)) / (count($deathRates) - 1); // SD công thức mẫu
-                $sd = round(sqrt($variance), 2);
-            } else {
-                $sd = 0.00;
-            }
-
-            // Lưu kết quả
-            $averageStdResults[$treatment['name']][$currentKey] = [
-                'average' => $mean,
-                'std_dev' => $sd,
-            ];
-        }
-    }
-}
-
-
-
-
-// Function to calculate standard deviation
-function calculateStandardDeviation($values)
-{
-    $count = count($values);
-    if ($count <= 1) {
-        return 0;
-    }
-
-    $mean = array_sum($values) / $count;
-    $sumOfSquares = 0;
-
-    foreach ($values as $value) {
-        $sumOfSquares += pow($value - $mean, 2);
-    }
-
-    return round(sqrt($sumOfSquares / ($count - 1)), 2);
-}
 ?>
 
 
@@ -167,9 +161,14 @@ function calculateStandardDeviation($values)
         <div class="card">
             <div class="card-body">
                 <div class="header-title">
-                    <h3 class="text-primary">Death Data for Case Study ID: <?php echo htmlspecialchars($caseStudyId); ?>
-                    </h3>
+                    <h3 class="text-primary">Death Data for Case Study ID: <?php echo htmlspecialchars($caseStudyId); ?></h3>
                 </div>
+
+                <?php if (empty($deathData) || empty($timeSlots)): ?>
+                    <div class="alert alert-info" role="alert">
+                        No death data available for this case study.
+                    </div>
+                <?php endif; ?>
 
                 <div class="table-container">
                     <!-- Fixed Table (Treatment Name and Reps) -->
@@ -182,29 +181,35 @@ function calculateStandardDeviation($values)
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($treatmentList as $treatment): ?>
-                                    <!-- Hiển thị các reps -->
-                                    <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
+                                <?php if (!empty($treatmentList)): ?>
+                                    <?php foreach ($treatmentList as $treatment): ?>
+                                        <!-- Hiển thị các reps -->
+                                        <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
+                                            <tr>
+                                                <?php if ($rep === 1): ?>
+                                                    <td rowspan="<?php echo $treatment['num_reps'] + 2; ?>" class="centered">
+                                                        <?php echo htmlspecialchars($treatment['name']); ?>
+                                                    </td>
+                                                <?php endif; ?>
+                                                <td class="centered"><?php echo $rep; ?></td>
+                                            </tr>
+                                        <?php endfor; ?>
+
+                                        <!-- Thêm hàng Mean -->
                                         <tr>
-                                            <?php if ($rep === 1): ?>
-                                                <td rowspan="<?php echo $treatment['num_reps'] + 2; ?>" class="centered">
-                                                    <?php echo htmlspecialchars($treatment['name']); ?>
-                                                </td>
-                                            <?php endif; ?>
-                                            <td class="centered"><?php echo $rep; ?></td>
+                                            <td class="centered" style="background-color: white !important; color: red"><strong>Mean</strong></td>
                                         </tr>
-                                    <?php endfor; ?>
 
-                                    <!-- Thêm hàng Mean -->
+                                        <!-- Thêm hàng SD -->
+                                        <tr>
+                                            <td class="centered" style="background-color:white !important;color: red"><strong>SD</strong></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
                                     <tr>
-                                        <td class="centered" style="background-color: white !important; color: red"><strong>Mean</strong></td>
+                                        <td colspan="2" class="text-center">No treatments available</td>
                                     </tr>
-
-                                    <!-- Thêm hàng SD -->
-                                    <tr>
-                                        <td class="centered" style="background-color:white !important;color: red"><strong>SD</strong></td>
-                                    </tr>
-                                <?php endforeach; ?>
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
@@ -216,95 +221,112 @@ function calculateStandardDeviation($values)
                             <thead>
                                 <!-- Date Header -->
                                 <tr class="date-header">
-                                    <?php $dayIndex = 0; ?>
-                                    <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
-                                        <th colspan="<?php echo count($timeSlots); ?>"
-                                            class="<?php echo $dayIndex % 2 === 0 ? 'bg-pink' : 'bg-green'; ?>">
-                                            <?php echo formatDate($date); ?>
-                                        </th>
-                                        <?php $dayIndex++; ?>
-                                    <?php endforeach; ?>
+                                    <?php if (!empty($deathData) && !empty(array_key_first($deathData))): ?>
+                                        <?php $dayIndex = 0; ?>
+                                        <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
+                                            <th colspan="<?php echo count($timeSlots); ?>" class="<?php echo $dayIndex % 2 === 0 ? 'bg-pink' : 'bg-green'; ?>">
+                                                <?php echo formatDate($date); ?>
+                                            </th>
+                                            <?php $dayIndex++; ?>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <th>No dates available</th>
+                                    <?php endif; ?>
                                 </tr>
 
                                 <!-- Time Slot Header -->
                                 <tr class="time-header">
+                                    <?php if (!empty($deathData) && !empty(array_key_first($deathData))): ?>
+                                        <?php $dayIndex = 0; ?>
+                                        <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
+                                            <?php foreach ($timeSlots as $slot): ?>
+                                                <th class="<?php echo $dayIndex % 2 === 0 ? 'bg-pink' : 'bg-green'; ?>">
+                                                    <?php echo $slot; ?>
+                                                </th>
+                                            <?php endforeach; ?>
+                                            <?php $dayIndex++; ?>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <th>No time slots available</th>
+                                    <?php endif; ?>
+                                </tr>
+                            </thead>
+                            <!-- Hàng tiêu đề ộ lệch giờ -->
+                            <tr class="offset-header">
+                                <?php if (!empty($deathData) && !empty(array_key_first($deathData))): ?>
                                     <?php $dayIndex = 0; ?>
                                     <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
                                         <?php foreach ($timeSlots as $slot): ?>
-                                            <th class="<?php echo $dayIndex % 2 === 0 ? 'bg-pink' : 'bg-green'; ?>">
-                                                <?php echo $slot; ?>
+                                            <?php
+                                            $currentSlot = new DateTime("$date $slot");
+                                            $interval = $baseTime->diff($currentSlot);
+                                            $hourDifference = ($interval->days * 24) + $interval->h;
+                                            if ($interval->invert) {
+                                                $hourDifference = -$hourDifference;
+                                            }
+                                            ?>
+                                            <th style="background-color: white;">
+                                                <?php echo $hourDifference; ?>
                                             </th>
                                         <?php endforeach; ?>
                                         <?php $dayIndex++; ?>
                                     <?php endforeach; ?>
-                                </tr>
-                            </thead>
-                            <!-- Hàng tiêu đề độ lệch giờ -->
-                            <tr class="offset-header">
-                                <?php $dayIndex = 0; ?>
-                                <?php foreach (array_keys($deathData[array_key_first($deathData)]) as $date): ?>
-                                    <?php foreach ($timeSlots as $slot): ?>
-                                        <?php
-                                        $currentSlot = new DateTime("$date $slot"); // Kết hợp ngày và giờ hiện tại
-                                        $interval = $baseTime->diff($currentSlot); // Tính khoảng cách đến thời gian gốc
-                                        $hourDifference = ($interval->days * 24) + $interval->h; // Chênh lệch giờ
-                                        if ($interval->invert) {
-                                            $hourDifference = -$hourDifference; // Nếu trước thời gian gốc thì giá trị âm
-                                        }
-                                        ?>
-                                        <th style="background-color: white;">
-                                            <?php echo $hourDifference; ?>
-                                        </th>
-                                    <?php endforeach; ?>
-                                    <?php $dayIndex++; ?>
-                                <?php endforeach; ?>
+                                <?php else: ?>
+                                    <th>No time differences available</th>
+                                <?php endif; ?>
                             </tr>
                             <tbody>
-                                <?php foreach ($treatmentList as $treatment): ?>
-                                    <!-- Hiển thị các reps -->
-                                    <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
-                                        <tr>
-                                            <?php $dayIndex = 0; ?>
+                                <?php if (!empty($treatmentList) && !empty($deathData)): ?>
+                                    <?php foreach ($treatmentList as $treatment): ?>
+                                        <!-- Hiển thị các reps -->
+                                        <?php for ($rep = 1; $rep <= $treatment['num_reps']; $rep++): ?>
+                                            <tr>
+                                                <?php $dayIndex = 0; ?>
+                                                <?php foreach ($deathData[$treatment['name']] as $date => $reps): ?>
+                                                    <?php $dayColor = $dayIndex % 2 === 0 ? 'bg-pink' : 'bg-green'; ?>
+                                                    <?php foreach ($timeSlots as $slot): ?>
+                                                        <td class="<?php echo $dayColor; ?>">
+                                                            <?php echo $reps[$rep][$slot] ?? '-'; ?>
+                                                        </td>
+                                                    <?php endforeach; ?>
+                                                    <?php $dayIndex++; ?>
+                                                <?php endforeach; ?>
+                                            </tr>
+                                        <?php endfor; ?>
+
+                                        <!-- Hàng Mean -->
+                                        <tr class="row-mean">
                                             <?php foreach ($deathData[$treatment['name']] as $date => $reps): ?>
-                                                <?php $dayColor = $dayIndex % 2 === 0 ? 'bg-pink' : 'bg-green'; ?>
                                                 <?php foreach ($timeSlots as $slot): ?>
-                                                    <td class="<?php echo $dayColor; ?>">
-                                                        <?php echo $reps[$rep][$slot] ?? '-'; ?>
+                                                    <td>
+                                                        <?php
+                                                        $currentKey = "$date $slot";
+                                                        echo $averageStdResults[$treatment['name']][$currentKey]['average'] ?? '0.00';
+                                                        ?>
                                                     </td>
                                                 <?php endforeach; ?>
-                                                <?php $dayIndex++; ?>
                                             <?php endforeach; ?>
                                         </tr>
-                                    <?php endfor; ?>
 
-                                    <!-- Hàng Mean -->
-                                    <tr class="row-mean">
-                                        <?php foreach ($deathData[$treatment['name']] as $date => $reps): ?>
-                                            <?php foreach ($timeSlots as $slot): ?>
-                                                <td>
-                                                    <?php
-                                                    $currentKey = "$date $slot";
-                                                    echo $averageStdResults[$treatment['name']][$currentKey]['average'] ?? '0.00';
-                                                    ?>
-                                                </td>
+                                        <!-- Hàng SD -->
+                                        <tr class="row-sd">
+                                            <?php foreach ($deathData[$treatment['name']] as $date => $reps): ?>
+                                                <?php foreach ($timeSlots as $slot): ?>
+                                                    <td>
+                                                        <?php
+                                                        $currentKey = "$date $slot";
+                                                        echo $averageStdResults[$treatment['name']][$currentKey]['std_dev'] ?? '0.00';
+                                                        ?>
+                                                    </td>
+                                                <?php endforeach; ?>
                                             <?php endforeach; ?>
-                                        <?php endforeach; ?>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td class="text-center">No data available</td>
                                     </tr>
-
-                                    <!-- Hàng SD -->
-                                    <tr class="row-sd">
-                                        <?php foreach ($deathData[$treatment['name']] as $date => $reps): ?>
-                                            <?php foreach ($timeSlots as $slot): ?>
-                                                <td>
-                                                    <?php
-                                                    $currentKey = "$date $slot";
-                                                    echo $averageStdResults[$treatment['name']][$currentKey]['std_dev'] ?? '0.00';
-                                                    ?>
-                                                </td>
-                                            <?php endforeach; ?>
-                                        <?php endforeach; ?>
-                                    </tr>
-                                <?php endforeach; ?>
+                                <?php endif; ?>
                             </tbody>
 
                         </table>
@@ -361,7 +383,7 @@ function calculateStandardDeviation($values)
                             white-space: nowrap;
                             text-align: center;
                             border: 0.1px solid #000;
-                            /* Gạch ngang và dọc đậm */
+                            /* Gạch ngang và dọc đm */
                             color: #333;
                             /* Màu chữ đậm */
                             font-weight: bold;
@@ -372,7 +394,7 @@ function calculateStandardDeviation($values)
                             /* Tạo viền bên trong */
                         }
 
-                        /* Phase header (cố định khi cuộn xuống) */
+                        /* Phase header (cố định khi cuộn xung) */
                         .phase-header th {
                             position: sticky;
                             top: 0;
@@ -393,7 +415,7 @@ function calculateStandardDeviation($values)
                         .date-header th {
                             position: sticky;
                             top: 0;
-                            /* Vị trí cố định khi cuộn */
+                            /* Vị trí c định khi cuộn */
                             z-index: 4;
                             /* Cao hơn nội dung khác */
                             background-color: #e9ecef;
@@ -425,7 +447,7 @@ function calculateStandardDeviation($values)
                         .sticky-header {
                             position: sticky;
                             top: 0;
-                            /* Đảm bảo cố định */
+                            /* ảm bảo cố định */
                             left: 0;
                             /* Cố định bên trái */
                             z-index: 5;
@@ -448,7 +470,7 @@ function calculateStandardDeviation($values)
                             border: 0.1px solid #000;
                             /* Gạch ngang và dọc đậm */
                             box-shadow: inset 0 0 0 1px #000;
-                            /* Tạo viền bên trong */
+                            /* Tạo vin bên trong */
                         }
 
                         /* Cố định hàng tiêu đề */
@@ -474,9 +496,9 @@ function calculateStandardDeviation($values)
                             text-align: center;
                             vertical-align: middle;
                             font-weight: bold;
-                            /* Chữ in đậm */
+                            /* Ch in đậm */
                             border: 0.1px solid #000;
-                            /* Gạch ngang và dọc đậm */
+                            /* Gạch ngang và dọc đm */
                         }
 
 

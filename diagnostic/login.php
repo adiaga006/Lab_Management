@@ -54,9 +54,12 @@ if ($_POST) {
                 
                 // Thiết lập session
                 $_SESSION['userId'] = $value['user_id'];
+                $_SESSION['username'] = $value['username'];
                 $_SESSION['role'] = $value['role'];
                 $_SESSION['session_id'] = session_create_id('user_');
                 $_SESSION['isAdmin'] = ($value['role'] == 1);
+                $_SESSION['isEmployee'] = ($value['role'] == 2);
+                $_SESSION['isGuest'] = ($value['role'] == 3);
 
                 // Kiểm tra URL chuyển hướng
                 if (isset($_SESSION['redirect_url'])) {
@@ -79,7 +82,7 @@ if ($_POST) {
                         <div class="popup__background"></div>
                         <div class="popup__content">
                             <h3 class="popup__content__title">Success</h3>
-                            <p><?php echo ($value['role'] == 1) ? 'Admin' : 'Client'; ?> Login Successfully</p>
+                            <p><?php echo ($value['role'] == 1) ? 'Admin' : ($value['role'] == 2 ? 'Employee' : 'Guest'); ?> Login Successfully</p>
                             <p><?php echo "<script>setTimeout(\"location.href = 'dashboard.php';\",1500);</script>"; ?></p>
                         </div>
                     </div>
