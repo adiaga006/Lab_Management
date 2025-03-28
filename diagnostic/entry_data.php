@@ -196,7 +196,6 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                                 <table class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
-                                            <th style="width: 30px;"><input type="checkbox" id="selectAll" onclick="toggleAllCheckboxes()"></th>
                                             <th style="width: 160px;">Treatment Name</th>
                                             <th style="width: 200px;">Product Application</th>
                                             <th style="width: 105px;">Day</th>
@@ -204,6 +203,7 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                                             <th style="text-align: center;width: 150px;">Survival Sample</th>
                                             <th style="text-align: center;width: 150px;">Feed Intake(g)</th>
                                             <th style="text-align: center">Action</th>
+                                            <th style="text-align: center;width: 100px;">Delete many</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -251,9 +251,6 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                                             }
                                         ?>
                                             <tr>
-                                                <td>
-                                                    <input type="checkbox" class="entryCheckbox" value="<?php echo $entry['entry_data_id']; ?>">
-                                                </td>
                                                 <?php if ($isNewTreatment): ?>
                                                     <td rowspan="<?php echo $treatmentRowCount; ?>" 
                                                         style="vertical-align: middle; font-weight: bold;">
@@ -286,6 +283,9 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                                                             <i class="fa fa-trash"></i> Delete
                                                         </button>
                                                     </div>
+                                                </td>
+                                                <td style="text-align: center; vertical-align: middle;">
+                                                    <input type="checkbox" class="entryCheckbox" value="<?php echo $entry['entry_data_id']; ?>">
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -722,13 +722,14 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                     <table class="table table-bordered table-striped">
                         <thead>
                             <tr>
-                                <th style="width: 30px;"><input type="checkbox" class="selectAll-day" onclick="toggleDayCheckboxes(this)"></th>
                                 <th style="width: 160px;">Treatment Name</th>
                                 <th style="width: 200px;">Product Application</th>
+                                <th style="width: 105px;">Day</th>
                                 <th style="width: 50px;">Reps</th>
                                 <th style="text-align: center">Survival Sample</th>
                                 <th style="text-align: center">Feed Intake(g)</th>
                                 <th style="text-align: center">Action</th>
+                                <th style="text-align: center;width: 100px;">Delete many</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -762,18 +763,11 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                 tableContent += `
             <tr>
                 <td>
-                    <input type="checkbox" class="entryCheckbox" value="${entry.entry_data_id || 0}" onchange="updateSelectedCount()">
+                    ${isNewTreatment ? `<td rowspan="${treatmentRowCount}" style="vertical-align: middle; font-weight: bold;">${currentTreatment}</td>` : ''}
                 </td>
-                ${isNewTreatment ? `
-                    <td rowspan="${treatmentRowCount}" style="vertical-align: middle; font-weight: bold;">
-                        ${currentTreatment}
-                    </td>
-                ` : ''}
-                ${isNewProductApplication ? `
-                    <td rowspan="${productRowCount}" style="vertical-align: middle;">
-                        ${entry.product_application}
-                    </td>
-                ` : ''}
+                <td>
+                    ${isNewProductApplication ? `<td rowspan="${productRowCount}" style="vertical-align: middle;">${entry.product_application}</td>` : ''}
+                </td>
                 <td>${entry.rep}</td>
                 <td>${entry.survival_sample}</td>
                 <td>${entry.feeding_weight}</td>
@@ -786,6 +780,9 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                             <i class="fa fa-trash"></i> Delete
                         </button>
                     </div>
+                </td>
+                <td style="text-align: center; vertical-align: middle;">
+                    <input type="checkbox" class="entryCheckbox" value="${entry.entry_data_id || 0}">
                 </td>
             </tr>
             `;
@@ -801,17 +798,6 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
         // Sau khi render, cập nhật lại sự kiện cho checkbox
         document.querySelectorAll('.entryCheckbox').forEach(checkbox => {
             checkbox.addEventListener('change', updateSelectedCount);
-        });
-        
-        document.querySelectorAll('.selectAll-day').forEach(header => {
-            header.addEventListener('change', function() {
-                const table = this.closest('table');
-                const checkboxes = table.querySelectorAll('.entryCheckbox');
-                checkboxes.forEach(checkbox => {
-                    checkbox.checked = this.checked;
-                });
-                updateSelectedCount();
-            });
         });
     }
 
@@ -835,18 +821,6 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
         
         // Hiển thị hoặc ẩn nút xóa dựa trên số lượng đã chọn
         document.getElementById('deleteSelectedBtn').style.display = count > 0 ? 'inline-block' : 'none';
-    }
-
-    // Chọn hoặc bỏ chọn tất cả
-    function toggleAllCheckboxes() {
-        const selectAllCheckbox = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.entryCheckbox');
-        
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
-        });
-        
-        updateSelectedCount();
     }
 
     // Xóa các mục đã chọn
@@ -918,16 +892,6 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                 });
             }
         });
-    }
-
-    // Hàm bổ sung để chọn/bỏ chọn tất cả checkbox trong một ngày
-    function toggleDayCheckboxes(headerCheckbox) {
-        const table = headerCheckbox.closest('table');
-        const checkboxes = table.querySelectorAll('.entryCheckbox');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = headerCheckbox.checked;
-        });
-        updateSelectedCount();
     }
 
     // Xóa tất cả dữ liệu theo ngày đã lọc

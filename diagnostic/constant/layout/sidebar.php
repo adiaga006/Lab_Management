@@ -21,7 +21,7 @@ $currentCaseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : (
                 <li class="nav-label">Home</li>
                 <li> 
                     <a href="dashboard.php" aria-expanded="false">
-                        <i class="fas fa-tachometer-alt"></i>Dashboard
+                        <i class="fa fa-dashboard"></i>Dashboard
                     </a>
                 </li>
 
@@ -84,7 +84,6 @@ $currentCaseStudyId = isset($_GET['case_study_id']) ? $_GET['case_study_id'] : (
                         </a>
                         <ul aria-expanded="false" class="collapse">
                             <?php if (isset($_SESSION['isAdmin']) && $_SESSION['isAdmin']) { ?>
-                                <li><a href="add_SOP.php">Add SOP</a></li>
                             <?php } ?>
                             <li><a href="manage_SOP.php">Manage SOP</a></li>
                         </ul>
