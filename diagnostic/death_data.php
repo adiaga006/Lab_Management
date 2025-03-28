@@ -120,9 +120,18 @@ foreach ($entries as $entry) {
             <button type="button" class="btn btn-secondary ml-2" onclick="resetFilter()">Reset</button>
         </form>
 
-        <!-- Nút Change View -->
-        <button type="button" id="changeViewButton" class="btn btn-info float-right" onclick="changeView()">Change
-            View</button>
+        <!-- Nút xóa nhiều dòng và Change View -->
+        <div>
+            <button type="button" class="btn btn-danger me-2" id="deleteSelectedBtn" style="display: none;" onclick="deleteSelectedEntries()">
+                <i class="fa fa-trash"></i> Delete Selected
+            </button>
+            <button type="button" class="btn btn-danger me-2" id="deleteByDateBtn" style="display: none;" onclick="deleteByDate()">
+                <i class="fa fa-trash"></i> Delete By Date
+            </button>
+            <button type="button" id="changeViewButton" class="btn btn-info" onclick="changeView()">
+                Change View
+            </button>
+        </div>
     </div>
 
 
@@ -143,7 +152,8 @@ foreach ($entries as $entry) {
                                     <th style="width: 10%;">Reps</th>
                                     <th style="width: 10%;">Hour</th>
                                     <th style="width: 15%;">Death Sample</th>
-                                    <th style="width: 20%; text-align: center;">Action</th>
+                                    <th style="width: 15%;">Action</th>
+                                    <th style="width: 5%;">Delete Many</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -218,6 +228,9 @@ foreach ($entries as $entry) {
                                                         </button>
                                                     </div>
                                                 </td>
+                                                <td class="text-center">
+                                                    <input type="checkbox" class="entry-checkbox" value="<?php echo htmlspecialchars($entry['id']); ?>">
+                                                </td>
                                             </tr>
                                 <?php
                                             $firstRepRow = false;
@@ -238,6 +251,9 @@ foreach ($entries as $entry) {
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <!-- Flatpickr JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- SweetAlert2 CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.all.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         // Initialize Flatpickr for filterDate
@@ -343,6 +359,7 @@ foreach ($entries as $entry) {
             <th style="width: 50px;">Hour</th>
             <th>Death Sample</th>
             <th style="text-align: center;width: 150px;">Action</th>
+            <th style="width: 50px;">Delete Many</th>
         </tr>
     `;
 
@@ -379,6 +396,9 @@ foreach ($entries as $entry) {
                                 <i class="fa fa-trash"></i> Delete
                             </button>
                         </div>
+                    </td>
+                    <td class="text-center">
+                        <input type="checkbox" class="entry-checkbox" value="${entry.id}">
                     </td>
                 `;
 
@@ -469,85 +489,116 @@ foreach ($entries as $entry) {
         });
     }
 
-
-
-
     function updateEntry() {
         const formData = $('#editEntryForm').serializeArray();
         const data = {};
 
-        // Tạo đối tượng dữ liệu từ form
         formData.forEach(field => {
             data[field.name] = field.value;
         });
 
-        // Lấy giá trị filterDate nếu có
         const filterDate = $('#filterDate').val();
 
         $.ajax({
-            url: 'php_action/edit_shrimp_death_data.php', // API cập nhật bản ghi
+            url: 'php_action/edit_shrimp_death_data.php',
             type: 'POST',
             data: data,
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    showToast('Entry updated successfully!', 'Success', true);
-                    $('#editEntryModal').modal('hide'); // Đóng modal
-
-                    if (filterDate) {
-                        // Nếu có filterDate, chỉ làm mới dữ liệu được lọc
-                        applyDateFilter();
-                    } else {
-                        // Nếu không có filterDate, reload toàn bộ trang
-                        location.reload();
-                    }
+                    $('#editEntryModal').modal('hide');
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Entry updated successfully!',
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        setTimeout(() => {
+                            if (filterDate) {
+                                applyDateFilter();
+                            } else {
+                                location.reload();
+                            }
+                        }, 500);
+                    });
                 } else {
-                    showToast(response.message || 'Failed to update entry!', 'Error', false);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: response.message || 'Failed to update entry!',
+                        icon: 'error'
+                    });
                 }
             },
             error: function(xhr, status, error) {
                 console.error('AJAX Error:', error);
-                showToast('Error updating entry!', 'Error', false);
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Error updating entry!',
+                    icon: 'error'
+                });
             }
         });
     }
 
-
-
-
     function deleteEntry(entryId) {
-        if (confirm('Are you sure you want to delete this entry?')) {
-            const filterDate = $('#filterDate').val(); // Lấy giá trị filterDate nếu có
+        Swal.fire({
+            title: 'Confirm Deletion',
+            html: 'Are you sure you want to delete this entry?<br>This action cannot be undone!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const filterDate = $('#filterDate').val();
 
-            $.ajax({
-                url: './php_action/delete_shrimp_death_data.php', // API xử lý xóa bản ghi
-                type: 'POST',
-                data: {
-                    id: entryId
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        showToast(response.message || 'Death shrimp data deleted successfully!', 'Success', true);
-
-                        if (filterDate) {
-                            // Nếu có filterDate, làm mới dữ liệu đã lọc
-                            applyDateFilter();
+                $.ajax({
+                    url: './php_action/delete_shrimp_death_data.php',
+                    type: 'POST',
+                    data: {
+                        id: entryId
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: response.message || 'Death shrimp data deleted successfully!',
+                                icon: 'success',
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                setTimeout(() => {
+                                    if (filterDate) {
+                                        applyDateFilter();
+                                    } else {
+                                        location.reload();
+                                    }
+                                }, 500);
+                            });
                         } else {
-                            // Nếu không có filterDate, reload lại toàn bộ trang
-                            location.reload();
+                            Swal.fire({
+                                title: 'Error!',
+                                text: response.message || 'Failed to delete entry!',
+                                icon: 'error'
+                            });
                         }
-                    } else {
-                        showToast(response.message || 'Failed to delete entry!', 'Error', false);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        console.error('Response:', xhr.responseText);
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Error during entry deletion!',
+                            icon: 'error'
+                        });
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', error);
-                    console.error('Response:', xhr.responseText);
-                    showToast('Error during entry deletion!', 'Error', false);
-                }
-            });
-        }
+                });
+            }
+        });
     }
 
     function changeView() {
@@ -564,6 +615,199 @@ foreach ($entries as $entry) {
         // Chuyển hướng đến file view_death_data.php
         window.location.href = url;
     }
+
+    // Hàm kiểm tra và hiển thị nút Delete Selected
+    function updateDeleteButtonVisibility() {
+        const selectedCheckboxes = document.getElementsByClassName('entry-checkbox');
+        const selectedCount = Array.from(selectedCheckboxes).filter(checkbox => checkbox.checked).length;
+        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+        deleteSelectedBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
+    }
+
+    // Hàm xóa nhiều dòng
+    function deleteSelectedEntries() {
+        const selectedCheckboxes = document.getElementsByClassName('entry-checkbox');
+        const selectedIds = Array.from(selectedCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => parseInt(checkbox.value));
+
+        if (selectedIds.length === 0) {
+            Swal.fire({
+                title: 'Warning!',
+                text: 'Please select at least one row to delete!',
+                icon: 'warning'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Confirm Deletion',
+            html: `Are you sure you want to delete ${selectedIds.length} selected rows?<br>This action cannot be undone!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete them!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const filterDate = $('#filterDate').val();
+                
+                // Hiện thông báo loading
+                Swal.fire({
+                    title: 'Đang xóa dữ liệu...',
+                    text: 'Vui lòng đợi trong giây lát',
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    willOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // Sử dụng cách tối ưu để gửi dữ liệu
+                $.ajax({
+                    url: './php_action/delete_multiple_death_data.php',
+                    type: 'POST',
+                    data: { ids: selectedIds },
+                    dataType: 'json',
+                    success: function(response) {
+                        Swal.close();
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: `Successfully deleted ${response.deleted_count} items`,
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                if (filterDate) {
+                                    applyDateFilter();
+                                } else {
+                                    location.reload();
+                                }
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: response.message || 'Failed to delete selected rows!',
+                                icon: 'error'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        Swal.close();
+                        
+                        let errorMessage = 'An error occurred while deleting data!';
+                        try {
+                            if (xhr.responseText) {
+                                const response = JSON.parse(xhr.responseText);
+                                errorMessage = response.message || errorMessage;
+                            }
+                        } catch (e) {
+                            errorMessage = `Error: ${error}`;
+                        }
+                        
+                        Swal.fire({
+                            title: 'Error!',
+                            text: errorMessage,
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    function deleteByDate() {
+        const filterDateInput = document.getElementById('filterDate').value;
+
+        if (!filterDateInput) {
+            Swal.fire({
+                title: 'Warning!',
+                text: 'Please select a date to delete!',
+                icon: 'warning'
+            });
+            return;
+        }
+
+        const formattedDate = filterDateInput.split('-').reverse().join('-');
+
+        Swal.fire({
+            title: 'Confirm Deletion',
+            html: `Are you sure you want to delete all entries for date ${filterDateInput}?<br>This action cannot be undone!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete all!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: './php_action/delete_entries_by_date.php',
+                    type: 'POST',
+                    data: {
+                        case_study_id: '<?php echo $caseStudyId; ?>',
+                        date: formattedDate
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: response.message || 'All entries for the selected date were deleted successfully!',
+                                icon: 'success',
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                setTimeout(() => {
+                                    location.reload();
+                                }, 500);
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: response.message || 'Failed to delete entries!',
+                                icon: 'error'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Error during entries deletion!',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        // Khởi tạo event listener cho checkboxes
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('entry-checkbox')) {
+                updateDeleteButtonVisibility();
+            }
+        });
+
+        // Khởi tạo event listener cho filter date
+        document.getElementById('filterDate').addEventListener('change', function() {
+            const deleteByDateBtn = document.getElementById('deleteByDateBtn');
+            deleteByDateBtn.style.display = this.value ? 'inline-block' : 'none';
+        });
+
+        // Kiểm tra trạng thái ban đầu
+        updateDeleteButtonVisibility();
+        const filterDate = document.getElementById('filterDate').value;
+        const deleteByDateBtn = document.getElementById('deleteByDateBtn');
+        deleteByDateBtn.style.display = filterDate ? 'inline-block' : 'none';
+    });
 </script>
 <style>
     /* Container cho toast */

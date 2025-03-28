@@ -143,6 +143,12 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                 placeholder="Select a day to filter" />
             <button type="button" class="btn btn-primary" onclick="applyDateFilter()">Filter</button>
             <button type="button" class="btn btn-secondary ml-2" onclick="resetTableFilter()">Reset</button>
+            <button type="button" class="btn btn-danger ml-2" id="deleteSelectedBtn" onclick="deleteSelectedEntries()" style="display:none;">
+                <i class="fa fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+            </button>
+            <button type="button" class="btn btn-danger ml-2" id="deleteFilteredBtn" onclick="deleteFilteredEntries()" style="display:none;">
+                <i class="fa fa-trash"></i> Delete By Date
+            </button>
         </form>
     </div>
     <div class="card-body d-flex justify-content-between" style="padding: 10px 50px;">
@@ -190,6 +196,7 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                                 <table class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
+                                            <th style="width: 30px;"><input type="checkbox" id="selectAll" onclick="toggleAllCheckboxes()"></th>
                                             <th style="width: 160px;">Treatment Name</th>
                                             <th style="width: 200px;">Product Application</th>
                                             <th style="width: 105px;">Day</th>
@@ -244,6 +251,9 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                                             }
                                         ?>
                                             <tr>
+                                                <td>
+                                                    <input type="checkbox" class="entryCheckbox" value="<?php echo $entry['entry_data_id']; ?>">
+                                                </td>
                                                 <?php if ($isNewTreatment): ?>
                                                     <td rowspan="<?php echo $treatmentRowCount; ?>" 
                                                         style="vertical-align: middle; font-weight: bold;">
@@ -362,12 +372,22 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <!-- Flatpickr JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- SweetAlert2 CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.all.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         flatpickr("#filterDate", {
             dateFormat: "d-m-Y", // Định dạng hiển thị dd-MM-YYYY
             allowInput: true,    // Cho phép người dùng nhập thủ công
             defaultDate: null,   // Ngày mặc định (nếu có)
+        });
+
+        // Thêm sự kiện cho các checkbox
+        document.addEventListener('change', function(event) {
+            if (event.target.classList.contains('entryCheckbox')) {
+                updateSelectedCount();
+            }
         });
     });
     document.addEventListener('wheel', function (event) {
@@ -464,7 +484,6 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
 
 
     // Cập nhật dữ liệu
-    // Cập nhật dữ liệu
     function updateEntryData() {
         const formData = $('#editDataForm').serializeArray();
 
@@ -475,22 +494,50 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    showToast('Entry updated successfully!', 'Success', true);
                     $('#editDataModal').modal('hide');
-                    reloadFilteredData(); // Kiểm tra và hành động theo trạng thái filterDate
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Entry updated successfully!',
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        setTimeout(() => {
+                            reloadFilteredData();
+                        }, 500);
+                    });
                 } else {
-                    showToast(response.messages, 'Error', false);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: response.messages || 'Failed to update the entry.',
+                        icon: 'error'
+                    });
                 }
             },
             error: function (xhr, status, error) {
                 console.error('AJAX Error:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Server connection error.',
+                    icon: 'error'
+                });
             }
         });
     }
 
     // Xóa dữ liệu
     function deleteEntryData(entryId) {
-        if (confirm('Are you sure you want to delete this entry?')) {
+        Swal.fire({
+            title: 'Confirm Deletion',
+            html: 'Are you sure you want to delete this item?<br>This action cannot be undone!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
             $.ajax({
                 url: 'php_action/remove_entry_data.php',
                 type: 'POST',
@@ -498,27 +545,53 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        showToast('Entry deleted successfully!', 'Success', true);
-                        reloadFilteredData(); // Kiểm tra và hành động theo trạng thái filterDate
+                            Swal.fire({
+                                title: 'Deleted!',
+                                text: 'Entry has been deleted successfully.',
+                                icon: 'success',
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                setTimeout(() => {
+                                    reloadFilteredData();
+                                }, 500);
+                            });
                     } else {
-                        showToast(response.messages, 'Error', false);
+                            Swal.fire({
+                                title: 'Error!',
+                                text: response.messages || 'Failed to delete the entry.',
+                                icon: 'error'
+                            });
                     }
                 },
                 error: function (xhr, status, error) {
                     console.error('AJAX Error:', error);
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Server connection error.',
+                            icon: 'error'
+                        });
                 }
             });
         }
+        });
     }
 
 
 
     function resetTableFilter() {
         document.getElementById('filterDate').value = ''; // Xóa giá trị ngày
-        showToast('Reset successfully!', 'Success', true);
+        document.getElementById('deleteFilteredBtn').style.display = 'none'; // Ẩn nút xóa theo ngày
+        Swal.fire({
+            title: 'Reset Complete',
+            text: 'Filter has been reset successfully!',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        });
         setTimeout(() => {
-            location.reload();;
-        }, 1000);
+            location.reload();
+        }, 1500);
     }
     function formatToDDMMYYYY(dateString) {
         const parts = dateString.split('-'); // Giả định dateString là YYYY-MM-DD
@@ -542,6 +615,15 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
         const filterDateInput = document.getElementById('filterDate');
         const filterDateValue = filterDateInput.value;
 
+        if (!filterDateValue) {
+            Swal.fire({
+                title: 'Warning!',
+                text: 'Please select a date to filter',
+                icon: 'warning'
+            });
+            return;
+        }
+
         // Chuyển đổi sang YYYY-MM-DD
         const formattedDate = filterDateValue.split('-').reverse().join('-');
 
@@ -556,13 +638,32 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
             success: function (response) {
                 if (response.success) {
                     renderPhases(response.data); // Hiển thị dữ liệu sau khi nhận
-                    showToast('Filter applied successfully!', 'Success', true);
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Filter applied successfully!',
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                    
+                    // Hiển thị nút xóa theo ngày
+                    document.getElementById('deleteFilteredBtn').style.display = 'inline-block';
                 } else {
-                    showToast(response.message || 'No data found!', 'Error', false);
+                    Swal.fire({
+                        title: 'No Data',
+                        text: response.message || 'No data found!',
+                        icon: 'info'
+                    });
+                    document.getElementById('deleteFilteredBtn').style.display = 'none';
                 }
             },
             error: function (xhr, status, error) {
                 console.error('AJAX Error:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Server connection error.',
+                    icon: 'error'
+                });
             }
         });
     }
@@ -621,6 +722,7 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                     <table class="table table-bordered table-striped">
                         <thead>
                             <tr>
+                                <th style="width: 30px;"><input type="checkbox" class="selectAll-day" onclick="toggleDayCheckboxes(this)"></th>
                                 <th style="width: 160px;">Treatment Name</th>
                                 <th style="width: 200px;">Product Application</th>
                                 <th style="width: 50px;">Reps</th>
@@ -659,6 +761,9 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                 // Hiển thị hàng
                 tableContent += `
             <tr>
+                <td>
+                    <input type="checkbox" class="entryCheckbox" value="${entry.entry_data_id || 0}" onchange="updateSelectedCount()">
+                </td>
                 ${isNewTreatment ? `
                     <td rowspan="${treatmentRowCount}" style="vertical-align: middle; font-weight: bold;">
                         ${currentTreatment}
@@ -675,10 +780,10 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
                 <td>
                     <div class="action-buttons">
                         <button class="btn btn-warning btn-sm" onclick="editEntryData(${entry.entry_data_id || 0})">
-                            <i class="fa fa-pencil">Edit</i> 
+                            <i class="fa fa-pencil"></i> Edit
                         </button>
                         <button class="btn btn-danger btn-sm" onclick="deleteEntryData(${entry.entry_data_id || 0})">
-                            <i class="fa fa-trash">Delete</i>
+                            <i class="fa fa-trash"></i> Delete
                         </button>
                     </div>
                 </td>
@@ -691,6 +796,22 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
             }
 
             container.innerHTML += phaseTitle + tableContent;
+        });
+        
+        // Sau khi render, cập nhật lại sự kiện cho checkbox
+        document.querySelectorAll('.entryCheckbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelectedCount);
+        });
+        
+        document.querySelectorAll('.selectAll-day').forEach(header => {
+            header.addEventListener('change', function() {
+                const table = this.closest('table');
+                const checkboxes = table.querySelectorAll('.entryCheckbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updateSelectedCount();
+            });
         });
     }
 
@@ -706,7 +827,177 @@ $groupedEntries = groupEntriesByPhase($entries, $phases);
         return dateString; // Nếu không phải định dạng YYYY-MM-DD, trả về nguyên bản
     }
 
+    // Cập nhật số lượng mục đã chọn
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.entryCheckbox:checked');
+        const count = checkboxes.length;
+        document.getElementById('selectedCount').textContent = count;
+        
+        // Hiển thị hoặc ẩn nút xóa dựa trên số lượng đã chọn
+        document.getElementById('deleteSelectedBtn').style.display = count > 0 ? 'inline-block' : 'none';
+    }
 
+    // Chọn hoặc bỏ chọn tất cả
+    function toggleAllCheckboxes() {
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.entryCheckbox');
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+        
+        updateSelectedCount();
+    }
+
+    // Xóa các mục đã chọn
+    function deleteSelectedEntries() {
+        const checkboxes = document.querySelectorAll('.entryCheckbox:checked');
+        const entryIds = Array.from(checkboxes).map(checkbox => checkbox.value);
+        
+        if (entryIds.length === 0) {
+            Swal.fire({
+                title: 'Warning!',
+                text: 'Please select at least one item to delete',
+                icon: 'warning'
+            });
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Confirm Deletion',
+            html: `Are you sure you want to delete <strong>${entryIds.length}</strong> selected items?<br>This action cannot be undone!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete them!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const formData = new FormData();
+                entryIds.forEach(id => {
+                    formData.append('entry_ids[]', id);
+                });
+                
+                $.ajax({
+                    url: 'php_action/remove_multiple_entries.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: `Successfully deleted ${response.deleted_count} items`,
+                                icon: 'success',
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                setTimeout(() => {
+                                    reloadFilteredData();
+                                }, 500);
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: response.messages || 'Error deleting data',
+                                icon: 'error'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Server connection error',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    // Hàm bổ sung để chọn/bỏ chọn tất cả checkbox trong một ngày
+    function toggleDayCheckboxes(headerCheckbox) {
+        const table = headerCheckbox.closest('table');
+        const checkboxes = table.querySelectorAll('.entryCheckbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = headerCheckbox.checked;
+        });
+        updateSelectedCount();
+    }
+
+    // Xóa tất cả dữ liệu theo ngày đã lọc
+    function deleteFilteredEntries() {
+        const filterDateInput = document.getElementById('filterDate');
+        const filterDateValue = filterDateInput.value;
+        
+        if (!filterDateValue) {
+            Swal.fire({
+                title: 'Warning!',
+                text: 'No date selected for filtering',
+                icon: 'warning'
+            });
+            return;
+        }
+        
+        const formattedDate = filterDateValue.split('-').reverse().join('-');
+        
+        Swal.fire({
+            title: 'Confirm Deletion',
+            html: `Are you sure you want to delete <strong>ALL DATA</strong> for date <strong>${filterDateValue}</strong>?<br>This action cannot be undone!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete everything!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: 'php_action/remove_entries_by_date.php',
+                    type: 'POST',
+                    data: {
+                        case_study_id: '<?php echo $caseStudyId; ?>',
+                        date: formattedDate
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: `Successfully deleted ${response.deleted_count} items`,
+                                icon: 'success',
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                setTimeout(() => {
+                                    reloadFilteredData();
+                                }, 500);
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: response.messages || 'Error deleting data',
+                                icon: 'error'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Server connection error',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+        });
+    }
 </script>
 <style>
     .action-buttons {
